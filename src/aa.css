@@ -1,0 +1,98 @@
+/* Aa. The editor takes the page's type and colour; a product sets the
+   --aa-* properties or the Design system 1 tokens they fall back to. */
+.aa, aa-editor {
+  display: block;
+  font-family: var(--aa-typeface, var(--typeface-regular, system-ui, sans-serif));
+  font-size: var(--aa-size, var(--type-size-default, 14px));
+  line-height: var(--aa-line, var(--type-lineheight-default, 1.45));
+  font-weight: var(--aa-weight, var(--type-weight-default, 400));
+  letter-spacing: var(--aa-letterspacing, var(--type-letterspacing-default, normal));
+  color: inherit;
+  -webkit-font-smoothing: antialiased;
+}
+.aa-block {
+  position: relative;
+  outline: none;
+  margin: 0;
+  min-height: 1lh;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-user-modify: read-write-plaintext-only;
+}
+.aa-block + .aa-block { margin-top: var(--aa-gap, 1lh); }
+.aa-block[data-kind="bullet"] + .aa-block[data-kind="bullet"] { margin-top: 0; }
+
+/* Syntax: the Markdown's own characters, in a quiet grey while they show. */
+.aa-syntax { color: var(--aa-syntax, color-mix(in srgb, currentColor 38%, transparent)); font-style: normal; font-weight: inherit; text-decoration: none; }
+.aa-syntax[data-hidden] { display: none; }
+
+.aa-b { font-family: var(--aa-typeface-bold, var(--typeface-medium, inherit)); font-weight: var(--aa-weight-bold, var(--type-weight-bold, 600)); }
+.aa-i { font-style: italic; }
+.aa-s { text-decoration: line-through; }
+.aa-c, .aa-block[data-kind="code"] { font-family: var(--aa-typeface-mono, var(--typeface-mono, ui-monospace, "SF Mono", Menlo, monospace)); }
+.aa-c { font-size: 0.92em; }
+a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: none; cursor: text; }
+
+.aa-block[data-kind="heading"] { font-family: var(--aa-typeface-heading, var(--typeface-medium, inherit)); font-weight: var(--aa-weight-heading, var(--type-weight-heading, 600)); }
+.aa-block[data-kind="heading"][data-level="1"] { font-size: var(--aa-h1, var(--type-size-title-1, 1.6em)); line-height: 1.2; }
+.aa-block[data-kind="heading"][data-level="2"] { font-size: var(--aa-h2, var(--type-size-title-2, 1.3em)); line-height: 1.25; }
+.aa-block[data-kind="heading"][data-level="3"] { font-size: var(--aa-h3, var(--type-size-heading, 1.1em)); }
+
+.aa-block[data-kind="quote"] { padding-left: 0.75em; border-left: 2px solid var(--aa-rule, color-mix(in srgb, currentColor 25%, transparent)); font-style: italic; }
+.aa-block[data-kind="quote"] .aa-syntax { font-style: normal; }
+
+.aa-block[data-kind="code"] { padding: 0.5lh 0.75em; border-radius: 4px; background: var(--aa-code-paper, color-mix(in srgb, currentColor 6%, transparent)); font-size: 0.92em; }
+
+/* A bullet: the marker drawn while its `- ` is hidden, and a box for a tick. */
+.aa-block[data-kind="bullet"] { padding-left: var(--aa-indent, 1.5em); }
+.aa-block[data-kind="bullet"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--aa-indent, 1.5em);
+  height: 1lh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--aa-marker, currentColor);
+  pointer-events: none;
+}
+.aa-block[data-kind="bullet"]:not([data-checked]):not([data-active])::before { content: "•"; }
+.aa-block[data-kind="bullet"][data-checked]::before {
+  content: "";
+  width: 0.8em;
+  height: 0.8em;
+  margin: calc((1lh - 0.8em) / 2) calc((var(--aa-indent, 1.5em) - 0.8em) / 2);
+  box-sizing: border-box;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.aa-block[data-kind="bullet"][data-checked="true"]::before { background: currentColor; }
+.aa-block[data-kind="bullet"][data-checked="true"] { color: var(--aa-done, color-mix(in srgb, currentColor 55%, transparent)); }
+.aa-block[data-kind="bullet"][data-active] { padding-left: var(--aa-indent, 1.5em); }
+
+/* A divider: a hairline while its --- is hidden. */
+.aa-block[data-kind="divider"]:not([data-active]) { min-height: 1lh; }
+.aa-block[data-kind="divider"]:not([data-active])::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(0.5lh - 0.5px);
+  height: 1px;
+  background: var(--aa-rule, color-mix(in srgb, currentColor 25%, transparent));
+}
+
+/* What to write, until something is. */
+.aa-block[data-placeholder]::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--aa-placeholder, color-mix(in srgb, currentColor 38%, transparent));
+  pointer-events: none;
+  white-space: nowrap;
+}

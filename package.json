@@ -1,0 +1,29 @@
+{
+  "name": "@0001/aa",
+  "version": "0.1.0",
+  "description": "Aa, the text editor of 0001's products: Markdown, drawn as you write",
+  "type": "module",
+  "files": ["dist/", "src/", "README.md"],
+  "main": "./dist/aa.js",
+  "module": "./dist/aa.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/aa.js" },
+    "./aa.css": "./src/aa.css"
+  },
+  "sideEffects": ["./src/element.ts", "./src/aa.css", "./dist/aa.js"],
+  "scripts": {
+    "dev": "vp dev",
+    "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts",
+    "check": "vp exec tsc --noEmit",
+    "test": "vp test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "happy-dom": "^20.14.0",
+    "typescript": "^6.0.3",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

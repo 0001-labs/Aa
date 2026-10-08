@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aa</title>
+<style>
+  @font-face { font-family: "GT-America-Standard-Regular"; src: url("/fonts/GT-America-Standard-Regular.woff2") format("woff2"); font-display: swap; }
+  @font-face { font-family: "GT-America-Standard-Medium"; src: url("/fonts/GT-America-Standard-Medium.woff2") format("woff2"); font-display: swap; }
+  @font-face { font-family: "Iosevka"; src: url("/fonts/Iosevka-Regular.woff2") format("woff2"); font-display: swap; }
+  :root {
+    --typeface-regular: "GT-America-Standard-Regular", system-ui, sans-serif;
+    --typeface-medium: "GT-America-Standard-Medium", system-ui, sans-serif;
+    --typeface-mono: "Iosevka", ui-monospace, monospace;
+    --type-size-default: 14px;
+    --type-lineheight-default: 20px;
+    --type-weight-default: 400;
+    --type-letterspacing-default: -0.1px;
+    --type-size-title-1: 24px;
+    --type-size-title-2: 18px;
+    --type-size-heading: 15px;
+    --paper: #fff;
+    --ink: #111;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) { :root { --paper: #111; --ink: #e8e8e8; } }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--typeface-regular); font-size: var(--type-size-default); line-height: var(--type-lineheight-default); }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; max-width: 1100px; margin: 0 auto; padding: 60px 20px; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  h1 { font: inherit; font-family: var(--typeface-medium); margin: 0 0 20px; }
+  .side { color: color-mix(in srgb, currentColor 60%, transparent); }
+  aa-editor { min-height: 400px; }
+  pre { margin: 0; font-family: var(--typeface-mono); font-size: 12px; line-height: 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+  button { font: inherit; background: none; border: 1px solid color-mix(in srgb, currentColor 30%, transparent); border-radius: 4px; padding: 2px 10px; color: inherit; cursor: pointer; }
+  button[aria-pressed="true"] { background: currentColor; color: var(--paper); }
+</style>
+</head>
+<body>
+<main>
+  <section>
+    <div class="bar"><h1 style="margin:0">Aa</h1><button id="readonly" aria-pressed="false">Read only</button><button id="undo">Undo</button><button id="redo">Redo</button></div>
+    <aa-editor id="editor" placeholder="Write"></aa-editor>
+  </section>
+  <section class="side">
+    <h1>What it stores</h1>
+    <pre id="source"></pre>
+  </section>
+</main>
+<script type="module" src="/playground.ts"></script>
+</body>
+</html>
