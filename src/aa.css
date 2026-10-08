@@ -96,3 +96,6 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
   pointer-events: none;
   white-space: nowrap;
 }
+
+/* While a ticked bullet is being edited its `[x]` shows, so the drawn box steps aside. */
+.aa-block[data-kind="bullet"][data-checked][data-active]::before { display: none; }
