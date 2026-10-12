@@ -1,6 +1,7 @@
-/* Aa. The editor takes the page's type and colour; a product sets the
-   --aa-* properties or the Design system 1 tokens they fall back to. */
-.aa, aa-editor {
+/* Aa. The editor takes the page's type and colour: its own rule weighs
+   nothing, so any rule of the page's wins. A product sets the --aa-*
+   properties or the Design system 1 tokens they fall back to. */
+:where(.aa, aa-editor) {
   display: block;
   font-family: var(--aa-typeface, var(--typeface-regular, system-ui, sans-serif));
   font-size: var(--aa-size, var(--type-size-default, 14px));
