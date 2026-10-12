@@ -134,12 +134,28 @@ export type Wrapped = { blocks: Block[]; anchor: Pos; focus: Pos }
 
 /**
  * Put a mark round the selection, or take it off: `**` for bold. Within
- * one block only. With nothing selected the delimiters are typed with the
+ * each selected block. With nothing selected the delimiters are typed with the
  * caret between them.
  */
 export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, delimiter: string, closing = delimiter): Wrapped | null {
   const [a, b] = order(from, to)
-  if (a.block !== b.block) return null
+  if (a.block !== b.block) {
+    let next = [...blocks]
+    let anchor = a, focus = b
+    for (let index = b.block; index >= a.block; index--) {
+      let start = index === a.block ? Math.max(a.offset, blocks[index].prefix) : blocks[index].prefix
+      let end = index === b.block ? b.offset : blocks[index].source.length
+      const source = blocks[index].source
+      if (index === a.block && source.slice(start - delimiter.length, start) === delimiter && source.endsWith(closing)) end -= closing.length
+      if (index === b.block && source.slice(end, end + closing.length) === closing && source.slice(start, start + delimiter.length) === delimiter) start += delimiter.length
+      if (end <= start || blocks[index].kind === 'code' || blocks[index].kind === 'divider') continue
+      const wrapped = wrapSelection(next, { block: index, offset: start }, { block: index, offset: end }, delimiter, closing)!
+      next = wrapped.blocks
+      if (index === a.block) anchor = wrapped.anchor
+      if (index === b.block) focus = wrapped.focus
+    }
+    return { blocks: next, anchor, focus }
+  }
   const source = blocks[a.block].source
   const inner = source.slice(a.offset, b.offset)
   const d = delimiter.length, c = closing.length
@@ -162,4 +178,54 @@ export function toggleBox(blocks: readonly Block[], index: number): Change | nul
   if (block.kind !== 'bullet' || block.checked === undefined) return null
   const box = block.source.indexOf('[') + 1
   return replaceRange(blocks, { block: index, offset: box }, { block: index, offset: box + 1 }, block.checked ? ' ' : 'x')
+}
+
+export type TurnKind = 'paragraph' | 'h1' | 'h2' | 'h3' | 'todo' | 'bullet' | 'numbered' | 'quote' | 'code'
+export type BlockSelection = { anchor: number; focus: number }
+
+/** Select a contiguous range of whole blocks, clamped to this document. */
+export function select(blocks: readonly Block[], anchor: number, focus = anchor): BlockSelection {
+  const clamp = (index: number) => Math.max(0, Math.min(blocks.length - 1, index))
+  return { anchor: clamp(anchor), focus: clamp(focus) }
+}
+
+export function turnInto(blocks: readonly Block[], selection: BlockSelection, kind: TurnKind): Change {
+  const first = Math.min(selection.anchor, selection.focus), last = Math.max(selection.anchor, selection.focus)
+  const next = blocks.flatMap((block, index) => {
+    if (index < first || index > last) return [block]
+    let text = block.source.slice(block.prefix)
+    if (block.kind === 'code') {
+      const lines = block.source.split('\n').slice(1)
+      if (codeClosed(block)) lines.pop()
+      text = lines.join('\n')
+    } else if (block.kind === 'quote') text = block.source.split('\n').map(line => line.replace(QUOTE, '')).join('\n')
+    else if (block.kind === 'divider') text = ''
+    const prefix = { paragraph: '', h1: '# ', h2: '## ', h3: '### ', todo: '- [ ] ', bullet: '- ', numbered: `${index - first + 1}. `, quote: '> ', code: '' }[kind]
+    const fence = '`'.repeat(Math.max(3, ...Array.from(text.matchAll(/`+/g), match => match[0].length + 1)))
+    const source = kind === 'code' ? `${fence}\n${text}\n${fence}` : text.split('\n').map(line => prefix + line).join('\n')
+    return parseBlocks(source).map(({ start: _start, ...converted }) => converted)
+  })
+  return { blocks: next, caret: { block: first, offset: next[first].prefix } }
+}
+
+export function deleteBlocks(blocks: readonly Block[], selection: BlockSelection): Change {
+  const first = Math.min(selection.anchor, selection.focus), last = Math.max(selection.anchor, selection.focus)
+  const next = [...blocks.slice(0, first), ...blocks.slice(last + 1)]
+  if (!next.length) next.push({ ...EMPTY })
+  const index = Math.min(first, next.length - 1)
+  return { blocks: next, caret: { block: index, offset: next[index].prefix } }
+}
+
+export function duplicateBlocks(blocks: readonly Block[], selection: BlockSelection): Change {
+  const first = Math.min(selection.anchor, selection.focus), last = Math.max(selection.anchor, selection.focus)
+  const copies = blocks.slice(first, last + 1).map(block => ({ ...block }))
+  return { blocks: [...blocks.slice(0, last + 1), ...copies, ...blocks.slice(last + 1)], caret: { block: last + 1, offset: copies[0].prefix } }
+}
+
+export function moveBlocks(blocks: readonly Block[], selection: BlockSelection, direction: -1 | 1): Change | null {
+  const first = Math.min(selection.anchor, selection.focus), last = Math.max(selection.anchor, selection.focus)
+  if (direction < 0 ? first === 0 : last === blocks.length - 1) return null
+  const next = [...blocks], moved = next.splice(first, last - first + 1)
+  next.splice(first + direction, 0, ...moved)
+  return { blocks: next, caret: { block: first + direction, offset: moved[0].prefix } }
 }

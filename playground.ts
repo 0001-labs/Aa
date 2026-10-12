@@ -11,6 +11,8 @@ Aa is the text editor of 0001's products. What you write is **Markdown**, drawn 
 
 Each paragraph is a block of its own, edited on its own, as Notion's are. Enter starts a new one and Shift-Enter breaks a line within it.
 
+Escape selects a block. ⌘A selects this block, then the whole document. Shift-Up and Shift-Down extend a block selection. ⌘D duplicates it; ⌘Shift-Up and ⌘Shift-Down move it. Backspace removes it. ⌘Enter ticks a box; ⌘Option-0 through 8 change its kind. Paste a URL over selected words to make a link; ⌘Shift-V keeps it plain. ⌘Shift-S strikes selected words, including words across blocks.
+
 - A bullet
 - Another, with a [link](https://ezo.gs) and some \`code\`
 - [ ] Something to do

@@ -21,6 +21,7 @@
   -webkit-user-modify: read-write-plaintext-only;
 }
 .aa-block + .aa-block { margin-top: var(--aa-gap, 1lh); }
+.aa-block[data-selected] { background: var(--aa-selection, var(--accent-color, var(--apple-green, Highlight))); }
 .aa-block[data-kind="bullet"] + .aa-block[data-kind="bullet"] { margin-top: 0; }
 
 /* Syntax: the Markdown's own characters, in a quiet grey while they show. */

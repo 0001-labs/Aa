@@ -1,9 +1,33 @@
 import { describe, expect, it } from 'vitest'
-import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown } from '../src/document'
+import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, select, turnInto, duplicateBlocks, deleteBlocks, moveBlocks } from '../src/document'
 import { History } from '../src/history'
 
 const doc = (text: string) => fromMarkdown(text)
 const at = (block: number, offset: number) => ({ block, offset })
+
+describe('whole blocks', () => {
+  it('moves and duplicates a reversed range, and preserves its neighbours', () => {
+    const blocks = doc('a\n\nb\n\nc\n\nd')
+    const range = select(blocks, 2, 1)
+    expect(moveBlocks(blocks, range, -1)!.blocks.map(b => b.source)).toEqual(['b', 'c', 'a', 'd'])
+    expect(moveBlocks(blocks, range, 1)!.blocks.map(b => b.source)).toEqual(['a', 'd', 'b', 'c'])
+    expect(duplicateBlocks(blocks, range).blocks.map(b => b.source)).toEqual(['a', 'b', 'c', 'b', 'c', 'd'])
+    expect(moveBlocks(blocks, select(blocks, 0), -1)).toBeNull()
+    expect(deleteBlocks(blocks, range).blocks.map(b => b.source)).toEqual(['a', 'd'])
+    expect(deleteBlocks(blocks, select(blocks, 0, 3)).blocks).toMatchObject([{ kind: 'paragraph', source: '' }])
+  })
+  it('changes kinds without retaining old prefixes or code fences', () => {
+    expect(toMarkdown(turnInto(doc('## Milk\n\n> Bread\n> Tea'), { anchor: 0, focus: 1 }, 'numbered').blocks)).toBe('1. Milk\n2. Bread\n2. Tea')
+    expect(toMarkdown(turnInto(doc('```ts\nhello\nworld\n```'), { anchor: 0, focus: 0 }, 'paragraph').blocks)).toBe('hello\nworld')
+    expect(turnInto(doc('- [x] milk'), { anchor: 0, focus: 0 }, 'todo').blocks[0].source).toBe('- [ ] milk')
+  })
+  it('formats each selected block while keeping list prefixes outside the mark', () => {
+    const blocks = doc('one\n\n- two\n- three')
+    const wrapped = wrapSelection(blocks, at(0, 1), at(2, 5), '**')!
+    expect(toMarkdown(wrapped.blocks)).toBe('o**ne**\n\n- **two**\n- **thr**ee')
+    expect(toMarkdown(wrapSelection(wrapped.blocks, wrapped.anchor, wrapped.focus, '**')!.blocks)).toBe(toMarkdown(blocks))
+  })
+})
 
 describe('replaceRange', () => {
   it('types into a block', () => {

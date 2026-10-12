@@ -6,7 +6,7 @@
  */
 
 import { IMAGE, type AtomSyntax, type Block } from './markdown'
-import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, order, comparePos, type Pos } from './document'
+import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal } from './render'
 
@@ -69,6 +69,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let placeholder = options.placeholder ?? ''
   let composing = false
   let destroyed = false
+  let selected: BlockSelection | null = null
+  let plainPaste = false
   const atoms = options.atoms ?? [imageAtom]
   const drawn = new Map<HTMLElement, (() => void) | void>()
   const drawAtom = (name: string, source: string) => {
@@ -211,6 +213,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const snapshot = (anchor: Pos, focus: Pos): Snapshot => ({ blocks, anchor, focus })
 
   const commit = (next: Block[], anchor: Pos, focus: Pos, kind: 'type' | 'edit') => {
+    clearBlocks()
     syncDom(next)
     setSelection(anchor, focus)
     applyReveal({ anchor, focus })
@@ -219,6 +222,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
 
   const restore = (state: Snapshot) => {
+    clearBlocks()
     syncDom(state.blocks)
     setSelection(state.anchor, state.focus)
     applyReveal({ anchor: state.anchor, focus: state.focus })
@@ -232,13 +236,15 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const readBack = (element: HTMLElement, kind: 'type' | 'edit' = 'type') => {
     const index = elements().indexOf(element)
     if (index < 0) return
-    const text = readBlock(element)
+    const raw = readBlock(element)
+    const text = raw.replace(/^\[\] /, '- [ ] ')
     if (text === blocks[index].source) return
     const selection = readSelection()
     const { blocks: next, caret } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, text)
     const within = (pos: Pos): Pos => pos.block !== index ? { ...pos, block: pos.block + (next.length - blocks.length) * (pos.block > index ? 1 : 0) } : mapOffset(next, index, caret, text, pos.offset)
-    const anchor = selection ? within(selection.anchor) : caret
-    const focus = selection ? within(selection.focus) : caret
+    const adjust = (pos: Pos) => text !== raw && pos.block === index ? { ...pos, offset: pos.offset + text.length - raw.length } : pos
+    const anchor = selection ? within(adjust(selection.anchor)) : caret
+    const focus = selection ? within(adjust(selection.focus)) : caret
     commit(next, anchor, focus, kind)
   }
 
@@ -394,6 +400,25 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     return block.kind === 'code' || block.kind === 'divider' ? 0 : block.prefix
   }
 
+  const clearBlocks = () => {
+    selected = null
+    for (const element of elements()) element.removeAttribute('data-selected')
+  }
+  const selectBlocks = (anchor: number, focus = anchor) => {
+    selected = select(blocks, anchor, focus)
+    const first = Math.min(selected.anchor, selected.focus), last = Math.max(selected.anchor, selected.focus)
+    setSelection({ block: first, offset: 0 }, { block: last, offset: blocks[last].source.length })
+    applyReveal()
+    elements().forEach((element, index) => element.toggleAttribute('data-selected', index >= first && index <= last))
+  }
+  const changeBlocks = (action: 'delete' | 'duplicate' | 'up' | 'down', range: BlockSelection) => {
+    const first = Math.min(range.anchor, range.focus), last = Math.max(range.anchor, range.focus)
+    const change = action === 'delete' ? deleteBlocks(blocks, range) : action === 'duplicate' ? duplicateBlocks(blocks, range) : moveBlocks(blocks, range, action === 'up' ? -1 : 1)
+    if (!change) return
+    commit(change.blocks, change.caret, change.caret, 'edit')
+    if (action !== 'delete') selectBlocks(change.caret.block, change.caret.block + last - first)
+  }
+
   const onKeyDown = (event: KeyboardEvent) => {
     if (destroyed || readOnly || composing || event.isComposing || event.defaultPrevented) return
     const mod = isMac ? event.metaKey : event.ctrlKey
@@ -401,13 +426,61 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return }
     const selection = readSelection()
     if (!selection) return
+    const key = event.key.toLowerCase()
+    plainPaste = false
+    if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
+    if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
+    if (mod && key === 'a' && !event.altKey) {
+      event.preventDefault()
+      if (selected) selectBlocks(0, blocks.length - 1)
+      else selectBlocks(selection.focus.block)
+      return
+    }
+    const range = selected ?? select(blocks, selection.anchor.block, selection.focus.block)
+    if (mod && key === 'd' && !event.altKey) { event.preventDefault(); changeBlocks('duplicate', range); return }
+    if (mod && event.shiftKey && (key === 'arrowup' || key === 'arrowdown')) { event.preventDefault(); changeBlocks(key === 'arrowup' ? 'up' : 'down', range); return }
+    const digit = /^Digit[0-9]$/.test(event.code) ? Number(event.code.slice(-1)) : /^\d$/.test(key) ? Number(key) : -1
+    if (mod && event.altKey && digit >= 0) {
+      const kinds: TurnKind[] = ['paragraph', 'h1', 'h2', 'h3', 'todo', 'bullet', 'numbered', 'quote', 'code']
+      const kind = kinds[digit]
+      if (kind) { event.preventDefault(); const change = turnInto(blocks, range, kind); commit(change.blocks, change.caret, change.caret, 'edit') }
+      return
+    }
+    if (mod && event.key === 'Enter') {
+      event.preventDefault()
+      const change = toggleBox(blocks, selection.focus.block)
+      if (change) commit(change.blocks, change.caret, change.caret, 'edit')
+      return
+    }
+    if (selected) {
+      if (key === 'backspace' || key === 'delete') { event.preventDefault(); changeBlocks('delete', selected); return }
+      if (key === 'arrowup' || key === 'arrowdown') {
+        event.preventDefault()
+        const index = selected.focus + (key === 'arrowup' ? -1 : 1)
+        selectBlocks(event.shiftKey ? selected.anchor : index, index)
+        return
+      }
+      if (key === 'arrowleft' || key === 'arrowright' || key === 'enter') {
+        event.preventDefault()
+        const index = selected.focus
+        clearBlocks()
+        const pos = { block: index, offset: key === 'arrowright' ? blocks[index].source.length : startOf(index) }
+        elements()[index].focus(); setSelection(pos); applyReveal()
+        return
+      }
+    }
+    if (!mod && !event.altKey && event.shiftKey && (key === 'arrowup' || key === 'arrowdown')) {
+      event.preventDefault()
+      selectBlocks(selection.anchor.block, selection.focus.block + (key === 'arrowup' ? -1 : 1))
+      return
+    }
     if (event.key === 'Enter' && !mod && !event.altKey) { event.preventDefault(); enter(selection, event.shiftKey); return }
     if (mod && !event.altKey) {
       const key = event.key.toLowerCase()
       if (key === 'b' && !event.shiftKey) { event.preventDefault(); wrap(selection, '**'); return }
       if (key === 'i' && !event.shiftKey) { event.preventDefault(); wrap(selection, '*'); return }
       if (key === 'e' && !event.shiftKey) { event.preventDefault(); wrap(selection, '`'); return }
-      if (key === 'x' && event.shiftKey) { event.preventDefault(); wrap(selection, '~~'); return }
+      if ((key === 'x' || key === 's') && event.shiftKey) { event.preventDefault(); wrap(selection, '~~'); return }
       if (key === 'k' && !event.shiftKey) {
         event.preventDefault()
         const [a, b] = order(selection.anchor, selection.focus)
@@ -451,10 +524,14 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (!selection || !event.clipboardData || comparePos(selection.anchor, selection.focus) === 0) return
     event.preventDefault()
     event.clipboardData.setData('text/plain', sliceMarkdown(blocks, selection.anchor, selection.focus))
-    if (event.type === 'cut' && !readOnly) insert(selection, '')
+    if (event.type === 'cut' && !readOnly) {
+      if (selected) changeBlocks('delete', selected)
+      else insert(selection, '')
+    }
   }
 
   const onClick = (event: MouseEvent) => {
+    clearBlocks()
     const target = event.target as HTMLElement | null
     const link = target?.closest?.('a.aa-link') as HTMLAnchorElement | null
     if (link && host.contains(link)) {
@@ -482,13 +559,23 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (element && element.parentElement === host) readBack(element)
   }
   const onSelectionChange = () => { if (!destroyed && !composing) applyReveal() }
+  const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
   const onPaste = (event: ClipboardEvent) => {
+    const plain = plainPaste
+    plainPaste = false
+    if (readOnly || destroyed) return
     const files = filesOf(event.clipboardData)
-    if (!files.length || !options.onFiles || readOnly || destroyed) return
+    if (files.length && options.onFiles) { event.preventDefault(); options.onFiles(files); return }
+    const selection = readSelection()
+    const text = event.clipboardData?.getData('text/plain')
+    if (!selection || text === undefined) return
     event.preventDefault()
-    options.onFiles(files)
+    const [a, b] = order(selection.anchor, selection.focus)
+    if (!plain && a.block === b.block && a.offset !== b.offset && /^https?:\/\/[^\s<>]+$/i.test(text.trim())) {
+      wrap(selection, '[', `](${text.trim().replace(/\(/g, '%28').replace(/\)/g, '%29')})`)
+    } else insert(selection, text.replace(/\r\n?/g, '\n'))
   }
   const onDrop = (event: DragEvent) => {
     event.preventDefault()
@@ -511,6 +598,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('copy', onCopy)
   host.addEventListener('cut', onCopy)
   host.addEventListener('click', onClick)
+  host.addEventListener('pointerdown', onPointerDown)
   host.addEventListener('drop', onDrop)
   host.addEventListener('paste', onPaste)
   host.addEventListener('compositionstart', onCompositionStart)
@@ -522,6 +610,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const setReadOnly = (value: boolean) => {
     if (value === readOnly) return
     readOnly = value
+    clearBlocks()
     for (const element of elements()) element.contentEditable = value ? 'false' : 'true'
   }
 
@@ -531,6 +620,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     set value(text: string) {
       if (toMarkdown(blocks) === text) return
       blocks = fromMarkdown(text)
+      clearBlocks()
       renderAll()
       history.reset({ blocks, anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } })
     },
@@ -569,6 +659,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('copy', onCopy)
       host.removeEventListener('cut', onCopy)
       host.removeEventListener('click', onClick)
+      host.removeEventListener('pointerdown', onPointerDown)
       host.removeEventListener('drop', onDrop)
       host.removeEventListener('paste', onPaste)
       host.removeEventListener('compositionstart', onCompositionStart)

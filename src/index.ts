@@ -4,3 +4,4 @@ export { parseBlocks, serialize, blockRuns, atomPattern, IMAGE, DEFAULT_ATOMS, t
 export { atomElement } from './render'
 export { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, type Pos, type Change } from './document'
 export { History, type Snapshot } from './history'
+export { select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind } from './document'
