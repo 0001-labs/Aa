@@ -99,3 +99,8 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 
 /* While a ticked bullet is being edited its `[x]` shows, so the drawn box steps aside. */
 .aa-block[data-kind="bullet"][data-checked][data-active]::before { display: none; }
+
+/* An atom: one thing to the caret, drawn by the product or as its own words. */
+.aa-atom { -webkit-user-modify: read-only; cursor: default; }
+.aa-atom[data-atom="image"] { display: inline-block; max-width: 100%; vertical-align: top; }
+.aa-atom[data-atom="image"] img { display: block; max-width: 100%; height: auto; border-radius: var(--aa-picture-radius, 4px); }

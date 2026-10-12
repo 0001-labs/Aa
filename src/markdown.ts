@@ -110,7 +110,7 @@ export function codeClosed(block: Block): boolean {
   return lines.length > 1 && closesFence(lines[lines.length - 1], FENCE.exec(lines[0])![1])
 }
 
-export type RunKind = 'text' | 'syntax' | 'break'
+export type RunKind = 'text' | 'syntax' | 'break' | 'atom'
 
 export type Run = {
   kind: RunKind
@@ -128,7 +128,39 @@ export type Run = {
    */
   group?: [number, number]
   prefix?: true
+  /** An atom's kind: the run is drawn as one thing, never letter by letter. */
+  atom?: string
 }
+
+/**
+ * A piece of writing drawn as one thing rather than as its letters: a
+ * picture, a reference, a link shown as a title. The text stays what it
+ * was written as; only the drawing changes, and the caret steps over it whole.
+ */
+export type AtomSyntax = {
+  name: string
+  /** How many characters an atom of this kind takes at `at` in a line, or 0 when none starts there. */
+  match(line: string, at: number): number
+}
+
+/** An atom found by a pattern, optionally only where `accept` agrees. */
+export function atomPattern(name: string, pattern: RegExp, accept?: (match: RegExpExecArray) => boolean): AtomSyntax {
+  const sticky = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, '') + 'y')
+  return {
+    name,
+    match(line, at) {
+      sticky.lastIndex = at
+      const found = sticky.exec(line)
+      return found && found[0].length && (!accept || accept(found)) ? found[0].length : 0
+    },
+  }
+}
+
+/** A Markdown picture, `![name](address)`. */
+export const IMAGE = atomPattern('image', /!\[[^\]\n]*\]\([^\s()]+\)/)
+
+/** The atoms an editor reads unless it is given others. */
+export const DEFAULT_ATOMS: readonly AtomSyntax[] = [IMAGE]
 
 type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'code' | 'href'>
 
@@ -187,7 +219,7 @@ function pushText(text: string, from: number, to: number, base: number, marks: M
 }
 
 /** The runs of one line of writing between `start` and `end`, offsets made absolute with `base`. */
-function inline(text: string, start: number, end: number, base: number, marks: Marks, out: Run[]) {
+function inline(text: string, start: number, end: number, base: number, marks: Marks, out: Run[], atoms: readonly AtomSyntax[]) {
   let i = start
   let from = start
   const flush = (to: number) => pushText(text, from, to, base, marks, out)
@@ -214,13 +246,24 @@ function inline(text: string, start: number, end: number, base: number, marks: M
         continue
       }
     }
+    if (!marks.href && !marks.code && atoms.length) {
+      let length = 0, name = ''
+      for (const atom of atoms) { length = atom.match(text, i); if (length && i + length <= end) { name = atom.name; break }; length = 0 }
+      if (length) {
+        flush(i)
+        out.push({ kind: 'atom', atom: name, from: base + i, to: base + i + length })
+        i += length
+        from = i
+        continue
+      }
+    }
     if (char === '[' && !marks.href && !marks.code) {
       const link = LINK.exec(text.slice(i, end))
       if (link) {
         flush(i)
         const group: [number, number] = [base + i, base + i + link[0].length]
         out.push({ kind: 'syntax', from: base + i, to: base + i + 1, group })
-        inline(text, i + 1, i + 1 + link[1].length, base, { ...marks, href: link[2] }, out)
+        inline(text, i + 1, i + 1 + link[1].length, base, { ...marks, href: link[2] }, out, atoms)
         out.push({ kind: 'syntax', from: base + i + 1 + link[1].length, to: base + i + link[0].length, group })
         i += link[0].length
         from = i
@@ -236,7 +279,7 @@ function inline(text: string, start: number, end: number, base: number, marks: M
         flush(i)
         const group: [number, number] = [base + i, base + close + d.length]
         out.push({ kind: 'syntax', from: base + i, to: base + i + d.length, group })
-        inline(text, i + d.length, close, base, { ...marks, [MARK_OF[d]]: true }, out)
+        inline(text, i + d.length, close, base, { ...marks, [MARK_OF[d]]: true }, out, atoms)
         out.push({ kind: 'syntax', from: base + close, to: base + close + d.length, group })
         i = close + d.length
         from = i
@@ -250,7 +293,7 @@ function inline(text: string, start: number, end: number, base: number, marks: M
 }
 
 /** Every run of a block, in order, covering its source from end to end. */
-export function blockRuns(block: Block): Run[] {
+export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Run[] {
   const runs: Run[] = []
   const lines = block.source.split('\n')
   const closed = block.kind === 'code' && codeClosed(block)
@@ -267,7 +310,7 @@ export function blockRuns(block: Block): Run[] {
       if (index === 0 && (block.kind === 'heading' || block.kind === 'bullet')) prefix = block.prefix
       else if (block.kind === 'quote') prefix = QUOTE.exec(line)?.[0].length ?? 0
       if (prefix) runs.push({ kind: 'syntax', from: at, to: at + prefix, prefix: true })
-      inline(line, prefix, line.length, at, {}, runs)
+      inline(line, prefix, line.length, at, {}, runs, atoms)
     }
     at += line.length + 1
   })

@@ -1,5 +1,6 @@
-export { createEditor, type Editor, type EditorOptions } from './editor'
+export { createEditor, imageAtom, type Atom, type Editor, type EditorOptions } from './editor'
 export { AaEditorElement, defineAaEditor } from './element'
-export { parseBlocks, serialize, blockRuns, type Block, type BlockKind, type Run, type Placed } from './markdown'
+export { parseBlocks, serialize, blockRuns, atomPattern, IMAGE, DEFAULT_ATOMS, type AtomSyntax, type Block, type BlockKind, type Run, type Placed } from './markdown'
+export { atomElement } from './render'
 export { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, type Pos, type Change } from './document'
 export { History, type Snapshot } from './history'

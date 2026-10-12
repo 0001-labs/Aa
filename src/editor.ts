@@ -5,10 +5,31 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { type Block } from './markdown'
+import { IMAGE, type AtomSyntax, type Block } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, order, comparePos, type Pos } from './document'
 import { History, type Snapshot } from './history'
-import { renderBlock, readBlock, offsetIn, pointAt, revealKey, type Reveal } from './render'
+import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal } from './render'
+
+/**
+ * An atom the editor reads and draws: what it is in the text, and how it is
+ * drawn into the element Aa gives it. What `draw` returns is called once the
+ * atom leaves the page, to stop whatever it started.
+ */
+export type Atom = AtomSyntax & { draw?(element: HTMLElement, source: string): void | (() => void) }
+
+/** A picture drawn as itself. */
+export const imageAtom: Atom = {
+  ...IMAGE,
+  draw(element, source) {
+    const [, alt = '', src = ''] = /^!\[([^\]]*)\]\(([^)]*)\)$/.exec(source) ?? []
+    const image = document.createElement('img')
+    image.src = src
+    image.alt = alt
+    image.loading = 'lazy'
+    image.draggable = false
+    element.append(image)
+  },
+}
 
 export type EditorOptions = {
   value?: string
@@ -16,6 +37,10 @@ export type EditorOptions = {
   placeholder?: string
   /** Called after every change the person made, with the document as Markdown. */
   onChange?: (value: string) => void
+  /** The atoms to read and draw; a picture unless told otherwise. */
+  atoms?: readonly Atom[]
+  /** Files pasted or dropped into the editor. Without it, they are ignored. */
+  onFiles?: (files: File[]) => void
 }
 
 export type Editor = {
@@ -25,6 +50,10 @@ export type Editor = {
   placeholder: string
   focus(): void
   blur(): void
+  /** Where the selection is, as offsets into `value`; null when it is not in the editor. */
+  selection(): { start: number; end: number } | null
+  /** Put `text` in place of `value`'s characters from `start` to `end`, the caret after it, as one step to undo. */
+  replace(start: number, end: number, text: string): void
   undo(): boolean
   redo(): boolean
   destroy(): void
@@ -40,6 +69,24 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let placeholder = options.placeholder ?? ''
   let composing = false
   let destroyed = false
+  const atoms = options.atoms ?? [imageAtom]
+  const drawn = new Map<HTMLElement, (() => void) | void>()
+  const drawAtom = (name: string, source: string) => {
+    const element = atomElement(name, source)
+    const atom = atoms.find(candidate => candidate.name === name)
+    if (atom?.draw) drawn.set(element, atom.draw(element, source))
+    else element.textContent = source
+    return element
+  }
+  /** Stop the atoms that are no longer on the page. */
+  const sweep = (all = false) => {
+    for (const [element, stop] of drawn) {
+      if (!all && host.contains(element)) continue
+      drawn.delete(element)
+      stop?.()
+    }
+  }
+  const draw = (element: HTMLElement, block: Block, reveal: Reveal) => renderBlock(element, block, reveal, atoms, drawAtom)
   const history = new History({ blocks, anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } })
 
   host.classList.add('aa')
@@ -51,7 +98,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const makeElement = (block: Block): HTMLElement => {
     const element = document.createElement('div')
     element.contentEditable = readOnly ? 'false' : 'true'
-    renderBlock(element, block, null)
+    draw(element, block, null)
     return element
   }
 
@@ -65,6 +112,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const renderAll = () => {
     host.replaceChildren(...blocks.map(makeElement))
     showPlaceholder()
+    sweep()
   }
 
   /** Bring the DOM to the new blocks, touching only the blocks that changed. */
@@ -81,6 +129,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     for (let i = start; i < endOld; i++) els[i].remove()
     for (const element of fresh) host.insertBefore(element, anchor)
     showPlaceholder()
+    sweep()
   }
 
   // ----- the selection -----
@@ -127,11 +176,34 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     let changed = false
     blocks.forEach((block, index) => {
       const reveal = revealFor(index, selection)
-      if (els[index].dataset.reveal === revealKey(block, reveal)) return
-      renderBlock(els[index], block, reveal)
+      if (els[index].dataset.reveal === revealKey(block, reveal, atoms)) return
+      draw(els[index], block, reveal)
       changed = true
     })
-    if (changed && selection) setSelection(selection.anchor, selection.focus)
+    if (!changed) return
+    sweep()
+    if (selection) setSelection(selection.anchor, selection.focus)
+  }
+
+  // ----- offsets into the Markdown -----
+
+  /** What stands between two blocks in the Markdown: a line break between bullets, a blank line otherwise. */
+  const gap = (index: number) => blocks[index].kind === 'bullet' && blocks[index + 1]?.kind === 'bullet' ? 1 : 2
+  const offsetOf = (pos: Pos) => {
+    let at = 0
+    for (let i = 0; i < pos.block; i++) at += blocks[i].source.length + gap(i)
+    return at + pos.offset
+  }
+  const posOf = (offset: number): Pos => {
+    let at = 0
+    for (let i = 0; i < blocks.length; i++) {
+      const end = at + blocks[i].source.length
+      if (offset <= end || i === blocks.length - 1) return { block: i, offset: Math.max(0, Math.min(offset - at, blocks[i].source.length)) }
+      // An offset between two blocks belongs to the end of the first.
+      if (offset < end + gap(i)) return { block: i, offset: blocks[i].source.length }
+      at = end + gap(i)
+    }
+    return { block: 0, offset: 0 }
   }
 
   // ----- changes -----
@@ -323,7 +395,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
-    if (destroyed || readOnly || composing || event.isComposing) return
+    if (destroyed || readOnly || composing || event.isComposing || event.defaultPrevented) return
     const mod = isMac ? event.metaKey : event.ctrlKey
     if (mod && !event.altKey && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return }
     if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return }
@@ -410,7 +482,28 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (element && element.parentElement === host) readBack(element)
   }
   const onSelectionChange = () => { if (!destroyed && !composing) applyReveal() }
-  const onDrop = (event: DragEvent) => event.preventDefault()
+  const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
+  // A file pasted is the product's to keep; Aa only says where it arrived.
+  const onPaste = (event: ClipboardEvent) => {
+    const files = filesOf(event.clipboardData)
+    if (!files.length || !options.onFiles || readOnly || destroyed) return
+    event.preventDefault()
+    options.onFiles(files)
+  }
+  const onDrop = (event: DragEvent) => {
+    event.preventDefault()
+    const files = filesOf(event.dataTransfer)
+    if (!files.length || !options.onFiles || readOnly || destroyed) return
+    // The caret goes where the files were let go, so they land there.
+    const range = document.caretRangeFromPoint?.(event.clientX, event.clientY)
+    const index = range ? blockIndexOf(range.startContainer) : -1
+    if (range && index >= 0) {
+      const pos = { block: index, offset: offsetIn(elements()[index], range.startContainer, range.startOffset) }
+      elements()[index].focus({ preventScroll: true })
+      setSelection(pos)
+    }
+    options.onFiles(files)
+  }
 
   host.addEventListener('beforeinput', onBeforeInput)
   host.addEventListener('input', onInput)
@@ -419,6 +512,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('cut', onCopy)
   host.addEventListener('click', onClick)
   host.addEventListener('drop', onDrop)
+  host.addEventListener('paste', onPaste)
   host.addEventListener('compositionstart', onCompositionStart)
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
@@ -452,6 +546,19 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       applyReveal({ anchor: pos, focus: pos })
     },
     blur() { (document.activeElement as HTMLElement | null)?.blur() },
+    selection() {
+      const selection = readSelection()
+      if (!selection) return null
+      const [a, b] = order(selection.anchor, selection.focus)
+      return { start: offsetOf(a), end: offsetOf(b) }
+    },
+    replace(start, end, text) {
+      if (destroyed) return
+      const { blocks: next, caret } = replaceRange(blocks, posOf(Math.min(start, end)), posOf(Math.max(start, end)), text)
+      commit(next, caret, caret, 'edit')
+      // Written from outside, by a picker or an upload, the editor may not have the focus to show the caret in.
+      if (!host.contains(document.activeElement)) { elements()[caret.block]?.focus({ preventScroll: true }); setSelection(caret) }
+    },
     undo,
     redo,
     destroy() {
@@ -463,9 +570,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('cut', onCopy)
       host.removeEventListener('click', onClick)
       host.removeEventListener('drop', onDrop)
+      host.removeEventListener('paste', onPaste)
       host.removeEventListener('compositionstart', onCompositionStart)
       host.removeEventListener('compositionend', onCompositionEnd)
       document.removeEventListener('selectionchange', onSelectionChange)
+      sweep(true)
     },
   }
 }
