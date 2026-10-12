@@ -24,8 +24,8 @@
 .aa-block[data-selected] { background: var(--aa-selection, var(--accent-color, var(--apple-green, Highlight))); }
 .aa-block[data-kind="bullet"] + .aa-block[data-kind="bullet"] { margin-top: 0; }
 
-/* Syntax: the Markdown's own characters, in a quiet grey while they show. */
-.aa-syntax { color: var(--aa-syntax, color-mix(in srgb, currentColor 38%, transparent)); font-style: normal; font-weight: inherit; text-decoration: none; }
+/* Markdown stays in the DOM for lossless storage, never on the editing surface. */
+.aa-syntax { display: none; }
 .aa-syntax[data-hidden] { display: none; }
 
 .aa-b { font-family: var(--aa-typeface-bold, var(--typeface-medium, inherit)); font-weight: var(--aa-weight-bold, var(--type-weight-bold, 600)); }
@@ -60,7 +60,7 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
   color: var(--aa-marker, currentColor);
   pointer-events: none;
 }
-.aa-block[data-kind="bullet"]:not([data-checked]):not([data-active])::before { content: "•"; }
+.aa-block[data-kind="bullet"]:not([data-checked])::before { content: "•"; }
 .aa-block[data-kind="bullet"][data-checked]::before {
   content: "";
   width: 0.8em;
@@ -77,8 +77,8 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-block[data-kind="bullet"][data-active] { padding-left: var(--aa-indent, 1.5em); }
 
 /* A divider: a hairline while its --- is hidden. */
-.aa-block[data-kind="divider"]:not([data-active]) { min-height: 1lh; }
-.aa-block[data-kind="divider"]:not([data-active])::before {
+.aa-block[data-kind="divider"] { min-height: 1lh; }
+.aa-block[data-kind="divider"]::before {
   content: "";
   position: absolute;
   left: 0;
@@ -99,8 +99,7 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
   white-space: nowrap;
 }
 
-/* While a ticked bullet is being edited its `[x]` shows, so the drawn box steps aside. */
-.aa-block[data-kind="bullet"][data-checked][data-active]::before { display: none; }
+/* Checkboxes remain visible while their text is edited. */
 
 /* An atom: one thing to the caret, drawn by the product or as its own words. */
 .aa-atom { -webkit-user-modify: read-only; cursor: default; }
@@ -139,7 +138,7 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-find span[aria-live] { padding-inline: calc(4px * var(--sf, 1)); white-space: nowrap; }
 .aa-find-match, .aa-highlight { background: var(--aa-highlight, var(--yellow, Highlight)); color: var(--aa-highlight-ink, inherit); }
 .aa-block[data-kind="bullet"] { margin-left: calc(var(--aa-depth, 0) * var(--aa-indent, 1.5em)); }
-.aa-block[data-kind="bullet"][data-number]:not([data-active])::before { content: attr(data-number) "."; }
+.aa-block[data-kind="bullet"][data-number]::before { content: attr(data-number) "."; }
 .aa-block[data-kind="callout"] { padding-left: var(--1, calc(20px * var(--sf, 1))); border-left: 1px solid var(--aa-rule, currentColor); }
 .aa-block[data-kind="callout"]::before { content: ""; position: absolute; left: 0; top: 0; width: var(--1, calc(20px * var(--sf, 1))); height: var(--1, calc(20px * var(--sf, 1))); background: currentColor; mask: var(--aa-callout-icon) center / calc(16px * var(--sf, 1)) no-repeat; cursor: pointer; }
 .aa-block[data-folded]:not([data-body-active]) .aa-callout-body { display: none; }
@@ -155,3 +154,5 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-peer-caret { position: relative; display: inline; border-left: calc(1px * var(--sf, 1)) solid var(--aa-accent, Highlight); }
 .aa-peer-caret::after { content: attr(data-label); position: absolute; bottom: 100%; left: 0; font-size: calc(10px * var(--sf, 1)); white-space: nowrap; background: var(--aa-accent, Highlight); color: HighlightText; }
 .aa-block[data-kind=callout][data-level] > span:not(.aa-syntax):not(.aa-callout-body) { font-weight: bold; }
+
+.aa-link-editor input { flex: 1; width: auto; }

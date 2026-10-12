@@ -447,10 +447,13 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const insertLink = (selection: Selection2) => {
     const [a, b] = order(selection.anchor, selection.focus)
     if (a.block !== b.block) return
-    const wrapped = wrapSelection(blocks, a, b, '[', '](url)')
-    if (!wrapped) return
-    const start = { block: a.block, offset: wrapped.focus.offset + 2 }
-    commit(wrapped.blocks, start, { block: a.block, offset: start.offset + 3 }, 'edit')
+    let start = a.offset, end = b.offset, text = blocks[a.block].source.slice(start, end), url = ''
+    for (const match of blocks[a.block].source.matchAll(/\[([^\]]*)\]\(([^)]*)\)/g)) {
+      if (a.offset >= match.index! && b.offset <= match.index! + match[0].length) {
+        start = match.index!; end = start + match[0].length; text = match[1]; url = match[2]; break
+      }
+    }
+    host.dispatchEvent(new CustomEvent('aa-link-request', { detail: { start: offsetOf({ block: a.block, offset: start }), end: offsetOf({ block: a.block, offset: end }), text, url } }))
   }
 
   const caretRect = (): DOMRect | null => {

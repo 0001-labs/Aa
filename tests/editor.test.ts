@@ -10,19 +10,19 @@ const block = (source: string, reveal: { from: number; to: number } | null = nul
 }
 
 describe('renderBlock', () => {
-  it('hides syntax until the caret is in its mark, and reads straight back', () => {
+  it('keeps syntax hidden while editing and reads Markdown straight back', () => {
     const quiet = block('a **b** c')
     expect(quiet.querySelectorAll('.aa-syntax[data-hidden]')).toHaveLength(2)
     expect(quiet.querySelector('.aa-b')?.textContent).toBe('b')
     expect(readBlock(quiet)).toBe('a **b** c')
     const inside = block('a **b** c', { from: 4, to: 4 })
-    expect(inside.querySelectorAll('.aa-syntax[data-hidden]')).toHaveLength(0)
+    expect(inside.querySelectorAll('.aa-syntax[data-hidden]')).toHaveLength(2)
     const after = block('a **b** c', { from: 8, to: 8 })
     expect(after.querySelectorAll('.aa-syntax[data-hidden]')).toHaveLength(2)
   })
-  it('shows a prefix only while the block is active', () => {
+  it('keeps block prefixes hidden even while the block is active', () => {
     expect(block('## T').querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(true)
-    expect(block('## T', { from: 3, to: 3 }).querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(false)
+    expect(block('## T', { from: 3, to: 3 }).querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(true)
     expect(block('## T').dataset).toMatchObject({ kind: 'heading', level: '2' })
   })
   it('gives an empty block a line to stand on', () => {

@@ -104,9 +104,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     if (run.kind === 'syntax') {
       const span = document.createElement('span')
       span.className = 'aa-syntax'
-      const shown = run.prefix ? !!reveal : !!reveal && !!run.group && reveal.from <= run.group[1] && reveal.to >= run.group[0]
-      if (!shown) span.setAttribute('data-hidden', '')
-      else visible = true
+      span.setAttribute('data-hidden', '')
       span.textContent = text
       destination.append(span)
       continue
@@ -264,7 +262,7 @@ export function pointAt(element: HTMLElement, offset: number): { node: Node; off
       const child = children[index]
       if (child.nodeType === Node.TEXT_NODE) {
         const length = (child.textContent ?? '').length
-        if (!isHidden(child) && offset >= count && offset <= count + length) { result = { node: child, offset: offset - count }; return true }
+        if (!isHidden(child) && offset <= count + length) { result = { node: child, offset: Math.max(0, offset - count) }; return true }
         count += length
         continue
       }

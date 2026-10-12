@@ -153,11 +153,28 @@ describe('controls, decorations and media', () => {
     expect((host!.querySelector('.aa-caption') as HTMLElement).contentEditable).toBe('false')
   })
 
-  it('selects the destination placeholder when the toolbar inserts a link', () => {
+  it('edits a link through a URL field without exposing Markdown', () => {
     const e = setup('Alpha beta', { toolbar: true }); e.selectRange(6, 10)
     e.format('link')
-    expect(e.value).toBe('Alpha [beta](url)')
-    expect(e.selection()).toEqual({ start: 13, end: 16 })
+    expect(e.value).toBe('Alpha beta')
+    const input = document.querySelector<HTMLInputElement>('[aria-label="Link URL"]')!
+    input.value = 'https://ezo.gs'
+    input.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    expect(e.value).toBe('Alpha [beta](https://ezo.gs)')
+    expect([...host!.querySelectorAll('.aa-syntax')].every(node => node.hasAttribute('data-hidden'))).toBe(true)
+  })
+  it('edits an existing link destination and cancels without changing Markdown', () => {
+    const e = setup('[Words](https://old.example)', { toolbar: true }); e.selectRange(2)
+    e.format('link')
+    const input = document.querySelector<HTMLInputElement>('[aria-label="Link URL"]')!
+    expect(input.value).toBe('https://old.example')
+    input.value = 'https://new.example'
+    input.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    expect(e.value).toBe('[Words](https://new.example)')
+    e.selectRange(2); e.format('link')
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    expect(e.value).toBe('[Words](https://new.example)')
+    expect(input.closest('form')!.hidden).toBe(true)
   })
   it('keeps block menus open when selecting a block scrolls it into view', () => {
     setup('Alpha beta', { toolbar: true })

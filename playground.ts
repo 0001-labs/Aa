@@ -35,7 +35,7 @@ defineAaEditor()
 
 const SAMPLE = `# Aa
 
-Aa is the text editor of 0001's products. What you write is **Markdown**, drawn as you write it: the marks show while the caret is in them and step aside when it leaves. Press ⌘B, ⌘I, ⌘E or ⌘K.
+Aa is the text editor of 0001's products. Write formatted text using the toolbar or Markdown shortcuts. Aa stores it as **Markdown** while keeping its syntax out of your way. Press ⌘B, ⌘I, ⌘E or ⌘K.
 
 ## Blocks
 

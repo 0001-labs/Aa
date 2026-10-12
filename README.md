@@ -1,6 +1,6 @@
 # Aa
 
-Markdown drawn as you write. One editable element per block, with source offsets preserved through formatting and atoms.
+Edit formatted text with the toolbar or typed Markdown shortcuts. Aa stores Markdown and keeps its syntax hidden, including while editing. One editable element per block preserves source offsets through formatting and atoms. Command/Control-K opens a URL field to add or edit a link.
 
 ```ts
 import { createEditor } from '@0001/aa'

@@ -69,6 +69,36 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const dropLine = document.createElement('div'); dropLine.className = 'aa-drop-line'; dropLine.hidden = true
   const findBar = document.createElement('div'); findBar.className = 'aa-controls aa-find'; findBar.hidden = true; findBar.setAttribute('role', 'search')
   document.body.append(menu, grip, dropLine, findBar)
+  const linkBar = document.createElement('form')
+  linkBar.className = 'aa-controls aa-find aa-link-editor'; linkBar.hidden = true
+  linkBar.setAttribute('aria-label', 'Edit link')
+  const linkUrl = document.createElement('input'); linkUrl.type = 'text'; linkUrl.placeholder = 'Link URL'; linkUrl.setAttribute('aria-label', 'Link URL')
+  const applyLink = document.createElement('button'); applyLink.type = 'submit'; applyLink.textContent = 'Apply'
+  const cancelLink = document.createElement('button'); cancelLink.type = 'button'; cancelLink.textContent = 'Cancel'
+  linkBar.append(linkUrl, applyLink, cancelLink); document.body.append(linkBar)
+  let linkTarget: { start: number; end: number; text: string; url: string } | null = null
+  const finishLink = () => { linkBar.hidden = true; if (linkTarget) editor.selectRange(linkTarget.start, linkTarget.end); linkTarget = null }
+  const requestLink = (event: Event) => {
+    linkTarget = (event as CustomEvent).detail
+    if (!linkTarget || editor.readOnly) return
+    linkUrl.value = linkTarget.url; linkBar.hidden = false
+    const rect = host.getBoundingClientRect()
+    const square = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--sf')) || 1)
+    linkBar.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - 16 * square))}px`
+    linkBar.style.top = `${Math.max(0, Math.min(rect.top, window.innerHeight - 3 * square))}px`
+    toolbar.hidden = true; linkUrl.focus(); linkUrl.select()
+  }
+  linkBar.addEventListener('submit', event => {
+    event.preventDefault()
+    if (!linkTarget || editor.readOnly || !linkUrl.value.trim()) return
+    const url = linkUrl.value.trim().replace(/\(/g, '%28').replace(/\)/g, '%29')
+    const label = linkTarget.text || url
+    editor.replace(linkTarget.start, linkTarget.end, `[${label}](${url})`)
+    linkBar.hidden = true; linkTarget = null
+  })
+  cancelLink.addEventListener('click', finishLink)
+  linkBar.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); finishLink() } })
+  host.addEventListener('aa-link-request', requestLink)
   let hovered = -1, active = 0, choices: readonly Command[] = [], slash: { from: number; to: number } | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
   let drag = -1, destination = -1, disposed = false
@@ -240,7 +270,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     editor.moveBlock(drag, destination > drag ? destination - 1 : destination)
     drag = -1; destination = -1
   }
-  const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; grip.hidden = true } }
+  const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; grip.hidden = true; linkBar.hidden = true; linkTarget = null } }
   const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); hovered = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
   const viewport = (event: Event) => {
     if (event.target instanceof Node && menu.contains(event.target)) return
@@ -264,7 +294,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   window.visualViewport?.addEventListener('resize', viewport)
   return () => {
     disposed = true; clearTimeout(timer)
-    toolbar.remove(); menu.remove(); grip.remove(); dropLine.remove(); findBar.remove()
+    toolbar.remove(); menu.remove(); grip.remove(); dropLine.remove(); findBar.remove(); linkBar.remove(); host.removeEventListener('aa-link-request', requestLink)
     host.removeEventListener('aa-selectionchange', selectionChanged); host.removeEventListener('aa-change', changed)
     host.removeEventListener('mousemove', hover); host.removeEventListener('keydown', keyboard, true)
     host.removeEventListener('contextmenu', contextMenu)
