@@ -1,3 +1,4 @@
+import checkIcon from './icons/check.svg?raw'
 import noteIcon from './icons/note.svg?raw'
 import icon0 from "./icons/bold.svg?raw"
 import icon1 from "./icons/bullet.svg?raw"
@@ -32,6 +33,7 @@ import icon29 from "./icons/todo.svg?raw"
 import icon30 from "./icons/toggle.svg?raw"
 import icon31 from "./icons/up.svg?raw"
 export const icons: Record<string, string> = {
+  "./icons/check.svg": checkIcon,
   "./icons/note.svg": noteIcon,
   "./icons/bold.svg": icon0,
   "./icons/bullet.svg": icon1,

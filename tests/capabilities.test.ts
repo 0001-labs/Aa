@@ -30,6 +30,14 @@ describe('nesting', () => {
 })
 
 describe('callouts and equations', () => {
+  it('initializes an editor containing the playground tip callout', () => {
+    const value = '# Aa\n\n> [!tip] A callout\n> Its body stays Markdown.'
+    const e = setup(value)
+    expect(e.value).toBe(value)
+    expect(host!.textContent).toContain('Its body stays Markdown.')
+    expect((host!.querySelector('[data-callout="tip"]') as HTMLElement).style.getPropertyValue('--aa-callout-icon')).toContain('data:image/svg+xml')
+  })
+
   it('folds and opens callouts without changing their body', () => {
     const blocks = fromMarkdown('> [!warning] Title\n> Body')
     expect(blocks[0]).toMatchObject({ kind: 'callout', callout: 'warning', folded: false })
