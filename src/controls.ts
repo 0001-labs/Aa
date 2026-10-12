@@ -104,7 +104,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   let drag = -1, destination = -1, disposed = false
   const moveMenu = (rect: DOMRect) => {
     const size = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--sf')) || 1)
-    menu.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - 8 * size))}px`
+    menu.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - 4 * size))}px`
     menu.style.top = `${Math.max(0, Math.min(rect.bottom, window.innerHeight - Math.min(choices.length, 12) * size))}px`
   }
   const close = () => { menu.hidden = true; slash = null; menu.replaceChildren(); host.removeAttribute('aria-controls') }
