@@ -127,10 +127,23 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-icon { display: inline-block; width: calc(16px * var(--sf, 1)); height: calc(16px * var(--sf, 1)); background: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; flex-shrink: 0; }
 .aa-toolbar { display: flex; height: var(--aa-square); border: 1px solid var(--aa-rule, currentColor); overflow-x: auto; max-width: 100vw; }
 .aa-toolbar[data-docked] { width: 100%; }
-.aa-menu { width: calc(8 * var(--aa-square)); max-height: calc(12 * var(--aa-square)); overflow-y: auto; border: 1px solid var(--aa-rule, currentColor); }
-.aa-menu button { display: flex; width: 100%; justify-content: flex-start; gap: calc(4px * var(--sf, 1)); padding-inline: calc(4px * var(--sf, 1)); white-space: nowrap; }
+.aa-menu {
+  display: flex; flex-direction: column; gap: calc(1px * var(--sf, 1));
+  width: calc(8 * var(--aa-square)); max-height: calc(12 * var(--aa-square));
+  overflow-y: auto; border: 0; border-radius: var(--ezo-item-radius, 0px);
+  clip-path: inset(0 round var(--ezo-item-radius, 0px));
+  background: transparent; color: var(--white, white);
+  font-size: calc(13px * var(--sf, 1)); line-height: 1;
+}
+.aa-menu button {
+  display: flex; width: 100%; justify-content: flex-start;
+  gap: calc(2px * var(--sf, 1)); padding: 0 calc(2px * var(--sf, 1)) 0 calc(3px * var(--sf, 1));
+  white-space: nowrap; background: var(--black, black); color: var(--white, white);
+}
+.aa-menu button:hover, .aa-menu button[data-current], .aa-menu button:focus-visible { background: var(--black, black); color: var(--white, white); }
+.aa-menu button[data-current] { outline: 1px solid currentColor; outline-offset: -1px; }
 .aa-menu button span:last-child { overflow: hidden; text-overflow: ellipsis; }
-.aa-menu-empty { display: block; padding-inline: calc(4px * var(--sf, 1)); }
+.aa-menu-empty { display: block; padding-inline: calc(3px * var(--sf, 1)); line-height: var(--aa-square); background: var(--black, black); }
 .aa-grip { display: flex; background: transparent; }
 .aa-drop-line { position: fixed; z-index: 1000; height: 1px; background: var(--accent-color, var(--apple-green, Highlight)); pointer-events: none; }
 .aa-find { display: flex; flex-wrap: wrap; width: calc(16 * var(--aa-square)); max-width: calc(100vw - 2 * var(--aa-square) - 2px); border: 1px solid var(--aa-rule, currentColor); }
