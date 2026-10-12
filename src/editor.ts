@@ -5,10 +5,13 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, type AtomSyntax, type Block } from './markdown'
+import { IMAGE, EQUATION, type AtomSyntax, type Block } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type Snapshot } from './history'
-import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal } from './render'
+import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
+import { indentBlocks, renumber, toggleCallout } from './document'
+import { editTable, fromTSV, tableRows, type TableAction } from './table'
+import { createControls, type Command, type ToolbarAction } from './controls'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -22,12 +25,18 @@ export const imageAtom: Atom = {
   ...IMAGE,
   draw(element, source) {
     const [, alt = '', src = ''] = /^!\[([^\]]*)\]\(([^)]*)\)$/.exec(source) ?? []
-    const image = document.createElement('img')
-    image.src = src
-    image.alt = alt
-    image.loading = 'lazy'
-    image.draggable = false
-    element.append(image)
+    const extension = src.split(/[?#]/)[0].split('.').pop()?.toLowerCase()
+    if (extension && /^(mp4|webm|mov|mp3|wav|ogg|m4a)$/.test(extension)) {
+      const media = document.createElement(/^(mp4|webm|mov)$/.test(extension) ? 'video' : 'audio')
+      media.src = src; media.controls = true; media.preload = 'metadata'
+      media.setAttribute('aria-label', alt)
+      element.append(media)
+    } else {
+      const image = document.createElement('img')
+      image.src = src; image.alt = alt; image.loading = 'lazy'; image.draggable = false
+      element.append(image)
+    }
+    const caption = document.createElement('span'); caption.className = 'aa-caption'; caption.textContent = alt; caption.contentEditable = 'true'; caption.dataset.placeholder = 'Add a caption'; element.append(caption)
   },
 }
 
@@ -41,6 +50,11 @@ export type EditorOptions = {
   atoms?: readonly Atom[]
   /** Files pasted or dropped into the editor. Without it, they are ignored. */
   onFiles?: (files: File[]) => void
+  toolbar?: boolean | readonly ToolbarAction[]
+  commands?: readonly Command[]
+  blockCommands?: readonly Command[]
+  menus?: boolean
+  drawEquation?: (element: HTMLElement, source: string, display: boolean) => void | (() => void)
 }
 
 export type Editor = {
@@ -56,6 +70,22 @@ export type Editor = {
   replace(start: number, end: number, text: string): void
   undo(): boolean
   redo(): boolean
+  activeBlock(): { index: number; start: number; end: number; block: Block } | null
+  selectBlocks(anchor: number, focus?: number): void
+  format(mark: 'bold' | 'italic' | 'strike' | 'code' | 'link' | 'equation' | 'highlight'): void
+  turnInto(kind: TurnKind): void
+  blockAction(action: 'delete' | 'duplicate' | 'up' | 'down'): void
+  moveBlock(from: number, to: number): void
+  indent(direction: -1 | 1): void
+  toggle(open?: boolean): void
+  table(action: TableAction): void
+  insertFile(file: File): void
+  decorate(ranges: readonly Decoration[], layer?: string): void
+  stats(): { words: number; characters: number; blocks: number }
+  find(query: string, caseSensitive?: boolean): { start: number; end: number }[]
+  selectRange(start: number, end?: number): void
+  transaction(action: () => void): void
+  setHistoryProvider(provider: { undo(): boolean; redo(): boolean } | null): void
   destroy(): void
 }
 
@@ -71,13 +101,19 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let destroyed = false
   let selected: BlockSelection | null = null
   let plainPaste = false
-  const atoms = options.atoms ?? [imageAtom]
+  let decorations: readonly Decoration[] = []
+  const decorationLayers = new Map<string, readonly Decoration[]>()
+  let stopControls = () => {}
+  let transactionDepth = 0
+  let historyProvider: { undo(): boolean; redo(): boolean } | null = null
+  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }]
   const drawn = new Map<HTMLElement, (() => void) | void>()
   const drawAtom = (name: string, source: string) => {
     const element = atomElement(name, source)
     const atom = atoms.find(candidate => candidate.name === name)
     if (atom?.draw) drawn.set(element, atom.draw(element, source))
     else element.textContent = source
+    element.querySelectorAll<HTMLElement>('.aa-caption').forEach(caption => caption.contentEditable = readOnly ? 'false' : 'true')
     return element
   }
   /** Stop the atoms that are no longer on the page. */
@@ -88,7 +124,12 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       stop?.()
     }
   }
-  const draw = (element: HTMLElement, block: Block, reveal: Reveal) => renderBlock(element, block, reveal, atoms, drawAtom)
+  const draw = (element: HTMLElement, block: Block, reveal: Reveal) => {
+    element.dataset.readonly = String(readOnly)
+    const index = blocks.indexOf(block)
+    const offset = index < 0 ? 0 : offsetOf({ block: index, offset: 0 })
+    renderBlock(element, block, reveal, atoms, drawAtom, decorations.map(range => ({ ...range, from: range.from - offset, to: range.to - offset })))
+  }
   const history = new History({ blocks, anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } })
 
   host.classList.add('aa')
@@ -214,11 +255,17 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const commit = (next: Block[], anchor: Pos, focus: Pos, kind: 'type' | 'edit') => {
     clearBlocks()
-    syncDom(next)
+    const numbered = renumber(next)
+    const adjust = (pos: Pos) => ({ ...pos, offset: Math.max(0, pos.offset + numbered[pos.block].prefix - next[pos.block].prefix) })
+    anchor = adjust(anchor); focus = adjust(focus)
+    syncDom(numbered)
     setSelection(anchor, focus)
     applyReveal({ anchor, focus })
-    history.record(snapshot(anchor, focus), kind)
-    options.onChange?.(toMarkdown(blocks))
+    if (!transactionDepth) {
+      history.record(snapshot(anchor, focus), kind)
+      options.onChange?.(toMarkdown(blocks))
+      host.dispatchEvent(new Event('aa-change'))
+    }
   }
 
   const restore = (state: Snapshot) => {
@@ -227,10 +274,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     setSelection(state.anchor, state.focus)
     applyReveal({ anchor: state.anchor, focus: state.focus })
     options.onChange?.(toMarkdown(blocks))
+    host.dispatchEvent(new Event('aa-change'))
   }
 
-  const undo = () => { const state = history.undo(); if (state) restore(state); return !!state }
-  const redo = () => { const state = history.redo(); if (state) restore(state); return !!state }
+  const undo = () => { if (readOnly) return false; if (historyProvider) return historyProvider.undo(); const state = history.undo(); if (state) restore(state); return !!state }
+  const redo = () => { if (readOnly) return false; if (historyProvider) return historyProvider.redo(); const state = history.redo(); if (state) restore(state); return !!state }
 
   /** The block the browser just changed, read back into the document. */
   const readBack = (element: HTMLElement, kind: 'type' | 'edit' = 'type') => {
@@ -270,6 +318,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const onBeforeInput = (event: InputEvent) => {
     if (destroyed) return
     if (readOnly) { event.preventDefault(); return }
+    if ((event.target as HTMLElement).closest?.('.aa-caption')) return
     const type = event.inputType
     if (type === 'historyUndo') { event.preventDefault(); undo(); return }
     if (type === 'historyRedo') { event.preventDefault(); redo(); return }
@@ -280,6 +329,10 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const spanning = a.block !== b.block
     const collapsed = !spanning && a.offset === b.offset
     const block = blocks[a.block]
+    if (block.kind === 'table') {
+      const cell = tableRows(block.source).flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
+      if (cell && collapsed && ((type === 'deleteContentBackward' && a.offset === cell.from) || (type === 'deleteContentForward' && a.offset === cell.to))) { event.preventDefault(); return }
+    }
     switch (type) {
       // Enter is handled on keydown, where Shift can be read. A line break
       // arriving here came some other way (a keyboard that composes, say) and
@@ -341,12 +394,35 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const onInput = (event: Event) => {
     if (destroyed || readOnly) return
     if (composing || (event instanceof InputEvent && event.isComposing)) return
+    const caption = (event.target as HTMLElement).closest?.('.aa-caption') as HTMLElement | null
+    if (caption) {
+      const atom = caption.closest('.aa-atom') as HTMLElement
+      const blockElement = atom.closest('.aa-block') as HTMLElement
+      const index = elements().indexOf(blockElement)
+      const source = atom.dataset.source ?? ''
+      const nextSource = source.replace(/^!\[[^\]]*\]/, `![${(caption.textContent ?? '').replace(/\]/g, '').replace(/\n/g, ' ')}]`)
+      atom.dataset.source = nextSource
+      const next = [...blocks]
+      next[index] = { ...blocks[index], source: readBlock(blockElement) }
+      blocks = next
+      const pos = { block: index, offset: offsetIn(blockElement, atom, 1) }
+      history.record(snapshot(pos, pos), 'type')
+      options.onChange?.(toMarkdown(blocks)); host.dispatchEvent(new Event('aa-change'))
+      return
+    }
     const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
     if (element && element.parentElement === host) readBack(element)
   }
 
   /** Enter: the block ends here and the next begins; with Shift, a line break within it. */
   const enter = (selection: Selection2, soft = false) => {
+    if (blocks[selection.focus.block].kind === 'table') {
+      const index = selection.focus.block
+      const next = [...blocks.slice(0, index + 1), { kind: 'paragraph' as const, source: '', prefix: 0 }, ...blocks.slice(index + 1)]
+      const pos = { block: index + 1, offset: 0 }
+      commit(next, pos, pos, 'edit'); return
+    }
+    if (blocks[selection.focus.block].kind === 'callout' && !soft) { insert(selection, '\n> '); return }
     if (soft) { insert(selection, '\n'); return }
     const [a, b] = order(selection.anchor, selection.focus)
     let current = blocks, pos = a
@@ -421,6 +497,10 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (destroyed || readOnly || composing || event.isComposing || event.defaultPrevented) return
+    if ((event.target as HTMLElement).closest?.('.aa-caption')) {
+      if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); (event.target as HTMLElement).blur() }
+      return
+    }
     const mod = isMac ? event.metaKey : event.ctrlKey
     if (mod && !event.altKey && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return }
     if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return }
@@ -437,6 +517,36 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       return
     }
     const range = selected ?? select(blocks, selection.anchor.block, selection.focus.block)
+    const tableBlock = blocks[selection.focus.block]
+    if (tableBlock.kind === 'table' && !mod && !event.shiftKey && selection.anchor.offset === selection.focus.offset && /^Arrow/.test(event.key)) {
+      const rows = tableRows(tableBlock.source), cells = rows.flat()
+      const index = cells.findIndex(cell => selection.focus.offset >= cell.from && selection.focus.offset <= cell.to)
+      const cell = cells[index]
+      let next: typeof cell | undefined
+      if (cell && event.key === 'ArrowLeft' && selection.focus.offset === cell.from) next = cells[index - 1]
+      if (cell && event.key === 'ArrowRight' && selection.focus.offset === cell.to) next = cells[index + 1]
+      if (cell && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) next = cells[index + (event.key === 'ArrowUp' ? -rows[0].length : rows[0].length)]
+      if (next) { event.preventDefault(); const pos = { block: selection.focus.block, offset: event.key === 'ArrowLeft' ? next.to : next.from }; elements()[pos.block].querySelectorAll<HTMLElement>('[data-cell]')[cells.indexOf(next)]?.focus(); setSelection(pos); return }
+    }
+    if (event.key === 'Tab' && !mod && !event.altKey) {
+      const block = blocks[selection.focus.block]
+      if (block.kind === 'table') {
+        event.preventDefault()
+        const cells = tableRows(block.source).flat()
+        const current = cells.findIndex(cell => selection.focus.offset >= cell.from && selection.focus.offset <= cell.to)
+        const next = cells[current + (event.shiftKey ? -1 : 1)]
+        if (next) { const pos = { block: selection.focus.block, offset: next.from }; setSelection(pos); elements()[pos.block].querySelectorAll<HTMLElement>('[data-cell]')[cells.indexOf(next)]?.focus(); setSelection(pos) }
+        else if (!event.shiftKey) enter(selection)
+        return
+      }
+      if (block.kind === 'bullet') { event.preventDefault(); const change = indentBlocks(blocks, range, event.shiftKey ? -1 : 1); if (change) commit(change.blocks, change.caret, change.caret, 'edit'); return }
+    }
+    if (mod && event.altKey && key === 't') {
+      event.preventDefault()
+      let next = blocks
+      for (let i = 0; i < next.length; i++) next = toggleCallout(next, i, true)?.blocks ?? next
+      commit(next, selection.anchor, selection.focus, 'edit'); return
+    }
     if (mod && key === 'd' && !event.altKey) { event.preventDefault(); changeBlocks('duplicate', range); return }
     if (mod && event.shiftKey && (key === 'arrowup' || key === 'arrowdown')) { event.preventDefault(); changeBlocks(key === 'arrowup' ? 'up' : 'down', range); return }
     const digit = /^Digit[0-9]$/.test(event.code) ? Number(event.code.slice(-1)) : /^\d$/.test(key) ? Number(key) : -1
@@ -448,7 +558,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     }
     if (mod && event.key === 'Enter') {
       event.preventDefault()
-      const change = toggleBox(blocks, selection.focus.block)
+      const change = toggleBox(blocks, selection.focus.block) ?? toggleCallout(blocks, selection.focus.block)
       if (change) commit(change.blocks, change.caret, change.caret, 'edit')
       return
     }
@@ -543,6 +653,9 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (!element || element.parentElement !== host || readOnly) return
     const index = elements().indexOf(element)
     const block = blocks[index]
+    if (block.kind === 'callout' && event.clientX - element.getBoundingClientRect().left < parseFloat(getComputedStyle(element).paddingLeft)) {
+      event.preventDefault(); const change = toggleCallout(blocks, index); if (change) commit(change.blocks, change.caret, change.caret, 'edit'); return
+    }
     if (block.kind !== 'bullet' || block.checked === undefined) return
     const rect = element.getBoundingClientRect()
     const box = parseFloat(getComputedStyle(element).paddingLeft)
@@ -558,7 +671,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
     if (element && element.parentElement === host) readBack(element)
   }
-  const onSelectionChange = () => { if (!destroyed && !composing) applyReveal() }
+  const onSelectionChange = () => { if (!destroyed && !composing && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); host.dispatchEvent(new Event('aa-selectionchange')) } }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
@@ -575,7 +688,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const [a, b] = order(selection.anchor, selection.focus)
     if (!plain && a.block === b.block && a.offset !== b.offset && /^https?:\/\/[^\s<>]+$/i.test(text.trim())) {
       wrap(selection, '[', `](${text.trim().replace(/\(/g, '%28').replace(/\)/g, '%29')})`)
-    } else insert(selection, text.replace(/\r\n?/g, '\n'))
+    } else insert(selection, (!plain ? fromTSV(text) : null) ?? text.replace(/\r\n?/g, '\n'))
   }
   const onDrop = (event: DragEvent) => {
     event.preventDefault()
@@ -611,10 +724,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (value === readOnly) return
     readOnly = value
     clearBlocks()
-    for (const element of elements()) element.contentEditable = value ? 'false' : 'true'
+    for (const element of elements()) { element.contentEditable = value || element.dataset.kind === 'table' ? 'false' : 'true'; element.dataset.readonly = String(value); element.querySelectorAll<HTMLElement>('[data-cell], .aa-caption').forEach(cell => cell.contentEditable = value ? 'false' : 'true') }
+    host.dispatchEvent(new Event('aa-change'))
   }
 
-  return {
+  const editor: Editor = {
     element: host,
     get value() { return toMarkdown(blocks) },
     set value(text: string) {
@@ -651,8 +765,36 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     },
     undo,
     redo,
+    activeBlock() { const selection = readSelection(); if (!selection) return null; const index = selection.focus.block; return { index, block: blocks[index], start: offsetOf({ block: index, offset: 0 }), end: offsetOf({ block: index, offset: blocks[index].source.length }) } },
+    selectBlocks,
+    format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark], mark === 'link' ? '](url)' : delimiters[mark]) },
+    turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
+    blockAction(action) { if (readOnly) return; const selection = readSelection(); if (selection) changeBlocks(action, selected ?? select(blocks, selection.anchor.block, selection.focus.block)) },
+    moveBlock(from, to) { if (readOnly || from < 0 || to < 0 || from >= blocks.length || to >= blocks.length || from === to) return; const next = [...blocks], moved = next.splice(from, 1)[0]; next.splice(to, 0, moved); const pos = { block: to, offset: moved.prefix }; commit(next, pos, pos, 'edit'); selectBlocks(to) },
+    indent(direction) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = indentBlocks(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), direction); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
+    toggle(open) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = toggleCallout(blocks, selection.focus.block, open) ?? toggleBox(blocks, selection.focus.block); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
+    table(action) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const index = selection.focus.block, block = blocks[index]; if (block.kind !== 'table') return; const rows = tableRows(block.source); let row = 0, column = 0; rows.forEach((cells, r) => cells.forEach((cell, c) => { if (selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) { row = r; column = c } })); const source = editTable(block, action, row, column); const change = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: block.source.length }, source); const pos = { block: index, offset: tableRows(source)[Math.min(row, tableRows(source).length - 1)][Math.min(column, tableRows(source)[0].length - 1)].from }; commit(change.blocks, pos, pos, 'edit') },
+    insertFile(file) { if (!readOnly && !destroyed) options.onFiles?.([file]) },
+    decorate(ranges, layer = 'external') { decorationLayers.set(layer, ranges.map(range => ({ ...range }))); decorations = [...decorationLayers.values()].flat(); const selection = readSelection(); blocks.forEach((block, index) => draw(elements()[index], block, revealFor(index, selection))); if (selection) setSelection(selection.anchor, selection.focus); sweep() },
+    stats() { const text = blocks.flatMap(block => block.kind === 'code' ? [] : [block.source.slice(block.prefix)]).join(' ').replace(/[*_~`#>|=$\[\]()]/g, ' '); const words = typeof Intl.Segmenter === 'function' ? [...new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text)].filter(part => part.isWordLike).length : (text.match(/\S+/g)?.length ?? 0); return { words, characters: [...toMarkdown(blocks)].length, blocks: blocks.length } },
+    find(query, caseSensitive = false) { if (!query) return []; const text = caseSensitive ? toMarkdown(blocks) : toMarkdown(blocks).toLocaleLowerCase(); const needle = caseSensitive ? query : query.toLocaleLowerCase(); const matches: { start: number; end: number }[] = []; for (let start = text.indexOf(needle); start >= 0; start = text.indexOf(needle, start + needle.length)) matches.push({ start, end: start + query.length }); return matches },
+    selectRange(start, end = start) { const a = posOf(start), b = posOf(end); clearBlocks(); elements()[a.block].focus(); setSelection(a, b); applyReveal() },
+    transaction(action) {
+      const before = toMarkdown(blocks)
+      transactionDepth++
+      try { action() } finally {
+        transactionDepth--
+        if (!transactionDepth && toMarkdown(blocks) !== before) {
+          const selection = readSelection() ?? { anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } }
+          history.record(snapshot(selection.anchor, selection.focus), 'edit')
+          options.onChange?.(toMarkdown(blocks)); host.dispatchEvent(new Event('aa-change'))
+        }
+      }
+    },
+    setHistoryProvider(provider) { historyProvider = provider },
     destroy() {
       destroyed = true
+      stopControls()
       host.removeEventListener('beforeinput', onBeforeInput)
       host.removeEventListener('input', onInput)
       host.removeEventListener('keydown', onKeyDown)
@@ -668,4 +810,6 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       sweep(true)
     },
   }
+  stopControls = createControls(editor, options)
+  return editor
 }

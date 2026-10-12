@@ -1,5 +1,5 @@
 import './src/aa.css'
-import { defineAaEditor, type AaEditorElement } from './src/index'
+import { createEditor, defineAaEditor, type AaEditorElement } from './src/index'
 
 defineAaEditor()
 
@@ -17,6 +17,24 @@ Escape selects a block. ⌘A selects this block, then the whole document. Shift-
 - Another, with a [link](https://ezo.gs) and some \`code\`
 - [ ] Something to do
 - [x] Something done
+  - A nested bullet: Tab indents, Shift-Tab outdents
+
+> [!tip] A callout
+> Its body stays Markdown. Click its icon or press ⌘Enter to fold it.
+
+> [!note]- A folded note
+> The title holds the body while it is folded.
+
+| Capability | Try it |
+| --- | --- |
+| Tables | Tab moves between cells; Enter leaves the table |
+| Menus | Type /, or use the handle beside a block |
+
+==Highlight a thought==, or write an equation: $E = mc^2$.
+
+$$
+a^2 + b^2 = c^2
+$$
 
 > A quote, in italics, with *emphasis* and ~~a change of mind~~ in it.
 
@@ -41,3 +59,18 @@ readOnly.addEventListener('click', () => {
 })
 document.getElementById('undo')!.addEventListener('click', () => { editor.undo(); show() })
 document.getElementById('redo')!.addEventListener('click', () => { editor.redo(); show() })
+
+document.getElementById('share')!.addEventListener('click', async event => {
+  (event.currentTarget as HTMLButtonElement).disabled = true
+  const [{ connectCollaboration }, Y] = await Promise.all([import('./src/collaboration'), import('yjs')])
+  const doc = new Y.Doc(), listeners = new Set<(state: Uint8Array) => void>()
+  let initialized = false
+  const transport = {
+    initialize: async (markdown: string) => { if (!initialized) { doc.getText('markdown').insert(0, markdown); initialized = true }; return Y.encodeStateAsUpdate(doc) },
+    subscribe: (receive: (state: Uint8Array) => void) => { listeners.add(receive); return () => { listeners.delete(receive) } },
+    send: async (update: Uint8Array) => { Y.applyUpdate(doc, update); const state = Y.encodeStateAsUpdate(doc); listeners.forEach(receive => receive(state)) },
+  }
+  const first = createEditor(document.getElementById('shared-first')!, { value: 'Write here; the second editor follows. Undo keeps the other editor’s changes.', toolbar: true })
+  const second = createEditor(document.getElementById('shared-second')!, { toolbar: true })
+  await Promise.all([connectCollaboration(first, transport, { id: 'first' }).ready, connectCollaboration(second, transport, { id: 'second' }).ready])
+})

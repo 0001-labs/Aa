@@ -40,12 +40,17 @@
 <main>
   <section>
     <div class="bar"><h1 style="margin:0">Aa</h1><button id="readonly" aria-pressed="false">Read only</button><button id="undo">Undo</button><button id="redo">Redo</button></div>
-    <aa-editor id="editor" placeholder="Write"></aa-editor>
+    <aa-editor id="editor" placeholder="Write" toolbar></aa-editor>
   </section>
   <section class="side">
     <h1>What it stores</h1>
     <pre id="source"></pre>
   </section>
+  <section>
+    <div class="bar"><h1 style="margin:0">Shared editing</h1><button id="share">Try two editors</button></div>
+    <div id="shared-first"></div>
+  </section>
+  <section><h1>Second editor</h1><div id="shared-second"></div></section>
 </main>
 <script type="module" src="/playground.ts"></script>
 </body>

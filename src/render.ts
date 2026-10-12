@@ -6,6 +6,10 @@
  */
 
 import { blockRuns, DEFAULT_ATOMS, type AtomSyntax, type Block } from './markdown'
+import { tableRows } from './table'
+import { icons } from './icons'
+
+export type Decoration = { from: number; to: number; className: string; label?: string }
 
 /**
  * Makes the element an atom is drawn in: a `.aa-atom` that is not editable,
@@ -39,14 +43,14 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
   if (!reveal) return ''
   const groups: string[] = []
   for (const run of blockRuns(block, atoms)) {
-    if (run.kind !== 'syntax' || !run.group) continue
+    if (!run.group) continue
     const key = `${run.group[0]}-${run.group[1]}`
     if (reveal.from <= run.group[1] && reveal.to >= run.group[0] && !groups.includes(key)) groups.push(key)
   }
   return `on:${groups.join(',')}`
 }
 
-export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS, draw: AtomDrawer = drawAtomAsText) {
+export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS, draw: AtomDrawer = drawAtomAsText, decorations: readonly Decoration[] = []) {
   element.className = 'aa-block'
   element.dataset.kind = block.kind
   if (block.level) element.dataset.level = String(block.level)
@@ -55,6 +59,21 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   else element.dataset.checked = block.checked ? 'true' : 'false'
   element.toggleAttribute('data-active', !!reveal)
   element.dataset.reveal = revealKey(block, reveal, atoms)
+  element.style.setProperty('--aa-depth', String(block.depth ?? 0))
+  if (block.number !== undefined) element.dataset.number = String(block.number)
+  else delete element.dataset.number
+  if (block.kind === 'callout') {
+    const icon = icons[`./icons/${block.folded ? 'toggle' : block.callout === 'tip' ? 'check' : block.callout === 'warning' || block.callout === 'caution' ? 'callout' : 'note'}.svg`]
+    element.style.setProperty('--aa-callout-icon', `url("data:image/svg+xml,${encodeURIComponent(icon.replace(/currentColor/g, 'black'))}")`)
+    element.dataset.callout = block.callout
+    element.toggleAttribute('data-folded', !!block.folded)
+    element.toggleAttribute('data-body-active', !!reveal && reveal.to > block.source.indexOf('\n') && block.source.includes('\n'))
+  } else {
+    delete element.dataset.callout
+    element.removeAttribute('data-folded')
+    element.removeAttribute('data-body-active')
+  }
+  if (block.kind === 'table') { renderTable(element, block, decorations); renderCarets(element, decorations); return }
 
   // An atom already drawn for the same words is kept rather than drawn
   // again, so a picture does not load twice as the caret moves past it.
@@ -65,15 +84,20 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   }
 
   const fragment = document.createDocumentFragment()
+  const body = document.createElement('span')
+  body.className = 'aa-callout-body'
+  let destination: DocumentFragment | HTMLElement = fragment
   let visible = false
   let lastBreak = false
   for (const run of blockRuns(block, atoms)) {
+    if (block.kind === 'callout' && run.from >= block.source.indexOf('\n') && block.source.includes('\n') && destination === fragment) { fragment.append(body); destination = body }
     lastBreak = run.kind === 'break'
-    if (run.kind === 'break') { fragment.append(document.createElement('br')); continue }
+    if (run.kind === 'break') { destination.append(document.createElement('br')); continue }
     const text = block.source.slice(run.from, run.to)
     if (!text) continue
     if (run.kind === 'atom') {
-      fragment.append(kept.get(`${run.atom}\u0000${text}`)?.shift() ?? draw(run.atom!, text))
+      if (run.group && reveal && reveal.from <= run.to && reveal.to >= run.from) destination.append(document.createTextNode(text))
+      else destination.append(kept.get(`${run.atom}\u0000${text}`)?.shift() ?? draw(run.atom!, text))
       visible = true
       continue
     }
@@ -84,7 +108,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
       if (!shown) span.setAttribute('data-hidden', '')
       else visible = true
       span.textContent = text
-      fragment.append(span)
+      destination.append(span)
       continue
     }
     visible = true
@@ -94,8 +118,10 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     if (run.italic) node.classList.add('aa-i')
     if (run.strike) node.classList.add('aa-s')
     if (run.code) node.classList.add('aa-c')
+    if (run.highlight) node.classList.add('aa-highlight')
     node.textContent = text
-    fragment.append(node)
+    decorateNode(node, run.from, decorations)
+    destination.append(node)
   }
   // A block with no line to stand on gets one: an empty block, one ending on
   // a line break, or one whose every character is hidden syntax.
@@ -104,6 +130,71 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     filler.dataset.filler = ''
     fragment.append(filler)
   }
+  element.replaceChildren(fragment)
+  renderCarets(element, decorations)
+}
+
+function decorateNode(node: HTMLElement, offset: number, decorations: readonly Decoration[]) {
+  const text = node.textContent ?? ''
+  const ranges = decorations.filter(range => range.from < offset + text.length && range.to > offset)
+  if (!ranges.length) return
+  const points = [...new Set([0, text.length, ...ranges.flatMap(range => [Math.max(0, range.from - offset), Math.min(text.length, range.to - offset)])])].sort((a, b) => a - b)
+  node.replaceChildren()
+  for (let i = 1; i < points.length; i++) {
+    const start = points[i - 1], end = points[i]
+    const span = document.createElement('span')
+    span.textContent = text.slice(start, end)
+    for (const range of ranges) if (range.from < offset + end && range.to > offset + start) {
+      span.classList.add(...range.className.split(/\s+/).filter(Boolean))
+      if (range.label) span.title = range.label
+    }
+    node.append(span)
+  }
+}
+
+function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) {
+  for (const caret of decorations.filter(range => range.from === range.to && range.from >= 0 && range.from <= readBlock(element).length)) {
+    const marker = document.createElement('span'); marker.className = `${caret.className} aa-peer-caret`; marker.contentEditable = 'false'; marker.dataset.label = caret.label ?? ''; marker.title = caret.label ?? ''
+    const point = pointAt(element, caret.from)
+    const range = document.createRange(); range.setStart(point.node, point.offset); range.collapse(true); range.insertNode(marker)
+  }
+}
+
+function renderTable(element: HTMLElement, block: Block, decorations: readonly Decoration[]) {
+  element.contentEditable = 'false'
+  const rows = tableRows(block.source)
+  const fragment = document.createDocumentFragment()
+  let offset = 0
+  rows.forEach((cells, row) => {
+    const line = document.createElement('span')
+    line.className = 'aa-table-row'
+    line.style.setProperty('--aa-columns', String(cells.length))
+    cells.forEach((cell, column) => {
+      const node = document.createElement('span')
+      node.className = 'aa-table-cell'
+      node.dataset.cell = `${row}:${column}`
+      node.dataset.from = String(cell.from)
+      node.dataset.to = String(cell.to)
+      node.contentEditable = element.dataset.readonly === 'true' ? 'false' : 'true'
+      const leading = document.createElement('span')
+      leading.className = 'aa-syntax'
+      leading.dataset.hidden = ''
+      leading.textContent = block.source.slice(offset, cell.from)
+      const content = document.createElement('span')
+      content.textContent = cell.text
+      decorateNode(content, cell.from, decorations)
+      if (!cell.text) { const br = document.createElement('br'); br.dataset.filler = ''; content.append(br) }
+      node.append(leading, content)
+      line.append(node)
+      offset = cell.to
+    })
+    fragment.append(line)
+  })
+  const tail = document.createElement('span')
+  tail.className = 'aa-syntax'
+  tail.dataset.hidden = ''
+  tail.textContent = block.source.slice(offset)
+  fragment.append(tail)
   element.replaceChildren(fragment)
 }
 

@@ -4,7 +4,7 @@
  * so what is drawn on the screen reads straight back into the text.
  */
 
-export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider'
+export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation'
 
 export type Block = {
   kind: BlockKind
@@ -18,13 +18,17 @@ export type Block = {
   checked?: boolean
   /** A numbered bullet's number. */
   number?: number
+  depth?: number
+  indent?: number
+  callout?: string
+  folded?: boolean
 }
 
 /** A block with where its source started in the text it was read from. */
 export type Placed = Block & { start: number }
 
 export const HEADING = /^ {0,3}(#{1,6})[ \t]+/
-export const BULLET = /^ {0,3}(?:([-*+])|(\d{1,9})[.)])[ \t]+(?:\[([ xX])\][ \t]+)?/
+export const BULLET = /^ *(?:([-*+])|(\d{1,9})[.)])[ \t]+(?:\[([ xX])\][ \t]+)?/
 export const QUOTE = /^ {0,3}>[ \t]?/
 export const FENCE = /^ {0,3}(`{3,}|~{3,})/
 export const DIVIDER = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/
@@ -52,6 +56,20 @@ export function parseBlocks(text: string): Placed[] {
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
+    if (line.trim() === '$$') {
+      let j = i + 1
+      while (j < lines.length && lines[j].trim() !== '$$') j++
+      push('equation', i, Math.min(j, lines.length - 1), { prefix: line.length })
+      i = j + 1
+      continue
+    }
+    if (i + 1 < lines.length && line.includes('|') && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(lines[i + 1])) {
+      let j = i + 1
+      while (j + 1 < lines.length && lines[j + 1].trim() && lines[j + 1].includes('|')) j++
+      push('table', i, j)
+      i = j + 1
+      continue
+    }
     const fence = FENCE.exec(line)
     if (fence) {
       let j = i + 1
@@ -66,14 +84,26 @@ export function parseBlocks(text: string): Placed[] {
     if (heading) { push('heading', i, i, { level: heading[1].length, prefix: heading[0].length }); i++; continue }
     const bullet = BULLET.exec(line)
     if (bullet) {
-      push('bullet', i, i, { prefix: bullet[0].length, checked: bullet[3] === undefined ? undefined : bullet[3] !== ' ', number: bullet[2] ? Number(bullet[2]) : undefined })
+      const indent = /^ */.exec(line)![0].length
+      const previous = blocks[blocks.length - 1]
+      let depth = 0
+      if (indent && previous?.kind === 'bullet') {
+        if (indent > (previous.indent ?? 0)) depth = (previous.depth ?? 0) + 1
+        else {
+          const sibling = [...blocks].reverse().find(b => b.kind === 'bullet' && (b.indent ?? 0) <= indent)
+          depth = sibling?.depth ?? 1
+        }
+      } else if (indent) depth = Math.floor(indent / (bullet[2] ? 3 : 2))
+      push('bullet', i, i, { prefix: bullet[0].length, indent, depth, checked: bullet[3] === undefined ? undefined : bullet[3] !== ' ', number: bullet[2] ? Number(bullet[2]) : undefined })
       i++
       continue
     }
     if (QUOTE.test(line)) {
       let j = i
       while (j + 1 < lines.length && QUOTE.test(lines[j + 1])) j++
-      push('quote', i, j, { prefix: QUOTE.exec(line)![0].length })
+      const callout = /^>\s*\[!([a-z]+)\](-)?\s*/i.exec(line)
+      const titleHeading = callout ? /^(#{1,6})\s+/.exec(line.slice(callout[0].length)) : null
+      push(callout ? 'callout' : 'quote', i, j, callout ? { level: titleHeading?.[1].length, prefix: callout[0].length + (titleHeading?.[0].length ?? 0), callout: callout[1].toLowerCase(), folded: !!callout[2] } : { prefix: QUOTE.exec(line)![0].length })
       i = j + 1
       continue
     }
@@ -120,6 +150,7 @@ export type Run = {
   italic?: true
   strike?: true
   code?: true
+  highlight?: true
   href?: string
   /**
    * Syntax belongs to a mark: the range of the whole mark, delimiters
@@ -158,14 +189,15 @@ export function atomPattern(name: string, pattern: RegExp, accept?: (match: RegE
 
 /** A Markdown picture, `![name](address)`. */
 export const IMAGE = atomPattern('image', /!\[[^\]\n]*\]\([^\s()]+\)/)
+export const EQUATION = atomPattern('equation', /\$(?!\$)(?:\\.|[^$\n])+\$/)
 
 /** The atoms an editor reads unless it is given others. */
-export const DEFAULT_ATOMS: readonly AtomSyntax[] = [IMAGE]
+export const DEFAULT_ATOMS: readonly AtomSyntax[] = [IMAGE, EQUATION]
 
-type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'code' | 'href'>
+type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'code' | 'href' | 'highlight'>
 
-const DELIMITERS = ['**', '__', '~~', '*', '_'] as const
-const MARK_OF: Record<(typeof DELIMITERS)[number], 'bold' | 'strike' | 'italic'> = { '**': 'bold', '__': 'bold', '~~': 'strike', '*': 'italic', '_': 'italic' }
+const DELIMITERS = ['**', '__', '~~', '==', '*', '_'] as const
+const MARK_OF: Record<(typeof DELIMITERS)[number], 'bold' | 'strike' | 'italic' | 'highlight'> = { '**': 'bold', '__': 'bold', '~~': 'strike', '==': 'highlight', '*': 'italic', '_': 'italic' }
 const LINK = /^\[([^[\]]*)\]\(([^\s()]*)\)/
 const AUTOLINK = /(?:https?:\/\/|www\.)[^\s<>()]*[^\s<>().,;:!?'"]/g
 
@@ -251,7 +283,7 @@ function inline(text: string, start: number, end: number, base: number, marks: M
       for (const atom of atoms) { length = atom.match(text, i); if (length && i + length <= end) { name = atom.name; break }; length = 0 }
       if (length) {
         flush(i)
-        out.push({ kind: 'atom', atom: name, from: base + i, to: base + i + length })
+        out.push({ kind: 'atom', atom: name, from: base + i, to: base + i + length, ...(name === 'equation' ? { group: [base + i, base + i + length] as [number, number] } : {}) })
         i += length
         from = i
         continue
@@ -297,6 +329,7 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   const runs: Run[] = []
   const lines = block.source.split('\n')
   const closed = block.kind === 'code' && codeClosed(block)
+  if (block.kind === 'equation') return [{ kind: 'atom', atom: 'equation-block', from: 0, to: block.source.length, group: [0, block.source.length] }]
   let at = 0
   lines.forEach((line, index) => {
     if (index) runs.push({ kind: 'break', from: at - 1, to: at })
@@ -308,7 +341,7 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
     } else {
       let prefix = 0
       if (index === 0 && (block.kind === 'heading' || block.kind === 'bullet')) prefix = block.prefix
-      else if (block.kind === 'quote') prefix = QUOTE.exec(line)?.[0].length ?? 0
+      else if (block.kind === 'quote' || block.kind === 'callout') prefix = index === 0 && block.kind === 'callout' ? block.prefix : QUOTE.exec(line)?.[0].length ?? 0
       if (prefix) runs.push({ kind: 'syntax', from: at, to: at + prefix, prefix: true })
       inline(line, prefix, line.length, at, {}, runs, atoms)
     }

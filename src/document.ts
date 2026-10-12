@@ -88,7 +88,10 @@ export function splitAt(blocks: readonly Block[], pos: Pos): Change {
   if (block.kind === 'code') {
     if (!(pos.offset === source.length && codeClosed(block))) return replaceRange(blocks, pos, pos, '\n')
   } else if (block.kind === 'bullet') {
-    if (!source.slice(block.prefix).trim()) return replaceRange(blocks, { block: pos.block, offset: 0 }, { block: pos.block, offset: source.length }, '')
+    if (!source.slice(block.prefix).trim()) {
+      if (block.depth) return indentBlocks(blocks, { anchor: pos.block, focus: pos.block }, -1)!
+      return replaceRange(blocks, { block: pos.block, offset: 0 }, { block: pos.block, offset: source.length }, '')
+    }
     tail = nextMarker(block) + tail
   } else if (block.kind === 'quote') {
     const lineStart = source.lastIndexOf('\n', pos.offset - 1) + 1
@@ -180,7 +183,7 @@ export function toggleBox(blocks: readonly Block[], index: number): Change | nul
   return replaceRange(blocks, { block: index, offset: box }, { block: index, offset: box + 1 }, block.checked ? ' ' : 'x')
 }
 
-export type TurnKind = 'paragraph' | 'h1' | 'h2' | 'h3' | 'todo' | 'bullet' | 'numbered' | 'quote' | 'code'
+export type TurnKind = 'paragraph' | 'h1' | 'h2' | 'h3' | 'todo' | 'bullet' | 'numbered' | 'quote' | 'code' | 'divider' | 'callout' | 'toggle' | 'toggle-h1' | 'toggle-h2' | 'toggle-h3' | 'table' | 'equation'
 export type BlockSelection = { anchor: number; focus: number }
 
 /** Select a contiguous range of whole blocks, clamped to this document. */
@@ -198,11 +201,11 @@ export function turnInto(blocks: readonly Block[], selection: BlockSelection, ki
       const lines = block.source.split('\n').slice(1)
       if (codeClosed(block)) lines.pop()
       text = lines.join('\n')
-    } else if (block.kind === 'quote') text = block.source.split('\n').map(line => line.replace(QUOTE, '')).join('\n')
+    } else if (block.kind === 'quote' || block.kind === 'callout') text = block.source.split('\n').map((line, i) => i === 0 ? line.slice(block.prefix) : line.replace(QUOTE, '')).join('\n')
     else if (block.kind === 'divider') text = ''
-    const prefix = { paragraph: '', h1: '# ', h2: '## ', h3: '### ', todo: '- [ ] ', bullet: '- ', numbered: `${index - first + 1}. `, quote: '> ', code: '' }[kind]
+    const prefix = { paragraph: '', h1: '# ', h2: '## ', h3: '### ', todo: '- [ ] ', bullet: '- ', numbered: `${index - first + 1}. `, quote: '> ', code: '', divider: '', callout: '> [!note] ', toggle: '> [!note]- ', 'toggle-h1': '> [!note]- # ', 'toggle-h2': '> [!note]- ## ', 'toggle-h3': '> [!note]- ### ', table: '', equation: '' }[kind]
     const fence = '`'.repeat(Math.max(3, ...Array.from(text.matchAll(/`+/g), match => match[0].length + 1)))
-    const source = kind === 'code' ? `${fence}\n${text}\n${fence}` : text.split('\n').map(line => prefix + line).join('\n')
+    const source = kind === 'code' ? `${fence}\n${text}\n${fence}` : kind === 'divider' ? '---' : kind === 'equation' ? `$$\n${text}\n$$` : kind === 'table' ? '| Column 1 | Column 2 |\n| --- | --- |\n|  |  |' : kind === 'callout' || kind.startsWith('toggle') ? prefix + text.split('\n').join('\n> ') : text.split('\n').map(line => prefix + line).join('\n')
     return parseBlocks(source).map(({ start: _start, ...converted }) => converted)
   })
   return { blocks: next, caret: { block: first, offset: next[first].prefix } }
@@ -228,4 +231,48 @@ export function moveBlocks(blocks: readonly Block[], selection: BlockSelection, 
   const next = [...blocks], moved = next.splice(first, last - first + 1)
   next.splice(first + direction, 0, ...moved)
   return { blocks: next, caret: { block: first + direction, offset: moved[0].prefix } }
+}
+
+/** Renumber siblings without changing the starting number of a list. */
+export function renumber(blocks: readonly Block[]): Block[] {
+  const counters = new Map<number, number>()
+  return blocks.map(block => {
+    if (block.kind !== 'bullet') { counters.clear(); return block }
+    const depth = block.indent ?? 0
+    for (const key of counters.keys()) if (key > depth) counters.delete(key)
+    if (block.number === undefined) { counters.delete(depth); return block }
+    const number = counters.has(depth) ? counters.get(depth)! + 1 : block.number
+    counters.set(depth, number)
+    if (number === block.number) return block
+    const source = block.source.replace(/^( *)(\d+)/, `$1${number}`)
+    return { ...block, source, number, prefix: block.prefix + String(number).length - String(block.number).length }
+  })
+}
+
+export function indentBlocks(blocks: readonly Block[], selection: BlockSelection, direction: -1 | 1): Change | null {
+  const first = Math.min(selection.anchor, selection.focus), last = Math.max(selection.anchor, selection.focus)
+  const current = blocks[first]
+  if (current.kind !== 'bullet') return null
+  if (direction === 1 && (first === 0 || blocks[first - 1].kind !== 'bullet')) return null
+  if (direction === -1 && !(current.indent ?? 0)) return null
+  const previous = blocks[first - 1]
+  const parentIndent = previous?.indent ?? 0
+  const spaces = direction === 1 ? Math.max(0, parentIndent + (previous.number === undefined ? 2 : 3) - (current.indent ?? 0)) : -Math.min(current.indent ?? 0, current.number === undefined ? 2 : 3)
+  if (!spaces) return null
+  const next = blocks.map((block, index) => {
+    if (index < first || index > last || block.kind !== 'bullet') return block
+    const source = spaces > 0 ? ' '.repeat(spaces) + block.source : block.source.slice(Math.min(-spaces, block.indent ?? 0))
+    return { ...block, source, prefix: block.prefix + source.length - block.source.length, indent: Math.max(0, (block.indent ?? 0) + spaces), depth: Math.max(0, (block.depth ?? 0) + direction) }
+  })
+  return { blocks: renumber(next), caret: { block: first, offset: next[first].prefix } }
+}
+
+export function toggleCallout(blocks: readonly Block[], index: number, open?: boolean): Change | null {
+  const block = blocks[index]
+  if (block.kind !== 'callout') return null
+  const folded = open === undefined ? !block.folded : !open
+  const source = block.source.replace(/^(>\s*\[![a-z]+\])-?/i, `$1${folded ? '-' : ''}`)
+  const next = [...blocks]
+  next[index] = { ...block, source, folded, prefix: block.prefix + source.length - block.source.length }
+  return { blocks: next, caret: { block: index, offset: next[index].prefix } }
 }

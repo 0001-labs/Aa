@@ -15,7 +15,7 @@ Aa is the text editor of 0001's products: Ezo's notes and writing blocks, Link's
 - **Atoms** are pieces of the text drawn as one thing, never letter by letter: a picture, `![name](address)`, out of the box, and whatever a product names (`atoms` in the options: Ezo's mentions, link titles, its own pictures). Each has a `match` that finds it in a line (`atomPattern` makes one from a pattern) and a `draw` that fills the uneditable `.aa-atom` Aa gives it, returning what to stop when it leaves. The text keeps the atom's words, in `data-source`, so it reads back as written; the caret stands beside an atom, and an atom drawn once is kept as the block is drawn again (`src/render.ts`).
 - **From outside**: `selection()` says where the selection is and `replace(start, end, text)` writes, both in offsets into the Markdown, as a picker or an upload needs; `onFiles` receives files pasted or dropped, which Aa never keeps itself.
 
-Not yet: a toolbar, a `/` menu, tables, maths, callouts and toggles, nested bullets, a React binding, collaboration. The plan for them, phase by phase against what Notion's editor has, is the Aa list in Ezo (`91MiVe`); its icons are in Design system 1's library. Each paragraph stays its own block, as Ezo settled.
+Toolbar, slash menu, block selection and handle, nested lists, callouts and toggle headings, GFM tables, equations, highlight, media captions, find/replace, decorations and counts are in the core. React and Yjs collaboration are separate optional entries. The product supplies uploads, equation drawing and authenticated Convex transport. Keep shared-note permissions in the parent app; component functions alone do not authorize a person. The implementation plan lives in Ezo (`91MiVe`).
 
 ## Stack
 
@@ -42,7 +42,7 @@ defineAaEditor()
 <aa-editor placeholder="Write"></aa-editor>
 ```
 
-Until it is published, link it: `pnpm add ../Aa` from the product, or a workspace path.
+Publication at 0.2.0 is prepared; verify npm availability before migrating consumers. Until it is published, link it: `pnpm add ../Aa` from the product, or a workspace path.
 
 ## Git commits
 
