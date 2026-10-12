@@ -125,7 +125,13 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-controls button:hover, .aa-controls button[data-current] { background: var(--accent-color, var(--apple-green, Highlight)); }
 .aa-controls button:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
 .aa-icon { display: inline-block; width: calc(16px * var(--sf, 1)); height: calc(16px * var(--sf, 1)); background: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; flex-shrink: 0; }
-.aa-toolbar { display: flex; height: var(--aa-square); border: 1px solid var(--aa-rule, currentColor); overflow-x: auto; max-width: 100vw; }
+.aa-toolbar {
+  display: flex; height: var(--aa-square); gap: calc(1px * var(--sf, 1)); border: 0;
+  border-radius: var(--aa-menu-radius, calc(4px * var(--sf, 1)));
+  clip-path: inset(0 round var(--aa-menu-radius, calc(4px * var(--sf, 1))));
+  overflow-x: auto; max-width: 100vw; background: transparent; color: var(--white, white);
+}
+.aa-toolbar button, .aa-toolbar button:hover, .aa-toolbar button[data-current] { background: var(--black, black); color: var(--white, white); }
 .aa-toolbar[data-docked] { width: 100%; }
 .aa-menu {
   display: flex; flex-direction: column; gap: calc(1px * var(--sf, 1));

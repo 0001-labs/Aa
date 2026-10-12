@@ -33,7 +33,11 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
   actions: readonly ToolbarAction[] = []
   connectedCallback() { this.setAttribute('role', 'toolbar'); this.setAttribute('aria-label', 'Text formatting'); this.refresh() }
   refresh() {
-    this.replaceChildren(...this.actions.map(action => button(action.label, action.icon, () => { if (this.editor && !this.editor.readOnly) action.run(this.editor) })))
+    this.replaceChildren(...this.actions.map(action => {
+      const node = button(action.label, action.icon, () => { if (this.editor && !this.editor.readOnly) action.run(this.editor) })
+      node.classList.add('note-menu-row')
+      return node
+    }))
   }
 }
 export function defineAaToolbar() { if (!customElements.get('aa-toolbar')) customElements.define('aa-toolbar', AaToolbarElement) }
