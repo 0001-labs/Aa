@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defineAaEditor, type AaEditorElement } from '../src/element'
 import { createEditor, type Editor } from '../src/editor'
 import { parseBlocks, serialize, blockRuns } from '../src/markdown'
 import { fromMarkdown, indentBlocks, renumber, toggleCallout, turnInto } from '../src/document'
@@ -13,7 +14,7 @@ function setup(value: string, options = {}) {
   return editor
 }
 function key(key: string, modifiers: KeyboardEventInit = {}) { host!.dispatchEvent(new KeyboardEvent('keydown', { key, cancelable: true, bubbles: true, ...modifiers })) }
-afterEach(() => { editor?.destroy(); host?.remove(); editor = undefined; host = undefined; window.getSelection()?.removeAllRanges(); vi.useRealTimers() })
+afterEach(() => { editor?.destroy(); host?.remove(); editor = undefined; host = undefined; window.getSelection()?.removeAllRanges(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('nesting', () => {
   it('indents under a parent and lifts an empty nested bullet before leaving the list', () => {
@@ -61,6 +62,22 @@ describe('callouts and equations', () => {
 })
 
 describe('tables', () => {
+  it('selects cell contents first and preserves whole-table selection on repeated Select all', () => {
+    const e = setup('| Name | Value |\n| --- | --- |\n| Milk | 2 |')
+    e.selectRange(35); key('a', mod)
+    expect(e.selection()).toEqual({ start: 33, end: 37 })
+    key('a', mod)
+    expect(e.selection()).toEqual({ start: 0, end: e.value.length })
+  })
+  it('pastes a spreadsheet range into existing table cells', () => {
+    const e = setup('| Name | Value |\n| --- | --- |\n| Milk | 2 |')
+    e.selectRange(33, 37)
+    const data = new DataTransfer(); data.setData('text/plain', 'Coffee\t4\nWater\t5')
+    host!.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }))
+    expect(e.value).toBe('| Name | Value |\n| --- | --- |\n| Coffee | 4 |\n| Water | 5 |')
+    e.undo(); expect(e.value).toBe('| Name | Value |\n| --- | --- |\n| Milk | 2 |')
+  })
+
   const source = '| Name | Value |\n| --- | --- |\n| Milk | 2 |'
   it('keeps every source character while editing cell by cell, including escaped pipes', () => {
     const e = setup(source)
@@ -97,6 +114,60 @@ describe('tables', () => {
 })
 
 describe('controls, decorations and media', () => {
+  it('keeps the creation toolbar available at a collapsed touch caret', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    setup('Phone typing', { toolbar: true })
+    host!.dispatchEvent(new Event('aa-selectionchange'))
+    vi.advanceTimersByTime(140)
+    const toolbar = document.querySelector('.aa-toolbar') as HTMLElement
+    expect(toolbar.hidden).toBe(false)
+    expect(toolbar.hasAttribute('data-docked')).toBe(true)
+    expect(toolbar.querySelector('[aria-label="Add a block"]')).not.toBeNull()
+  })
+  it('lets the block grip start native dragging', () => {
+    setup('Drag me')
+    const handle = document.querySelector('.aa-grip button')!
+    const event = new Event('pointerdown', { bubbles: true, cancelable: true })
+    handle.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+    expect((handle as HTMLButtonElement).draggable).toBe(true)
+  })
+
+  it('keeps caption Select all and paste inside the caption', () => {
+    const e = setup('![Sample](/sample.png)')
+    const caption = host!.querySelector('.aa-caption') as HTMLElement
+    caption.focus()
+    const range = document.createRange(); range.selectNodeContents(caption)
+    window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range)
+    caption.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ...mod, bubbles: true, cancelable: true }))
+    expect(window.getSelection()!.toString()).toBe('Sample')
+    const data = new DataTransfer(); data.setData('text/plain', 'New caption')
+    const event = new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true })
+    caption.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+    expect(e.value).toBe('![Sample](/sample.png)')
+  })
+  it('never makes captions editable while drawing a read-only editor', () => {
+    setup('![Sample](/sample.png)', { readOnly: true })
+    expect((host!.querySelector('.aa-caption') as HTMLElement).contentEditable).toBe('false')
+  })
+
+  it('selects the destination placeholder when the toolbar inserts a link', () => {
+    const e = setup('Alpha beta', { toolbar: true }); e.selectRange(6, 10)
+    e.format('link')
+    expect(e.value).toBe('Alpha [beta](url)')
+    expect(e.selection()).toEqual({ start: 13, end: 16 })
+  })
+  it('keeps block menus open when selecting a block scrolls it into view', () => {
+    setup('Alpha beta', { toolbar: true })
+    key('/', mod)
+    const menu = document.querySelector('.aa-menu') as HTMLElement
+    expect(menu.hidden).toBe(false)
+    window.dispatchEvent(new Event('scroll'))
+    expect(menu.hidden).toBe(false)
+  })
+
   it('filters slash commands and runs one as a single undoable edit', () => {
     const e = setup('/head', { toolbar: true })
     e.selectRange(e.value.length)
@@ -154,4 +225,15 @@ it('peer carets at empty and final offsets do not change the source', () => {
   ed.value = ''; ed.decorate([{ from: 0, to: 0, className: 'aa-peer-selection', label: 'Peer' }])
   expect(host!.querySelector('.aa-peer-caret')).not.toBeNull()
   expect(ed.value).toBe('')
+})
+
+it('preserves options assigned before the custom element is registered', () => {
+  const node = document.createElement('aa-editor') as AaEditorElement
+  node.options = { toolbar: true, onFiles: vi.fn() }
+  node.value = 'Before registration'
+  document.body.append(node)
+  defineAaEditor()
+  expect(node.value).toBe('Before registration')
+  expect([...document.querySelectorAll('.aa-toolbar button')].some(button => button.getAttribute('aria-label') === 'Image or file')).toBe(true)
+  node.remove()
 })

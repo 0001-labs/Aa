@@ -251,6 +251,11 @@ export function offsetIn(element: HTMLElement, node: Node, nodeOffset: number): 
 
 /** The DOM point for an offset into a block's source, in text that is displayed. */
 export function pointAt(element: HTMLElement, offset: number): { node: Node; offset: number } {
+  if (element.dataset.kind === 'table') {
+    const cell = Array.from(element.querySelectorAll<HTMLElement>('[data-cell]')).find(cell => offset >= Number(cell.dataset.from) && offset <= Number(cell.dataset.to))
+    if (cell?.lastElementChild) return pointAt(cell.lastElementChild as HTMLElement, offset - Number(cell.dataset.from))
+  }
+
   let count = 0
   let result: { node: Node; offset: number } | null = null
   const walk = (parent: Node): boolean => {

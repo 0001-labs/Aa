@@ -10,7 +10,7 @@ import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPr
 import { History, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout } from './document'
-import { editTable, fromTSV, tableRows, type TableAction } from './table'
+import { editTable, fromTSV, tableRows, writeTable, type TableAction } from './table'
 import { createControls, type Command, type ToolbarAction } from './controls'
 
 /**
@@ -26,8 +26,8 @@ export const imageAtom: Atom = {
   draw(element, source) {
     const [, alt = '', src = ''] = /^!\[([^\]]*)\]\(([^)]*)\)$/.exec(source) ?? []
     const extension = src.split(/[?#]/)[0].split('.').pop()?.toLowerCase()
-    if (extension && /^(mp4|webm|mov|mp3|wav|ogg|m4a)$/.test(extension)) {
-      const media = document.createElement(/^(mp4|webm|mov)$/.test(extension) ? 'video' : 'audio')
+    if (/^data:(audio|video)\//.test(src) || (extension && /^(mp4|webm|mov|mp3|wav|ogg|m4a)$/.test(extension))) {
+      const media = document.createElement(/^data:video\//.test(src) || /^(mp4|webm|mov)$/.test(extension ?? '') ? 'video' : 'audio')
       media.src = src; media.controls = true; media.preload = 'metadata'
       media.setAttribute('aria-label', alt)
       element.append(media)
@@ -185,6 +185,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
 
   const readSelection = (): Selection2 | null => {
+    if (document.activeElement?.closest?.('.aa-caption')) return null
+    if (selected) {
+      const first = Math.min(selected.anchor, selected.focus), last = Math.max(selected.anchor, selected.focus)
+      return { anchor: { block: first, offset: 0 }, focus: { block: last, offset: blocks[last].source.length } }
+    }
     const selection = window.getSelection()
     if (!selection || !selection.rangeCount || !selection.anchorNode || !selection.focusNode) return null
     const a = blockIndexOf(selection.anchorNode), f = blockIndexOf(selection.focusNode)
@@ -196,13 +201,15 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     }
   }
 
+  let settingSelection = false
   const setSelection = (anchor: Pos, focus: Pos = anchor) => {
     const els = elements()
     const a = pointAt(els[anchor.block], Math.min(anchor.offset, blocks[anchor.block].source.length))
     const f = pointAt(els[focus.block], Math.min(focus.offset, blocks[focus.block].source.length))
     const selection = window.getSelection()
     if (!selection) return
-    selection.setBaseAndExtent(a.node, a.offset, f.node, f.offset)
+    settingSelection = true
+    try { selection.setBaseAndExtent(a.node, a.offset, f.node, f.offset) } finally { settingSelection = false }
   }
 
   const revealFor = (index: number, selection: Selection2 | null): Reveal => {
@@ -325,6 +332,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (composing || event.isComposing) return
     const selection = readSelection()
     if (!selection) return
+    if (selected && type.startsWith('insert')) { event.preventDefault(); insert(selection, event.data ?? '', 'edit'); return }
     const [a, b] = order(selection.anchor, selection.focus)
     const spanning = a.block !== b.block
     const collapsed = !spanning && a.offset === b.offset
@@ -436,6 +444,15 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (wrapped) commit(wrapped.blocks, wrapped.anchor, wrapped.focus, 'edit')
   }
 
+  const insertLink = (selection: Selection2) => {
+    const [a, b] = order(selection.anchor, selection.focus)
+    if (a.block !== b.block) return
+    const wrapped = wrapSelection(blocks, a, b, '[', '](url)')
+    if (!wrapped) return
+    const start = { block: a.block, offset: wrapped.focus.offset + 2 }
+    commit(wrapped.blocks, start, { block: a.block, offset: start.offset + 3 }, 'edit')
+  }
+
   const caretRect = (): DOMRect | null => {
     const selection = window.getSelection()
     if (!selection?.rangeCount) return null
@@ -497,7 +514,13 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (destroyed || readOnly || composing || event.isComposing || event.defaultPrevented) return
-    if ((event.target as HTMLElement).closest?.('.aa-caption')) {
+    const caption = (event.target as HTMLElement).closest?.('.aa-caption')
+    if (caption) {
+      if ((isMac ? event.metaKey : event.ctrlKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault(); const range = document.createRange(); range.selectNodeContents(caption)
+        const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
+        return
+      }
       if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); (event.target as HTMLElement).blur() }
       return
     }
@@ -512,7 +535,12 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
     if (mod && key === 'a' && !event.altKey) {
       event.preventDefault()
-      if (selected) selectBlocks(0, blocks.length - 1)
+      const block = blocks[selection.focus.block]
+      const cell = block.kind === 'table' && !selected ? tableRows(block.source).flat().find(cell => selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) : null
+      if (cell && (selection.anchor.offset !== cell.from || selection.focus.offset !== cell.to)) {
+        setSelection({ block: selection.focus.block, offset: cell.from }, { block: selection.focus.block, offset: cell.to })
+        applyReveal()
+      } else if (selected) selectBlocks(0, blocks.length - 1)
       else selectBlocks(selection.focus.block)
       return
     }
@@ -593,12 +621,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       if ((key === 'x' || key === 's') && event.shiftKey) { event.preventDefault(); wrap(selection, '~~'); return }
       if (key === 'k' && !event.shiftKey) {
         event.preventDefault()
-        const [a, b] = order(selection.anchor, selection.focus)
-        if (a.block !== b.block) return
-        const wrapped = wrapSelection(blocks, a, b, '[', '](url)')
-        if (!wrapped) return
-        const end = { block: a.block, offset: wrapped.focus.offset + 2 }
-        commit(wrapped.blocks, end, { block: a.block, offset: end.offset + 3 }, 'edit')
+        insertLink(selection)
         return
       }
       return
@@ -630,6 +653,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
 
   const onCopy = (event: ClipboardEvent) => {
+    if ((event.target as HTMLElement).closest?.('.aa-caption')) return
     const selection = readSelection()
     if (!selection || !event.clipboardData || comparePos(selection.anchor, selection.focus) === 0) return
     event.preventDefault()
@@ -668,14 +692,16 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const onCompositionStart = () => { composing = true }
   const onCompositionEnd = (event: CompositionEvent) => {
     composing = false
+    if ((event.target as HTMLElement).closest?.('.aa-caption')) { onInput(event); return }
     const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
     if (element && element.parentElement === host) readBack(element)
   }
-  const onSelectionChange = () => { if (!destroyed && !composing && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); host.dispatchEvent(new Event('aa-selectionchange')) } }
+  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !document.activeElement?.closest?.('.aa-caption') && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); host.dispatchEvent(new Event('aa-selectionchange')) } }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
   const onPaste = (event: ClipboardEvent) => {
+    if ((event.target as HTMLElement).closest?.('.aa-caption')) return
     const plain = plainPaste
     plainPaste = false
     if (readOnly || destroyed) return
@@ -686,6 +712,21 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (!selection || text === undefined) return
     event.preventDefault()
     const [a, b] = order(selection.anchor, selection.focus)
+    const block = blocks[a.block]
+    if (!plain && !selected && a.block === b.block && block.kind === 'table' && text.includes('\t')) {
+      const cells = tableRows(block.source), row = cells.findIndex(row => row.some(cell => a.offset >= cell.from && a.offset <= cell.to))
+      const column = row < 0 ? -1 : cells[row].findIndex(cell => a.offset >= cell.from && a.offset <= cell.to)
+      if (row >= 0 && column >= 0) {
+        const rows = cells.map(row => row.map(cell => cell.text))
+        const pasted = text.replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n').map(line => line.split('\t'))
+        pasted.forEach((values, i) => { const target = rows[row + i] ?? (rows[row + i] = []); values.forEach((value, j) => { target[column + j] = value }) })
+        const source = writeTable(rows)
+        const cell = tableRows(source)[row][column]
+        const change = replaceRange(blocks, { block: a.block, offset: 0 }, { block: a.block, offset: block.source.length }, source)
+        const pos = { block: a.block, offset: cell.to }
+        commit(change.blocks, pos, pos, 'edit'); return
+      }
+    }
     if (!plain && a.block === b.block && a.offset !== b.offset && /^https?:\/\/[^\s<>]+$/i.test(text.trim())) {
       wrap(selection, '[', `](${text.trim().replace(/\(/g, '%28').replace(/\)/g, '%29')})`)
     } else insert(selection, (!plain ? fromTSV(text) : null) ?? text.replace(/\r\n?/g, '\n'))
@@ -767,7 +808,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     redo,
     activeBlock() { const selection = readSelection(); if (!selection) return null; const index = selection.focus.block; return { index, block: blocks[index], start: offsetOf({ block: index, offset: 0 }), end: offsetOf({ block: index, offset: blocks[index].source.length }) } },
     selectBlocks,
-    format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark], mark === 'link' ? '](url)' : delimiters[mark]) },
+    format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; if (mark === 'link') { insertLink(selection); return }; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark]) },
     turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
     blockAction(action) { if (readOnly) return; const selection = readSelection(); if (selection) changeBlocks(action, selected ?? select(blocks, selection.anchor.block, selection.focus.block)) },
     moveBlock(from, to) { if (readOnly || from < 0 || to < 0 || from >= blocks.length || to >= blocks.length || from === to) return; const next = [...blocks], moved = next.splice(from, 1)[0]; next.splice(to, 0, moved); const pos = { block: to, offset: moved.prefix }; commit(next, pos, pos, 'edit'); selectBlocks(to) },

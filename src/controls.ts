@@ -15,7 +15,7 @@ const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'toggle-h1', label: 'Toggle heading 1', icon: 'h1' }, { kind: 'toggle-h2', label: 'Toggle heading 2', icon: 'h2' }, { kind: 'toggle-h3', label: 'Toggle heading 3', icon: 'h3' },
   { kind: 'table', label: 'Table', icon: 'table' }, { kind: 'equation', label: 'Equation', icon: 'equation' },
 ]
-function button(label: string, icon: string, action: () => void, text = false): HTMLButtonElement {
+function button(label: string, icon: string, action: () => void, text = false, draggable = false): HTMLButtonElement {
   const node = document.createElement('button')
   node.type = 'button'; node.title = label; node.setAttribute('aria-label', label)
   const picture = document.createElement('span')
@@ -24,7 +24,7 @@ function button(label: string, icon: string, action: () => void, text = false): 
   if (svg) picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/currentColor/g, 'black'))}")`
   node.append(picture)
   if (text) { const name = document.createElement('span'); name.textContent = label; node.append(name) }
-  node.addEventListener('pointerdown', event => event.preventDefault())
+  if (!draggable) node.addEventListener('pointerdown', event => event.preventDefault())
   node.addEventListener('click', action)
   return node
 }
@@ -54,6 +54,11 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const input = document.createElement('input'); input.type = 'file'; input.multiple = true
     input.addEventListener('change', () => { restore(); options.onFiles?.(Array.from(input.files ?? [])) }, { once: true }); input.click()
   } }]
+  if (window.matchMedia?.('(pointer: coarse)').matches) toolbar.actions = [...toolbar.actions,
+    { id: 'add', label: 'Add a block', icon: 'plus', run: () => { restore(); hovered = editor.activeBlock()?.index ?? -1; const block = editor.activeBlock(); if (block) { editor.replace(block.end, block.end, '\n\n/'); updateCommands() } } },
+    { id: 'indent', label: 'Indent', icon: 'indent', run: () => { restore(); editor.indent(1) } },
+    { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => { restore(); editor.indent(-1) } },
+  ]
   toolbar.refresh()
   if (options.toolbar) document.body.append(toolbar)
 
@@ -108,7 +113,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       { id: 'down', label: 'Move down', icon: 'down', run: () => editor.blockAction('down') },
       { id: 'indent', label: 'Indent', icon: 'indent', run: () => editor.indent(1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
       { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => editor.indent(-1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
-      ...(['add-row', 'delete-row', 'add-column', 'delete-column'] as const).map(action => ({ id: action, label: action.replace('-', ' '), icon: 'table', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'table', run: () => editor.table(action) })),
+      ...(['add-row', 'delete-row', 'add-column', 'delete-column'] as const).map(action => ({ id: action, label: action.replace('-', ' ').replace(/^./, letter => letter.toUpperCase()), icon: 'table', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'table', run: () => editor.table(action) })),
       ...(options.blockCommands ?? []),
     ]
     const count = editor.stats()
@@ -116,7 +121,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     slash = null
     open(commands, grip.getBoundingClientRect())
   }
-  const handle = button('Block menu', 'handle', blockMenu)
+  const handle = button('Block menu', 'handle', blockMenu, false, true)
   handle.draggable = true
   handle.addEventListener('dragstart', event => {
     drag = hovered; event.dataTransfer?.setData('application/x-aa-block', String(drag)); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
@@ -158,7 +163,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const selectionChanged = () => {
     clearTimeout(timer)
     const selection = editor.selection()
-    if (!selection || selection.start === selection.end || editor.readOnly) { toolbar.hidden = true; return }
+    const mobile = window.matchMedia?.('(pointer: coarse)').matches && host.contains(document.activeElement)
+    if (!selection || (!mobile && selection.start === selection.end) || editor.readOnly) { toolbar.hidden = true; return }
     saved = selection
     timer = setTimeout(() => { if (!disposed && options.toolbar && !editor.readOnly) { toolbar.hidden = false; positionToolbar() } }, 140)
   }
@@ -236,7 +242,15 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; grip.hidden = true } }
   const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); hovered = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
-  const viewport = () => { positionToolbar(); grip.hidden = true; if (!menu.hidden) close() }
+  const viewport = (event: Event) => {
+    if (event.target instanceof Node && menu.contains(event.target)) return
+    positionToolbar(); grip.hidden = true
+    if (!menu.hidden) {
+      const block = editor.activeBlock()
+      const rect = block ? host.children[block.index]?.getBoundingClientRect() : null
+      if (rect) moveMenu(rect)
+    }
+  }
   host.addEventListener('aa-selectionchange', selectionChanged)
   host.addEventListener('aa-change', changed)
   host.addEventListener('mousemove', hover)

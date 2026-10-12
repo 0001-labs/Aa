@@ -1,6 +1,36 @@
 import './src/aa.css'
 import { createEditor, defineAaEditor, type AaEditorElement } from './src/index'
 
+const editor = document.getElementById('editor') as AaEditorElement
+editor.options = {
+  drawEquation: (element, tex, displayMode) => {
+    let active = true
+    element.textContent = tex
+    void Promise.all([import('katex'), import('katex/dist/katex.min.css')]).then(([{ default: katex }]) => {
+      if (active) katex.render(tex, element, { displayMode, throwOnError: false, trust: false })
+    }).catch(() => { /* Keep the TeX source visible if the renderer cannot load. */ })
+    return () => { active = false }
+  },
+  onFiles: async files => {
+    const instance = editor.editor
+    if (!instance) return
+    let selection = instance.selection()
+    for (const file of files) {
+      const url = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      if (instance.readOnly || !selection) return
+      const name = file.name.replace(/[\[\]\n]/g, '')
+      const source = `${/^(image|audio|video)\//.test(file.type) ? '!' : ''}[${name}](${url})`
+      const start = selection.start, before = instance.value.slice(0, start), after = instance.value.slice(selection.end)
+      const text = `${before && !before.endsWith('\n\n') ? '\n\n' : ''}${source}${after && !after.startsWith('\n\n') ? '\n\n' : ''}`
+      instance.replace(start, selection.end, text)
+      selection = instance.selection()
+    }
+  },
+}
 defineAaEditor()
 
 const SAMPLE = `# Aa
@@ -46,7 +76,6 @@ const editor = createEditor(host, { value })
 
 Addresses turn into links by themselves: https://using.link and www.ezo.gs.`
 
-const editor = document.getElementById('editor') as AaEditorElement
 const source = document.getElementById('source')!
 const readOnly = document.getElementById('readonly') as HTMLButtonElement
 editor.value = SAMPLE

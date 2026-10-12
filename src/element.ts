@@ -10,7 +10,21 @@ export class AaEditorElement extends (typeof HTMLElement === 'undefined' ? class
   #editor: Editor | null = null
   #pending: string | null = null
   /** Set before connection; custom actions, files and equation drawing stay with the product. */
-  options: EditorOptions = {}
+  #options: EditorOptions = {}
+  get options(): EditorOptions { return this.#options }
+  set options(value: EditorOptions) { this.#options = value }
+
+  constructor() {
+    super()
+    // Properties supplied before registration shadow prototype accessors.
+    // Replay them after upgrade so the configured callbacks reach the editor.
+    for (const name of ['options', 'value', 'readOnly'] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(this, name)
+      if (!descriptor) continue
+      Reflect.deleteProperty(this, name)
+      Reflect.set(this, name, descriptor.value)
+    }
+  }
 
   connectedCallback() {
     if (this.#editor) return
