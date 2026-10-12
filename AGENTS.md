@@ -1,5 +1,7 @@
 # Aa
 
+> **Read first:** `/Users/joachim/.agents/harness-instructions.md` (harness instructions), `/Users/joachim/0001/AGENTS.md` (0001). This file wins where they differ.
+
 Aa is the text editor of 0001's products: Ezo's notes and writing blocks, Link's comments and messages, and whatever comes next. It is Markdown drawn as you write it, Notion's architecture on 0001's own terms. Local only, no remote.
 
 ## What it is
@@ -13,7 +15,7 @@ Aa is the text editor of 0001's products: Ezo's notes and writing blocks, Link's
 - **Atoms** are pieces of the text drawn as one thing, never letter by letter: a picture, `![name](address)`, out of the box, and whatever a product names (`atoms` in the options: Ezo's mentions, link titles, its own pictures). Each has a `match` that finds it in a line (`atomPattern` makes one from a pattern) and a `draw` that fills the uneditable `.aa-atom` Aa gives it, returning what to stop when it leaves. The text keeps the atom's words, in `data-source`, so it reads back as written; the caret stands beside an atom, and an atom drawn once is kept as the block is drawn again (`src/render.ts`).
 - **From outside**: `selection()` says where the selection is and `replace(start, end, text)` writes, both in offsets into the Markdown, as a picker or an upload needs; `onFiles` receives files pasted or dropped, which Aa never keeps itself.
 
-Not yet: a toolbar, a `/` menu, tables, maths, callouts and toggles, nested bullets, a React binding, collaboration. Each paragraph stays its own block, as Ezo settled.
+Not yet: a toolbar, a `/` menu, tables, maths, callouts and toggles, nested bullets, a React binding, collaboration. The plan for them, phase by phase against what Notion's editor has, is the Aa list in Ezo (`91MiVe`); its icons are in Design system 1's library. Each paragraph stays its own block, as Ezo settled.
 
 ## Stack
 
