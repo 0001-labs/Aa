@@ -64,7 +64,10 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => { restore(); editor.indent(-1) } },
   ]
   toolbar.refresh()
-  if (options.toolbar) document.body.append(toolbar)
+  // Floating controls must stay within a native modal's interactive subtree.
+  // Outside a dialog they continue to use the document's viewport layer.
+  const overlayRoot = host.closest('dialog') ?? host.ownerDocument.body
+  if (options.toolbar) overlayRoot.append(toolbar)
 
   const menu = document.createElement('div')
   menu.className = 'aa-controls aa-menu'; menu.hidden = true; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Block commands')
@@ -72,14 +75,14 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   grip.className = 'aa-controls aa-grip'; grip.hidden = true
   const dropLine = document.createElement('div'); dropLine.className = 'aa-drop-line'; dropLine.hidden = true
   const findBar = document.createElement('div'); findBar.className = 'aa-controls aa-find'; findBar.hidden = true; findBar.setAttribute('role', 'search')
-  document.body.append(menu, grip, dropLine, findBar)
+  overlayRoot.append(menu, grip, dropLine, findBar)
   const linkBar = document.createElement('form')
   linkBar.className = 'aa-controls aa-find aa-link-editor'; linkBar.hidden = true
   linkBar.setAttribute('aria-label', 'Edit link')
   const linkUrl = document.createElement('input'); linkUrl.type = 'text'; linkUrl.placeholder = 'Link URL'; linkUrl.setAttribute('aria-label', 'Link URL')
   const applyLink = document.createElement('button'); applyLink.type = 'submit'; applyLink.textContent = 'Apply'
   const cancelLink = document.createElement('button'); cancelLink.type = 'button'; cancelLink.textContent = 'Cancel'
-  linkBar.append(linkUrl, applyLink, cancelLink); document.body.append(linkBar)
+  linkBar.append(linkUrl, applyLink, cancelLink); overlayRoot.append(linkBar)
   let linkTarget: { start: number; end: number; text: string; url: string } | null = null
   const finishLink = () => { linkBar.hidden = true; if (linkTarget) editor.selectRange(linkTarget.start, linkTarget.end); linkTarget = null }
   const requestLink = (event: Event) => {
