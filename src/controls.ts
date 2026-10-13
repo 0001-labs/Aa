@@ -12,7 +12,7 @@ const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'numbered', label: 'Numbered list', icon: 'numbered' }, { kind: 'quote', label: 'Quote', icon: 'quote' },
   { kind: 'code', label: 'Code', icon: 'code-block' }, { kind: 'divider', label: 'Divider', icon: 'divider' },
   { kind: 'callout', label: 'Callout', icon: 'callout' }, { kind: 'toggle', label: 'Toggle', icon: 'toggle' },
-  { kind: 'toggle-h1', label: 'Toggle heading 1', icon: 'h1' }, { kind: 'toggle-h2', label: 'Toggle heading 2', icon: 'h2' }, { kind: 'toggle-h3', label: 'Toggle heading 3', icon: 'h3' },
+  { kind: 'toggle-h1', label: 'Heading 1', icon: 'h1' }, { kind: 'toggle-h2', label: 'Heading 2', icon: 'h2' }, { kind: 'toggle-h3', label: 'Heading 3', icon: 'h3' },
   { kind: 'table', label: 'Table', icon: 'table' }, { kind: 'equation', label: 'Equation', icon: 'equation' },
 ]
 function button(label: string, icon: string, action: () => void, text = false, draggable = false): HTMLButtonElement {
