@@ -148,6 +148,7 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 }
 .aa-menu button:hover, .aa-menu button[data-current], .aa-menu button:focus-visible { background: var(--black, black); color: var(--white, white); }
 .aa-menu button[data-current] { outline: 1px solid currentColor; outline-offset: -1px; }
+.aa-menu button[data-command="count"] { font-size: calc(10px * var(--sf, 1)); }
 .aa-menu button .aa-icon { order: 2; }
 .aa-menu button span:last-child {
   order: 1; flex: 1; min-width: 0; overflow: hidden;

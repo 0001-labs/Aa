@@ -122,7 +122,9 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const paint = () => {
     menu.replaceChildren(...choices.map((command, index) => {
       const node = button(command.label, command.icon, () => run(command), true)
-      node.classList.add('note-menu-row'); node.setAttribute('role', 'menuitem'); node.tabIndex = index === active ? 0 : -1
+      node.classList.add('note-menu-row'); node.dataset.command = command.id; node.setAttribute('role', 'menuitem');
+      if (command.id === 'count') node.lastElementChild!.textContent = command.label.split(',')[0]
+      node.tabIndex = index === active ? 0 : -1
       node.toggleAttribute('data-current', index === active)
       return node
     }))
