@@ -112,9 +112,9 @@ step('Checking')
 if (run('git', ['status', '--porcelain', '--', '.'], { quiet: true }).out) {
   fail(`${nested ? relative(gitRoot, root) : 'The repository'} has uncommitted changes: commit them first, so the release holds only what is committed.`)
 }
-if (run('git', ['rev-parse', '-q', '--verify', `refs/tags/${gitTag}`], { quiet: true }).ok) {
-  fail(`The tag ${gitTag} already exists`)
-}
+// `current` publishes a version that may be tagged already; any other release makes a new one.
+const tagged = run('git', ['rev-parse', '-q', '--verify', `refs/tags/${gitTag}`], { quiet: true }).ok
+if (tagged && to !== from) fail(`The tag ${gitTag} already exists`)
 const published = run('npm', ['view', `${pkg.name}@${to}`, 'version'], { quiet: true })
 if (published.ok && published.out) fail(`${pkg.name}@${to} is already on npm`)
 if (!dryRun) {
@@ -159,9 +159,9 @@ if (dryRun) {
   process.exit(0)
 }
 
-step(`Committing and tagging ${gitTag}`)
+step(tagged ? `Committing (${gitTag} is tagged already)` : `Committing and tagging ${gitTag}`)
 if (touched.length) must('git', ['commit', '-m', `Release ${pkg.name} ${to}`, '--', ...touched])
-must('git', ['tag', '-a', gitTag, '-m', `${pkg.name} ${to}`])
+if (!tagged) must('git', ['tag', '-a', gitTag, '-m', `${pkg.name} ${to}`])
 
 console.log(`\n✓ Published ${pkg.name}@${to} under "${tag}": https://www.npmjs.com/package/${pkg.name}/v/${to}`)
 console.log(`  Update a product with: vp add ${pkg.name}@${tag === 'latest' ? to : tag}`)
