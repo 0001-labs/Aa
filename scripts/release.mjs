@@ -19,6 +19,7 @@
 // The same file is in Aa, Design system 1, ID 1 and Drag: change it in all four.
 import { spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { relative, resolve } from 'node:path'
 
 const args = process.argv.slice(2).filter((arg) => arg !== '--')
@@ -31,9 +32,9 @@ const pkgPath = resolve(root, 'package.json')
 const pkgText = readFileSync(pkgPath, 'utf8')
 const pkg = JSON.parse(pkgText)
 
-function run(command, commandArgs, { env, quiet } = {}) {
+function run(command, commandArgs, { env, quiet, cwd = root } = {}) {
   const result = spawnSync(command, commandArgs, {
-    cwd: root,
+    cwd,
     stdio: quiet ? 'pipe' : 'inherit',
     encoding: 'utf8',
     env: { ...process.env, ...env },
@@ -115,10 +116,11 @@ if (run('git', ['status', '--porcelain', '--', '.'], { quiet: true }).out) {
 // `current` publishes a version that may be tagged already; any other release makes a new one.
 const tagged = run('git', ['rev-parse', '-q', '--verify', `refs/tags/${gitTag}`], { quiet: true }).ok
 if (tagged && to !== from) fail(`The tag ${gitTag} already exists`)
-const published = run('npm', ['view', `${pkg.name}@${to}`, 'version'], { quiet: true })
+// npm runs from the home folder: a package that pins pnpm in `devEngines` refuses npm inside it.
+const published = run('npm', ['view', `${pkg.name}@${to}`, 'version'], { quiet: true, cwd: homedir() })
 if (published.ok && published.out) fail(`${pkg.name}@${to} is already on npm`)
 if (!dryRun) {
-  const user = run('npm', ['whoami'], { quiet: true })
+  const user = run('npm', ['whoami'], { quiet: true, cwd: homedir() })
   if (!user.ok) fail('Not signed in to npm: run `vp pm login`, then release again.')
   console.log(`Signed in to npm as ${user.out}`)
 }
