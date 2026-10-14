@@ -22,6 +22,7 @@ export default {
           ['aa.js', script(read('dist/aa.js'))],
           ['aa.css', read('src/aa.css')],
           ['fonts/aa-mono.woff2', read('src/fonts/aa-mono.woff2')],
+          ['fonts/inter-arrows.woff2', read('src/fonts/inter-arrows.woff2')],
           ['fonts/LICENSE.md', read('src/fonts/LICENSE.md')],
           ['aa.d.ts', "export * from './index';\n"],
         ])

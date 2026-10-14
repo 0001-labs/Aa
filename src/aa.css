@@ -1,6 +1,17 @@
 /* Aa. The editor takes the page's type and colour: its own rule weighs
    nothing, so any rule of the page's wins. A product sets the --aa-*
    properties or the Design system 1 tokens they fall back to. */
+/* Arrows are always Inter: Inter's arrows alone (fonts/LICENSE.md), first in
+   every font Aa sets, so the unicode-range draws only arrows with it. */
+@font-face {
+  font-family: "Inter Arrows";
+  src: url("./fonts/inter-arrows.woff2") format("woff2");
+  unicode-range: U+2190-21FF, U+27F0-27FF, U+2900-297F, U+2B00-2BFF;
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Code is set in Aa Mono, Iosevka cut down to what code uses (fonts/LICENSE.md),
    after the product's own --aa-typeface-mono or --typeface-mono, so code never
    falls back to the browser's serif when the product's font is not loaded. */
@@ -14,7 +25,7 @@
 
 :where(.aa, aa-editor) {
   display: block;
-  font-family: var(--aa-typeface, var(--typeface-regular, system-ui, sans-serif));
+  font-family: "Inter Arrows", var(--aa-typeface, var(--typeface-regular, system-ui)), system-ui, sans-serif;
   font-size: var(--aa-size, var(--type-size-default, 14px));
   line-height: var(--aa-line, var(--type-lineheight-default, 1.45));
   font-weight: var(--aa-weight, var(--type-weight-default, 400));
@@ -39,14 +50,14 @@
 .aa-syntax { display: none; }
 .aa-syntax[data-hidden] { display: none; }
 
-.aa-b { font-family: var(--aa-typeface-bold, var(--typeface-medium, inherit)); font-weight: var(--aa-weight-bold, var(--type-weight-bold, 600)); }
+.aa-b { font-family: "Inter Arrows", var(--aa-typeface-bold, var(--typeface-medium, var(--aa-typeface, var(--typeface-regular, system-ui)))), system-ui, sans-serif; font-weight: var(--aa-weight-bold, var(--type-weight-bold, 600)); }
 .aa-i { font-style: italic; }
 .aa-s { text-decoration: line-through; }
-.aa-c, .aa-block[data-kind="code"] { font-family: var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-ligatures: none; }
+.aa-c, .aa-block[data-kind="code"] { font-family: "Inter Arrows", var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-ligatures: none; }
 .aa-c { font-size: 0.92em; }
 a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: none; cursor: text; }
 
-.aa-block[data-kind="heading"] { font-family: var(--aa-typeface-heading, var(--typeface-medium, inherit)); font-weight: var(--aa-weight-heading, var(--type-weight-heading, 600)); }
+.aa-block[data-kind="heading"] { font-family: "Inter Arrows", var(--aa-typeface-heading, var(--typeface-medium, var(--aa-typeface, var(--typeface-regular, system-ui)))), system-ui, sans-serif; font-weight: var(--aa-weight-heading, var(--type-weight-heading, 600)); }
 .aa-block[data-kind="heading"][data-level="1"] { font-size: var(--aa-h1, var(--type-size-title-1, 1.6em)); line-height: 1.2; }
 .aa-block[data-kind="heading"][data-level="2"] { font-size: var(--aa-h2, var(--type-size-title-2, 1.3em)); line-height: 1.25; }
 .aa-block[data-kind="heading"][data-level="3"] { font-size: var(--aa-h3, var(--type-size-heading, 1.1em)); }
