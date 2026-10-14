@@ -46,7 +46,7 @@ Products copy the built editor with Sync 1 (`/Users/joachim/0001/Sync 1`): `"Aa"
 
 ## Releasing to npm
 
-One command publishes a new version, with semantic versioning (`scripts/release.mjs`, the same file in Aa, Design system 1, ID 1 and Drag):
+One command publishes a new version, with semantic versioning (`scripts/release.mjs`, the same file in Aa, Design system 1, ID v1 and Drag):
 
 - `vp run release patch` — fixes, nothing changes for products (0.2.0 → 0.2.1)
 - `vp run release minor` — something new, nothing breaks (0.2.0 → 0.3.0)
