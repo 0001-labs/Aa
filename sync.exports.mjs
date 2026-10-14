@@ -6,8 +6,8 @@
 const optional = ['react', 'collaboration', 'convex']
 // The maps are not copied, so the lines pointing at them go too, and the
 // optional entries import the core from beside them rather than the package.
-const script = text => text.toString().replace(/\n?\/\/# sourceMappingURL=\S*\s*$/, '\n').replace(/from\s*["']@0001\/aa["']/g, 'from "./aa.js"')
-const types = text => text.toString().replace(/from\s*["']@0001\/aa["']/g, 'from "./index"')
+const script = text => text.toString().replace(/\n?\/\/# sourceMappingURL=\S*\s*$/, '\n').replace(/from\s*["']@0001(?:-labs)?\/aa["']/g, 'from "./aa.js"')
+const types = text => text.toString().replace(/from\s*["']@0001(?:-labs)?\/aa["']/g, 'from "./index"')
 
 export default {
   exports: {
@@ -21,6 +21,8 @@ export default {
         const files = new Map([
           ['aa.js', script(read('dist/aa.js'))],
           ['aa.css', read('src/aa.css')],
+          ['fonts/aa-mono.woff2', read('src/fonts/aa-mono.woff2')],
+          ['fonts/LICENSE.md', read('src/fonts/LICENSE.md')],
           ['aa.d.ts', "export * from './index';\n"],
         ])
         for (const entry of entries) files.set(`${entry}.js`, script(read(`dist/${entry}.js`)))

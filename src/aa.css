@@ -1,6 +1,17 @@
 /* Aa. The editor takes the page's type and colour: its own rule weighs
    nothing, so any rule of the page's wins. A product sets the --aa-*
    properties or the Design system 1 tokens they fall back to. */
+/* Code is set in Aa Mono, Iosevka cut down to what code uses (fonts/LICENSE.md),
+   after the product's own --aa-typeface-mono or --typeface-mono, so code never
+   falls back to the browser's serif when the product's font is not loaded. */
+@font-face {
+  font-family: "Aa Mono";
+  src: url("./fonts/aa-mono.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :where(.aa, aa-editor) {
   display: block;
   font-family: var(--aa-typeface, var(--typeface-regular, system-ui, sans-serif));
@@ -31,7 +42,7 @@
 .aa-b { font-family: var(--aa-typeface-bold, var(--typeface-medium, inherit)); font-weight: var(--aa-weight-bold, var(--type-weight-bold, 600)); }
 .aa-i { font-style: italic; }
 .aa-s { text-decoration: line-through; }
-.aa-c, .aa-block[data-kind="code"] { font-family: var(--aa-typeface-mono, var(--typeface-mono, ui-monospace, "SF Mono", Menlo, monospace)); }
+.aa-c, .aa-block[data-kind="code"] { font-family: var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-ligatures: none; }
 .aa-c { font-size: 0.92em; }
 a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: none; cursor: text; }
 
