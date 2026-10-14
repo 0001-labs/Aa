@@ -13,7 +13,7 @@
 //
 // It checks you are signed in to npm (`vp pm login` otherwise) and that the
 // package has nothing uncommitted, writes the new version, runs the package's
-// `release:sync`, `check`, `test` and `build` scripts where it has them,
+// `release:sync`, `check` (or `release:check`), `test` and `build` scripts where it has them,
 // publishes (an alpha under the `alpha` tag, everything else under `latest`),
 // then commits the version and tags it. If a step fails, the version is put back.
 // The same file is in Aa, Design system 1, ID 1 and Drag: change it in all four.
@@ -139,7 +139,9 @@ try {
     writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + (pkgText.endsWith('\n') ? '\n' : ''))
     touched = ['package.json']
   }
-  for (const script of ['release:sync', 'check', 'test', 'build']) {
+  // A package whose `check` covers more than what it publishes names a narrower `release:check`.
+  const check = pkg.scripts?.['release:check'] ? 'release:check' : 'check'
+  for (const script of ['release:sync', check, 'test', 'build']) {
     if (pkg.scripts?.[script]) {
       step(`vp run ${script}`)
       must('vp', ['run', script], { env: { CI: 'true', RELEASE_FROM: from, RELEASE_TO: to } })
