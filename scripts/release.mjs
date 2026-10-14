@@ -16,7 +16,7 @@
 // `release:sync`, `check` (or `release:check`), `test` and `build` scripts where it has them,
 // publishes (an alpha under the `alpha` tag, everything else under `latest`),
 // then commits the version and tags it. If a step fails, the version is put back.
-// The same file is in Aa, Design system 1, ID v1, Drag and Worktrees: change it in all five.
+// The same file is in Aa, Design system 1, IDv1, Drag and Worktrees: change it in all five.
 import { spawnSync } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
