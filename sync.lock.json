@@ -1,0 +1,9 @@
+{
+  "Design system 1": {
+    "commit": "9c7e9d24f10626a1dd70ab7345909f1a9b5a4165",
+    "version": "0.3.0-alpha.13",
+    "files": {
+      "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab"
+    }
+  }
+}

@@ -42,7 +42,7 @@ defineAaEditor()
 <aa-editor placeholder="Write"></aa-editor>
 ```
 
-Publication at 0.2.0 is prepared; verify npm availability before migrating consumers. Until it is published, link it: `pnpm add ../Aa` from the product, or a workspace path.
+Products copy the built editor with Sync 1 (`/Users/joachim/0001/Sync 1`): `"Aa": { "build": { "to": "client/vendor/aa", "entries": ["react"] } }` in their `sync.json`, then `sync1`, which builds Aa first (`sync.exports.mjs`; `entries` takes react, collaboration and convex). Aa takes its shared icons from Design system 1 the same way (`sync.json`). Publication at 0.2.0 is prepared; verify npm availability before migrating consumers. Until it is published, link it: `pnpm add ../Aa` from the product, or a workspace path.
 
 ## Git commits
 
