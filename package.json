@@ -1,5 +1,5 @@
 {
-  "name": "@0001/aa",
+  "name": "@0001-labs/aa",
   "version": "0.2.0",
   "description": "Aa, the text editor of 0001's products: Markdown, drawn as you write",
   "type": "module",
@@ -46,7 +46,8 @@
     "dev": "vp dev",
     "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts && vp build --config vite.config.react.ts && vp build --config vite.config.collaboration.ts && vp build --config vite.config.convex.ts",
     "check": "vp exec tsc --noEmit",
-    "test": "vp test"
+    "test": "vp test",
+    "release": "node scripts/release.mjs"
   },
   "devDependencies": {
     "@types/katex": "^0.16.8",

@@ -1,5 +1,5 @@
 import { createElement, forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, type HTMLAttributes } from 'react'
-import { createEditor, type Editor, type EditorOptions } from '@0001/aa'
+import { createEditor, type Editor, type EditorOptions } from '@0001-labs/aa'
 
 export type AaEditorProps = Omit<HTMLAttributes<HTMLDivElement>, 'onChange' | 'onInput' | 'children'> & EditorOptions
 export type AaEditorRef = { readonly editor: Editor | null; focus(): void; undo(): boolean; redo(): boolean }

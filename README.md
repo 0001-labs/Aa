@@ -3,8 +3,8 @@
 Edit formatted text with the toolbar or typed Markdown shortcuts. Aa stores Markdown and keeps its syntax hidden, including while editing. One editable element per block preserves source offsets through formatting and atoms. Command/Control-K opens a URL field to add or edit a link.
 
 ```ts
-import { createEditor } from '@0001/aa'
-import '@0001/aa/aa.css'
+import { createEditor } from '@0001-labs/aa'
+import '@0001-labs/aa/aa.css'
 
 const editor = createEditor(host, {
   value: '# A note',
@@ -26,8 +26,8 @@ Escape selects a block. Command/Control-A selects its block, then the document. 
 ## React
 
 ```tsx
-import { AaEditor } from '@0001/aa/react'
-import '@0001/aa/aa.css'
+import { AaEditor } from '@0001-labs/aa/react'
+import '@0001-labs/aa/aa.css'
 
 <AaEditor value={markdown} onChange={setMarkdown} toolbar />
 ```
@@ -37,15 +37,15 @@ The ref exposes `editor`, `focus()`, `undo()` and `redo()`. Keep capability arra
 ## Collaboration and Convex
 
 ```ts
-import { connectCollaboration } from '@0001/aa/collaboration'
+import { connectCollaboration } from '@0001-labs/aa/collaboration'
 const connection = connectCollaboration(editor, transport, { id: sessionId, label: name, onError })
 await connection.ready
 ```
 
 The transport atomically initializes one canonical Yjs document, subscribes to its persisted state and sends updates. Optional `publishSelection` and `subscribeSelections` carry encoded relative positions. Local undo preserves remote edits. Failed sends remain pending for `retry()` or `flush()`; transports should persist unsent updates if navigation or process termination must survive. Initialization locks editing until the canonical document arrives. Destroy the connection before the editor.
 
-A Convex component is exported at `@0001/aa/convex.config`. Register it in the parent app and expose authenticated wrappers for `collaboration.get`, `initialize` and `append`. Check the note's read/write permission and entitlement in every wrapper; never expose component calls directly to clients. `append` returns Markdown for the parent to store atomically on its note. Stored state and updates are limited to 512 KiB. Applications with other writers must reconcile their Markdown changes into the collaborative state. Ezo's `convex/aaNotes.ts` implements this reconciliation and authenticated presence.
+A Convex component is exported at `@0001-labs/aa/convex.config`. Register it in the parent app and expose authenticated wrappers for `collaboration.get`, `initialize` and `append`. Check the note's read/write permission and entitlement in every wrapper; never expose component calls directly to clients. `append` returns Markdown for the parent to store atomically on its note. Stored state and updates are limited to 512 KiB. Applications with other writers must reconcile their Markdown changes into the collaborative state. Ezo's `convex/aaNotes.ts` implements this reconciliation and authenticated presence.
 
-`convexTransport` from `@0001/aa/convex` supports `ConvexClient`; applications using `ConvexReactClient` can implement the same transport with `watchQuery` and `mutation`. Convex is an optional peer dependency. The core imports neither React nor Yjs.
+`convexTransport` from `@0001-labs/aa/convex` supports `ConvexClient`; applications using `ConvexReactClient` can implement the same transport with `watchQuery` and `mutation`. Convex is an optional peer dependency. The core imports neither React nor Yjs.
 
 Run the playground with `vp run dev` at http://localhost:5195. Run `vp test`, `vp run check` and `vp run build` before a release.

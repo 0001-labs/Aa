@@ -33,8 +33,8 @@ Toolbar, slash menu, block selection and handle, nested lists, callouts and togg
 ## Using it in a product
 
 ```ts
-import '@0001/aa/aa.css'
-import { defineAaEditor } from '@0001/aa'
+import '@0001-labs/aa/aa.css'
+import { defineAaEditor } from '@0001-labs/aa'
 defineAaEditor()
 ```
 
@@ -42,7 +42,20 @@ defineAaEditor()
 <aa-editor placeholder="Write"></aa-editor>
 ```
 
-Products copy the built editor with Sync 1 (`/Users/joachim/0001/Sync 1`): `"Aa": { "build": { "to": "client/vendor/aa", "entries": ["react"] } }` in their `sync.json`, then `sync1`, which builds Aa first (`sync.exports.mjs`; `entries` takes react, collaboration and convex). Aa takes its shared icons from Design system 1 the same way (`sync.json`). Publication at 0.2.0 is prepared; verify npm availability before migrating consumers. Until it is published, link it: `pnpm add ../Aa` from the product, or a workspace path.
+Products copy the built editor with Sync 1 (`/Users/joachim/0001/Sync 1`): `"Aa": { "build": { "to": "client/vendor/aa", "entries": ["react"] } }` in their `sync.json`, then `sync1`, which builds Aa first (`sync.exports.mjs`; `entries` takes react, collaboration and convex). Aa takes its shared icons from Design system 1 the same way (`sync.json`). On npm it is `@0001-labs/aa`: `vp add @0001-labs/aa`.
+
+## Releasing to npm
+
+One command publishes a new version, with semantic versioning (`scripts/release.mjs`, the same file in Aa, Design system 1, ID 1 and Drag):
+
+- `vp run release patch` — fixes, nothing changes for products (0.2.0 → 0.2.1)
+- `vp run release minor` — something new, nothing breaks (0.2.0 → 0.3.0)
+- `vp run release major` — something breaks for products (0.2.0 → 1.0.0)
+- `vp run release alpha` — a preview under the `alpha` tag (0.2.1-alpha.0, then .1 …)
+- `vp run release current` — publishes the version already in `package.json`, for the first release
+- `--dry-run` after any of them goes through every step without publishing
+
+It refuses with uncommitted changes or when npm is signed out (`vp pm login`), runs `check`, `test` and `build`, publishes, then commits `Release @0001-labs/aa <version>` and tags `v<version>`. A failed step puts the version back. Products then take it with `vp update @0001-labs/aa`.
 
 ## Git commits
 
