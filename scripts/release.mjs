@@ -151,7 +151,8 @@ try {
     if (script === 'release:sync') touched = changedFiles()
   }
   step(`Publishing ${pkg.name}@${to}`)
-  must('vp', ['pm', 'publish', '--access', 'public', '--tag', tag, '--no-git-checks', ...(dryRun ? ['--dry-run'] : [])])
+  // pnpm directly: `vp pm publish` only forwards to it, and has hung while other `vp` commands ran.
+  must('pnpm', ['publish', '--access', 'public', '--tag', tag, '--no-git-checks', ...(dryRun ? ['--dry-run'] : [])])
 } catch (error) {
   restore()
   fail(`${error.message}\nNothing was published; the version is back at ${from}.`)
