@@ -123,9 +123,13 @@ if (!dryRun) {
   console.log(`Signed in to npm as ${user.out}`)
 }
 
+// The release touches only the version: package.json, and what `release:sync` writes.
+// Those files alone are put back or committed, so work elsewhere in the repository is left alone.
+let touched = []
+const changedFiles = () => must('git', ['diff', '--name-only', '--relative', '--', '.'], { quiet: true }).split('\n').filter(Boolean)
+
 function restore() {
-  // The package had nothing uncommitted when the release began, so this only undoes the release's own edits.
-  run('git', ['checkout', '--', '.'], { quiet: true })
+  if (touched.length) run('git', ['checkout', '--', ...touched], { quiet: true })
 }
 
 try {
@@ -133,11 +137,14 @@ try {
     step(`Writing ${to}`)
     pkg.version = to
     writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + (pkgText.endsWith('\n') ? '\n' : ''))
+    touched = ['package.json']
   }
   for (const script of ['release:sync', 'check', 'test', 'build']) {
-    if (!pkg.scripts?.[script]) continue
-    step(`vp run ${script}`)
-    must('vp', ['run', script], { env: { CI: 'true', RELEASE_FROM: from, RELEASE_TO: to } })
+    if (pkg.scripts?.[script]) {
+      step(`vp run ${script}`)
+      must('vp', ['run', script], { env: { CI: 'true', RELEASE_FROM: from, RELEASE_TO: to } })
+    }
+    if (script === 'release:sync') touched = changedFiles()
   }
   step(`Publishing ${pkg.name}@${to}`)
   must('vp', ['pm', 'publish', '--access', 'public', '--tag', tag, '--no-git-checks', ...(dryRun ? ['--dry-run'] : [])])
@@ -153,10 +160,7 @@ if (dryRun) {
 }
 
 step(`Committing and tagging ${gitTag}`)
-if (run('git', ['status', '--porcelain', '--', '.'], { quiet: true }).out) {
-  must('git', ['add', '-A', '--', '.'])
-  must('git', ['commit', '-m', `Release ${pkg.name} ${to}`, '--', '.'])
-}
+if (touched.length) must('git', ['commit', '-m', `Release ${pkg.name} ${to}`, '--', ...touched])
 must('git', ['tag', '-a', gitTag, '-m', `${pkg.name} ${to}`])
 
 console.log(`\n✓ Published ${pkg.name}@${to} under "${tag}": https://www.npmjs.com/package/${pkg.name}/v/${to}`)
