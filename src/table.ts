@@ -28,10 +28,21 @@ export function tableRows(source: string): Cell[][] {
     return [cells]
   })
 }
-export function writeTable(rows: readonly (readonly string[])[]): string {
+/** A column's alignment, from the delimiter row: `:---` start, `:---:` centre, `---:` end. */
+export type Alignment = 'start' | 'center' | 'end' | null
+export function tableAlignments(source: string): Alignment[] {
+  const line = source.split('\n')[1] ?? ''
+  return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(cell => {
+    const text = cell.trim(), start = text.startsWith(':'), end = text.endsWith(':')
+    return start && end ? 'center' : end ? 'end' : start ? 'start' : null
+  })
+}
+const DELIMITER: Record<string, string> = { start: ':---', center: ':---:', end: '---:' }
+export function writeTable(rows: readonly (readonly string[])[], alignments: readonly Alignment[] = []): string {
   const width = Math.max(1, ...rows.map(row => row.length))
   const line = (row: readonly string[]) => `| ${Array.from({ length: width }, (_, i) => (row[i] ?? '').replace(/\r?\n/g, ' ').replace(/(?<!\\)\|/g, '\\|')).join(' | ')} |`
-  return [line(rows[0] ?? ['']), line(Array(width).fill('---')), ...rows.slice(1).map(line)].join('\n')
+  const delimiter = `| ${Array.from({ length: width }, (_, i) => DELIMITER[alignments[i] ?? ''] ?? '---').join(' | ')} |`
+  return [line(rows[0] ?? ['']), delimiter, ...rows.slice(1).map(line)].join('\n')
 }
 export function fromTSV(text: string): string | null {
   if (!text.includes('\t')) return null
@@ -40,11 +51,12 @@ export function fromTSV(text: string): string | null {
 export type TableAction = 'add-row' | 'delete-row' | 'add-column' | 'delete-column'
 export function editTable(block: Block, action: TableAction, row: number, column: number): string {
   const rows = tableRows(block.source).map(row => row.map(cell => cell.text))
+  const alignments = tableAlignments(block.source)
   const width = Math.max(1, ...rows.map(row => row.length))
   rows.forEach(row => { while (row.length < width) row.push('') })
   if (action === 'add-row') rows.splice(row + 1, 0, Array(width).fill(''))
   if (action === 'delete-row' && row > 0 && rows.length > 1) rows.splice(row, 1)
-  if (action === 'add-column') rows.forEach(row => row.splice(column + 1, 0, ''))
-  if (action === 'delete-column' && width > 1) rows.forEach(row => row.splice(column, 1))
-  return writeTable(rows)
+  if (action === 'add-column') { rows.forEach(row => row.splice(column + 1, 0, '')); alignments.splice(column + 1, 0, null) }
+  if (action === 'delete-column' && width > 1) { rows.forEach(row => row.splice(column, 1)); alignments.splice(column, 1) }
+  return writeTable(rows, alignments)
 }

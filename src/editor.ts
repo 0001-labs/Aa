@@ -10,7 +10,7 @@ import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPr
 import { History, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout } from './document'
-import { editTable, fromTSV, tableRows, writeTable, type TableAction } from './table'
+import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableAction } from './table'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
 
@@ -724,7 +724,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         const rows = cells.map(row => row.map(cell => cell.text))
         const pasted = text.replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n').map(line => line.split('\t'))
         pasted.forEach((values, i) => { const target = rows[row + i] ?? (rows[row + i] = []); values.forEach((value, j) => { target[column + j] = value }) })
-        const source = writeTable(rows)
+        const source = writeTable(rows, tableAlignments(block.source))
         const cell = tableRows(source)[row][column]
         const change = replaceRange(blocks, { block: a.block, offset: 0 }, { block: a.block, offset: block.source.length }, source)
         const pos = { block: a.block, offset: cell.to }

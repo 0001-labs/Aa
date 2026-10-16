@@ -3,7 +3,7 @@ import { defineAaEditor, type AaEditorElement } from '../src/element'
 import { createEditor, type Editor } from '../src/editor'
 import { parseBlocks, serialize, blockRuns } from '../src/markdown'
 import { fromMarkdown, indentBlocks, renumber, toggleCallout, turnInto } from '../src/document'
-import { fromTSV, tableRows, editTable } from '../src/table'
+import { fromTSV, tableAlignments, tableRows, editTable } from '../src/table'
 import { readBlock, renderBlock, pointAt, offsetIn } from '../src/render'
 
 let editor: Editor | undefined, host: HTMLElement | undefined
@@ -101,6 +101,17 @@ describe('tables', () => {
     expect(tableRows(editTable(block, 'delete-row', 0, 0))).toHaveLength(2)
     expect(tableRows(editTable(block, 'add-column', 0, 0))[0]).toHaveLength(3)
     expect(fromTSV('Name\tValue\nMilk\t2')).toBe(source)
+  })
+  it('reads and keeps each column\'s alignment, setting numbers to the end', () => {
+    const aligned = '| Name | Count |\n| :--- | ---: |\n| Milk | 2 |'
+    expect(tableAlignments(aligned)).toEqual(['start', 'end'])
+    expect(tableAlignments(source)).toEqual([null, null])
+    const block = parseBlocks(aligned)[0]
+    expect(editTable(block, 'add-row', 0, 0).split('\n')[1]).toBe('| :--- | ---: |')
+    expect(editTable(block, 'add-column', 0, 0).split('\n')[1]).toBe('| :--- | --- | ---: |')
+    expect(editTable(block, 'delete-column', 0, 0).split('\n')[1]).toBe('| ---: |')
+    setup(aligned)
+    expect([...host!.querySelectorAll<HTMLElement>('[data-cell]')].map(cell => cell.dataset.align)).toEqual(['start', 'end', 'start', 'end'])
   })
   it('keeps table cells read-only and prevents deleting source separators at an edge', () => {
     const e = setup(source)

@@ -6,7 +6,7 @@
  */
 
 import { blockRuns, DEFAULT_ATOMS, type AtomSyntax, type Block } from './markdown'
-import { tableRows } from './table'
+import { tableAlignments, tableRows } from './table'
 import { icons } from './icons'
 
 export type Decoration = { from: number; to: number; className: string; label?: string }
@@ -161,7 +161,7 @@ function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) 
 
 function renderTable(element: HTMLElement, block: Block, decorations: readonly Decoration[]) {
   element.contentEditable = 'false'
-  const rows = tableRows(block.source)
+  const rows = tableRows(block.source), alignments = tableAlignments(block.source)
   const fragment = document.createDocumentFragment()
   let offset = 0
   rows.forEach((cells, row) => {
@@ -172,6 +172,7 @@ function renderTable(element: HTMLElement, block: Block, decorations: readonly D
       const node = document.createElement('span')
       node.className = 'aa-table-cell'
       node.dataset.cell = `${row}:${column}`
+      if (alignments[column]) node.dataset.align = alignments[column]!
       node.dataset.from = String(cell.from)
       node.dataset.to = String(cell.to)
       node.contentEditable = element.dataset.readonly === 'true' ? 'false' : 'true'

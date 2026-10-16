@@ -220,9 +220,17 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-block[data-kind="callout"]::before { content: ""; position: absolute; left: 0; top: 0; width: var(--1, calc(20px * var(--sf, 1))); height: var(--1, calc(20px * var(--sf, 1))); background: currentColor; mask: var(--aa-callout-icon) center / calc(16px * var(--sf, 1)) no-repeat; cursor: pointer; }
 .aa-block[data-folded]:not([data-body-active]) .aa-callout-body { display: none; }
 .aa-block[data-kind="table"] { white-space: normal; }
+/* A table is Design system 1's: rows one square high, each on a hairline at
+   its foot (19px of words, 1px of line), no box and no column lines. The
+   header row keeps the text's weight in the title grey; Markdown's `---:`
+   sets a column of numbers to its end in tabular figures. */
+.aa-block[data-kind="table"] { --aa-table-row: calc(20px * var(--sf, 1)); font-variant-numeric: tabular-nums; }
 .aa-table-row { display: grid; grid-template-columns: repeat(var(--aa-columns), minmax(0, 1fr)); }
-.aa-table-cell { min-height: var(--1, calc(20px * var(--sf, 1))); padding: 0 calc(4px * var(--sf, 1)); border: 1px solid var(--aa-rule, currentColor); margin-right: -1px; margin-bottom: -1px; white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
-.aa-table-row:first-child { font-weight: var(--type-weight-bold, 600); }
+.aa-table-cell { box-sizing: border-box; min-height: var(--aa-table-row); padding: 0 calc(var(--aa-table-row) / 2) 0 0; border-bottom: 1px solid var(--aa-table-rule, var(--ds-border-color, color-mix(in srgb, currentColor 15%, transparent))); line-height: calc(var(--aa-table-row) - 1px); white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
+.aa-table-cell:last-child { padding-inline-end: 0; }
+.aa-table-cell[data-align="center"] { text-align: center; }
+.aa-table-cell[data-align="end"] { text-align: end; }
+.aa-table-row:first-child { color: var(--aa-table-header, var(--ds-title-color, var(--base-darker-grey, color-mix(in srgb, currentColor 55%, transparent)))); }
 .aa-atom video, .aa-atom audio { display: block; max-width: 100%; }
 .aa-caption { display: block; font: inherit; font-size: var(--type-size-small, 10px); min-height: 1lh; outline: none; cursor: text; -webkit-user-modify: read-write-plaintext-only; }
 .aa-caption:empty::before { content: attr(data-placeholder); color: var(--aa-placeholder, GrayText); }
