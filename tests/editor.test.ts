@@ -20,9 +20,16 @@ describe('renderBlock', () => {
     const after = block('a **b** c', { from: 8, to: 8 })
     expect(after.querySelectorAll('.aa-syntax[data-hidden]')).toHaveLength(2)
   })
-  it('keeps block prefixes hidden even while the block is active', () => {
+  it('reveals active heading prefixes beside the text and preserves source offsets', () => {
     expect(block('## T').querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(true)
-    expect(block('## T', { from: 3, to: 3 }).querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(true)
+    const active = block('## T', { from: 3, to: 3 })
+    const prefix = active.querySelector('.aa-syntax')!
+    expect(prefix.hasAttribute('data-heading-prefix')).toBe(true)
+    expect(prefix.hasAttribute('data-hidden')).toBe(false)
+    expect(readBlock(active)).toBe('## T')
+    expect(pointAt(active, 1)).toEqual({ node: prefix.firstChild, offset: 1 })
+    expect(offsetIn(active, prefix.firstChild!, 1)).toBe(1)
+    expect(block('- T', { from: 2, to: 2 }).querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(true)
     expect(block('## T').dataset).toMatchObject({ kind: 'heading', level: '2' })
   })
   it('gives an empty block a line to stand on', () => {

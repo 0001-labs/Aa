@@ -46,9 +46,18 @@
 .aa-block[data-selected] { background: var(--aa-selection, var(--accent-color, var(--apple-green, Highlight))); }
 .aa-block[data-kind="bullet"] + .aa-block[data-kind="bullet"] { margin-top: 0; }
 
-/* Markdown stays in the DOM for lossless storage, never on the editing surface. */
+/* Markdown stays in the DOM for lossless storage. Active heading prefixes
+   hang beside the text, outside the line, so editing never shifts it. */
 .aa-syntax { display: none; }
 .aa-syntax[data-hidden] { display: none; }
+.aa-syntax[data-heading-prefix] {
+  display: inline-block;
+  position: absolute;
+  right: 100%;
+  top: 0;
+  white-space: pre;
+  color: var(--aa-syntax, color-mix(in srgb, currentColor 38%, transparent));
+}
 
 .aa-b { font-family: "Inter Arrows", var(--aa-typeface-bold, var(--typeface-medium, var(--aa-typeface, var(--typeface-regular, system-ui)))), system-ui, sans-serif; font-weight: var(--aa-weight-bold, var(--type-weight-bold, 600)); }
 .aa-i { font-style: italic; }

@@ -104,7 +104,8 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     if (run.kind === 'syntax') {
       const span = document.createElement('span')
       span.className = 'aa-syntax'
-      span.setAttribute('data-hidden', '')
+      if (block.kind === 'heading' && run.prefix && reveal) span.setAttribute('data-heading-prefix', '')
+      else span.setAttribute('data-hidden', '')
       span.textContent = text
       destination.append(span)
       continue
