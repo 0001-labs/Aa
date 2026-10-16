@@ -44,6 +44,28 @@
 }
 .aa-block + .aa-block { margin-top: var(--aa-gap, 1lh); }
 .aa-block[data-selected] { background: var(--aa-selection, var(--accent-color, var(--apple-green, Highlight))); }
+.aa-block[data-selected] { border-radius: calc(2px * var(--sf, 1)); }
+/* The mask joins wrapped lines into one softly rounded silhouette. The
+   native selection still owns editing, copying and touch handles. */
+.aa-block[data-aa-selection] { isolation: isolate; }
+.aa-block[data-aa-selection]::after {
+  content: "";
+  position: absolute;
+  inset: var(--aa-selection-box);
+  width: var(--aa-selection-width);
+  height: var(--aa-selection-height);
+  pointer-events: none;
+  z-index: -1;
+  background: var(--aa-text-selection, color-mix(in srgb, currentColor 15%, transparent));
+  mask: var(--aa-selection-mask) 0 0 / 100% 100% no-repeat;
+}
+.aa-block[data-aa-selection]::selection,
+.aa-block[data-aa-selection] ::selection { background: transparent; color: inherit; }
+@media (forced-colors: active) {
+  .aa-block[data-aa-selection]::after { display: none; }
+  .aa-block[data-aa-selection]::selection,
+  .aa-block[data-aa-selection] ::selection { background: Highlight; color: HighlightText; }
+}
 .aa-block[data-kind="bullet"] + .aa-block[data-kind="bullet"] { margin-top: 0; }
 
 /* Markdown stays in the DOM for lossless storage. Active heading prefixes

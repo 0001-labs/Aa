@@ -12,6 +12,7 @@ import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type
 import { indentBlocks, renumber, toggleCallout } from './document'
 import { editTable, fromTSV, tableRows, writeTable, type TableAction } from './table'
 import { createControls, type Command, type ToolbarAction } from './controls'
+import { paintSelection } from './selection'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -763,6 +764,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   document.addEventListener('selectionchange', onSelectionChange)
 
   renderAll()
+  const stopSelection = paintSelection(host)
 
   const setReadOnly = (value: boolean) => {
     if (value === readOnly) return
@@ -838,6 +840,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     setHistoryProvider(provider) { historyProvider = provider },
     destroy() {
       destroyed = true
+      stopSelection()
       stopControls()
       host.removeEventListener('beforeinput', onBeforeInput)
       host.removeEventListener('input', onInput)
