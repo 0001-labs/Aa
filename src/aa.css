@@ -236,3 +236,4 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 
 /* A plain specimen inherits its surrounding face and size without controls. */
 :where(.aa-plain) { font: inherit; letter-spacing: inherit; }
+:where(.aa-plain) > .aa-block { font: inherit; letter-spacing: inherit; }
