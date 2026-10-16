@@ -39,6 +39,10 @@ Toolbar, slash menu, block selection and handle, nested lists, callouts and togg
 - `vp run check` — type check
 - `vp test` — the tests
 
+## Plain text
+
+`createPlainEditor(host, { value, readOnly, onChange })` provides one native plain-text block for short specimens and simple writing surfaces. It shares Aa's rounded native-selection painter and inherits the surrounding typography. It has no Markdown conversion, toolbar, menus, atoms or document model; the browser owns multiline input, clipboard, IME and undo. This single-block mode is an intentional exception to the Markdown document/history rules. Use `createEditor` for documents.
+
 ## Using it in a product
 
 ```ts

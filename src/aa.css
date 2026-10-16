@@ -233,3 +233,6 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-block[data-kind=callout][data-level] > span:not(.aa-syntax):not(.aa-callout-body) { font-weight: bold; }
 
 .aa-link-editor input { flex: 1; width: auto; }
+
+/* A plain specimen inherits its surrounding face and size without controls. */
+:where(.aa-plain) { font: inherit; letter-spacing: inherit; }
