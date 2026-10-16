@@ -4,6 +4,14 @@
 
 Aa is the text editor of 0001's products: Ezo's notes and writing blocks, Link's comments and messages, and whatever comes next. It is Markdown drawn as you write it, Notion's architecture on 0001's own terms. Local only, no remote.
 
+## System parts
+
+System node: `aa` ([map](https://system.0001.dev/system?focus=aa)). Follow the studio’s Selecting System requirements workflow; inspect current edges for Stack dependencies and their evidence.
+
+- Recorded relationships — local: `editing`; shared: `sharing`, `documentation`.
+- Decisions/exceptions: What it is and Using it in a product below own Markdown storage and optional adapters; uploads, permissions and authenticated transport stay in the consuming product.
+- Coverage: relationships select guides, not proof of acceptance. Proposed (`opportunity`) and unknown (`unverified`) relationships stay distinct; verify applicable requirements for the current change.
+
 ## What it is
 
 - **The document is Markdown.** That is what every product stores, what the `.ezo` file is, what agents write and what the iPhone app reads, so nothing is converted and nothing is lost. `src/markdown.ts` reads a text into blocks (paragraph, heading, bullet with or without a box, quote, fenced code, divider) and a block into runs (text, syntax, line break), every character kept with its offset.
