@@ -53,6 +53,11 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
 export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS, draw: AtomDrawer = drawAtomAsText, decorations: readonly Decoration[] = []) {
   element.className = 'aa-block'
   element.dataset.kind = block.kind
+  // Code is not words: no spelling marks, and no phone capitalising or correcting it.
+  for (const name of ['spellcheck', 'autocorrect', 'autocapitalize']) {
+    if (block.kind === 'code') element.setAttribute(name, name === 'spellcheck' ? 'false' : 'off')
+    else element.removeAttribute(name)
+  }
   if (block.level) element.dataset.level = String(block.level)
   else delete element.dataset.level
   if (block.checked === undefined) delete element.dataset.checked
@@ -116,7 +121,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     if (run.bold) node.classList.add('aa-b')
     if (run.italic) node.classList.add('aa-i')
     if (run.strike) node.classList.add('aa-s')
-    if (run.code) node.classList.add('aa-c')
+    if (run.code) { node.classList.add('aa-c'); node.spellcheck = false }
     if (run.highlight) node.classList.add('aa-highlight')
     node.textContent = text
     decorateNode(node, run.from, decorations)

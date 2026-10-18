@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, select, turnInto, duplicateBlocks, deleteBlocks, moveBlocks } from '../src/document'
-import { History } from '../src/history'
+import { History, changeEnd } from '../src/history'
 
 const doc = (text: string) => fromMarkdown(text)
 const at = (block: number, offset: number) => ({ block, offset })
@@ -142,6 +142,30 @@ describe('History', () => {
     expect(toMarkdown(history.undo()!.blocks)).toBe('')
     expect(history.undo()).toBeNull()
     expect(toMarkdown(history.redo()!.blocks)).toBe('ab')
+  })
+  it('keeps deleting apart from typing and begins a step at the space after a word', () => {
+    const history = new History({ blocks: doc(''), anchor: at(0, 0), focus: at(0, 0) })
+    history.record({ blocks: doc('hi'), anchor: at(0, 2), focus: at(0, 2) }, 'type', 1000)
+    history.record({ blocks: doc('hi '), anchor: at(0, 3), focus: at(0, 3) }, 'type', 1100)
+    history.record({ blocks: doc('hi yo'), anchor: at(0, 5), focus: at(0, 5) }, 'type', 1200)
+    history.record({ blocks: doc('hi y'), anchor: at(0, 4), focus: at(0, 4) }, 'delete', 1300)
+    expect(toMarkdown(history.undo()!.blocks)).toBe('hi yo')
+    expect(toMarkdown(history.undo()!.blocks)).toBe('hi')
+    expect(toMarkdown(history.undo()!.blocks)).toBe('')
+  })
+  it('puts the caret where the change undone was', () => {
+    const history = new History({ blocks: doc('one\n\ntwo'), anchor: at(0, 0), focus: at(0, 0) })
+    history.record({ blocks: doc('one!\n\ntwo'), anchor: at(0, 4), focus: at(0, 4) }, 'type', 1000)
+    history.record({ blocks: doc('one!\n\ntwo?'), anchor: at(1, 4), focus: at(1, 4) }, 'type', 1100)
+    expect(history.undo()).toMatchObject({ anchor: at(1, 3), focus: at(1, 3) })
+    expect(history.undo()).toMatchObject({ focus: at(0, 3) })
+  })
+  it('finds where two documents differ', () => {
+    expect(changeEnd(doc('abc'), doc('abc'))).toBeNull()
+    expect(changeEnd(doc('abcxyz'), doc('abc'))).toEqual(at(0, 6))
+    expect(changeEnd(doc('aa'), doc('aaa'))).toEqual(at(0, 2))
+    expect(changeEnd(doc('a\n\nc'), doc('a\n\nb\n\nc'))).toEqual(at(0, 1))
+    expect(changeEnd(doc('a\n\nb\n\nc'), doc('a\n\nc'))).toEqual(at(1, 1))
   })
 })
 

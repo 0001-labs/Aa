@@ -7,7 +7,7 @@
 
 import { IMAGE, EQUATION, type AtomSyntax, type Block } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
-import { History, type Snapshot } from './history'
+import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout } from './document'
 import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableAction } from './table'
@@ -127,15 +127,27 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
   const draw = (element: HTMLElement, block: Block, reveal: Reveal) => {
     element.dataset.readonly = String(readOnly)
+    renderBlock(element, block, reveal, atoms, drawAtom, decorationsFor(block))
+  }
+  /** The decorations a block shows, in its own offsets. */
+  const decorationsFor = (block: Block): Decoration[] => {
+    if (!decorations.length) return []
     const index = blocks.indexOf(block)
     const offset = index < 0 ? 0 : offsetOf({ block: index, offset: 0 })
-    renderBlock(element, block, reveal, atoms, drawAtom, decorations.map(range => ({ ...range, from: range.from - offset, to: range.to - offset })))
+    return decorations.map(range => ({ ...range, from: range.from - offset, to: range.to - offset }))
   }
   const history = new History({ blocks, anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } })
 
   host.classList.add('aa')
   host.setAttribute('role', 'textbox')
   host.setAttribute('aria-multiline', 'true')
+  /** What a screen reader is told beside the text: whether it can be changed, and the placeholder. */
+  const describe = () => {
+    host.setAttribute('aria-readonly', String(readOnly))
+    if (placeholder) host.setAttribute('aria-placeholder', placeholder)
+    else host.removeAttribute('aria-placeholder')
+  }
+  describe()
 
   const elements = () => Array.from(host.children) as HTMLElement[]
 
@@ -261,7 +273,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const snapshot = (anchor: Pos, focus: Pos): Snapshot => ({ blocks, anchor, focus })
 
-  const commit = (next: Block[], anchor: Pos, focus: Pos, kind: 'type' | 'edit') => {
+  const commit = (next: Block[], anchor: Pos, focus: Pos, kind: ChangeKind) => {
     clearBlocks()
     const numbered = renumber(next)
     const adjust = (pos: Pos) => ({ ...pos, offset: Math.max(0, pos.offset + numbered[pos.block].prefix - next[pos.block].prefix) })
@@ -289,12 +301,13 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const redo = () => { if (readOnly) return false; if (historyProvider) return historyProvider.redo(); const state = history.redo(); if (state) restore(state); return !!state }
 
   /** The block the browser just changed, read back into the document. */
-  const readBack = (element: HTMLElement, kind: 'type' | 'edit' = 'type') => {
+  const readBack = (element: HTMLElement) => {
     const index = elements().indexOf(element)
     if (index < 0) return
     const raw = readBlock(element)
     const text = raw.replace(/^\[\] /, '- [ ] ')
     if (text === blocks[index].source) return
+    const kind: ChangeKind = text.length < blocks[index].source.length ? 'delete' : 'type'
     const selection = readSelection()
     const { blocks: next, caret } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, text)
     const within = (pos: Pos): Pos => pos.block !== index ? { ...pos, block: pos.block + (next.length - blocks.length) * (pos.block > index ? 1 : 0) } : mapOffset(next, index, caret, text, pos.offset)
@@ -316,7 +329,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     return last
   }
 
-  const insert = (selection: Selection2, text: string, kind: 'type' | 'edit' = 'edit') => {
+  const insert = (selection: Selection2, text: string, kind: ChangeKind = 'edit') => {
     const { blocks: next, caret } = replaceRange(blocks, selection.anchor, selection.focus, text)
     commit(next, caret, caret, kind)
   }
@@ -693,12 +706,39 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (change) commit(change.blocks, change.caret, change.caret, 'edit')
   }
 
+  /** Each block's decorations in its own offsets, only those that reach it, in one pass. */
+  const shownDecorations = (): string[] => {
+    let at = 0
+    return blocks.map((block, index) => {
+      const from = at, to = at + block.source.length
+      at = to + gap(index)
+      return JSON.stringify(decorations.filter(range => range.from <= to && range.to >= from).map(range => ({ ...range, from: range.from - from, to: range.to - from })))
+    })
+  }
+  /** Draw again the blocks whose decorations are not what they were, and no others. */
+  let pendingDecorations: string[] | null = null
+  const redecorate = (before: string[]) => {
+    pendingDecorations = null
+    const selection = readSelection()
+    const els = elements(), after = shownDecorations()
+    let changed = false
+    blocks.forEach((block, index) => {
+      if (before[index] === after[index]) return
+      draw(els[index], block, revealFor(index, selection))
+      changed = true
+    })
+    if (!changed) return
+    if (selection) setSelection(selection.anchor, selection.focus)
+    sweep()
+  }
+
   const onCompositionStart = () => { composing = true }
   const onCompositionEnd = (event: CompositionEvent) => {
     composing = false
     if ((event.target as HTMLElement).closest?.('.aa-caption')) { onInput(event); return }
     const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
     if (element && element.parentElement === host) readBack(element)
+    if (pendingDecorations) redecorate(pendingDecorations)
   }
   const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !document.activeElement?.closest?.('.aa-caption') && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); host.dispatchEvent(new Event('aa-selectionchange')) } }
   const onPointerDown = () => clearBlocks()
@@ -769,6 +809,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const setReadOnly = (value: boolean) => {
     if (value === readOnly) return
     readOnly = value
+    describe()
     clearBlocks()
     for (const element of elements()) { element.contentEditable = value || element.dataset.kind === 'table' ? 'false' : 'true'; element.dataset.readonly = String(value); element.querySelectorAll<HTMLElement>('[data-cell], .aa-caption').forEach(cell => cell.contentEditable = value ? 'false' : 'true') }
     host.dispatchEvent(new Event('aa-change'))
@@ -779,15 +820,31 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     get value() { return toMarkdown(blocks) },
     set value(text: string) {
       if (toMarkdown(blocks) === text) return
-      blocks = fromMarkdown(text)
+      // Only the blocks that changed are drawn again, so a change from
+      // outside (another person, a product's own state) keeps the caret,
+      // the focus and the pictures of everything it did not touch.
+      const selection = host.contains(document.activeElement) ? readSelection() : null
+      const old = blocks, parsed = fromMarkdown(text)
+      const sameBlock = (a: Block, b: Block) => JSON.stringify(a) === JSON.stringify(b)
+      let start = 0
+      while (start < old.length && start < parsed.length && sameBlock(old[start], parsed[start])) start++
+      let end = 0
+      while (end < old.length - start && end < parsed.length - start && sameBlock(old[old.length - 1 - end], parsed[parsed.length - 1 - end])) end++
+      const next = [...old.slice(0, start), ...parsed.slice(start, parsed.length - end), ...old.slice(old.length - end)]
       clearBlocks()
-      renderAll()
-      history.reset({ blocks, anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } })
+      syncDom(next)
+      const keep = (pos: Pos): Pos => {
+        const block = pos.block < start ? pos.block : pos.block >= old.length - end ? pos.block + next.length - old.length : Math.min(pos.block, next.length - 1)
+        return { block, offset: Math.min(pos.offset, next[block].source.length) }
+      }
+      const anchor = selection ? keep(selection.anchor) : { block: 0, offset: 0 }, focus = selection ? keep(selection.focus) : anchor
+      if (selection) { setSelection(anchor, focus); applyReveal({ anchor, focus }) }
+      history.reset({ blocks, anchor, focus })
     },
     get readOnly() { return readOnly },
     set readOnly(value: boolean) { setReadOnly(value) },
     get placeholder() { return placeholder },
-    set placeholder(value: string) { placeholder = value; showPlaceholder() },
+    set placeholder(value: string) { placeholder = value; showPlaceholder(); describe() },
     focus() {
       const last = blocks.length - 1
       elements()[last]?.focus({ preventScroll: true })
@@ -821,7 +878,14 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     toggle(open) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = toggleCallout(blocks, selection.focus.block, open) ?? toggleBox(blocks, selection.focus.block); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
     table(action) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const index = selection.focus.block, block = blocks[index]; if (block.kind !== 'table') return; const rows = tableRows(block.source); let row = 0, column = 0; rows.forEach((cells, r) => cells.forEach((cell, c) => { if (selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) { row = r; column = c } })); const source = editTable(block, action, row, column); const change = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: block.source.length }, source); const pos = { block: index, offset: tableRows(source)[Math.min(row, tableRows(source).length - 1)][Math.min(column, tableRows(source)[0].length - 1)].from }; commit(change.blocks, pos, pos, 'edit') },
     insertFile(file) { if (!readOnly && !destroyed) options.onFiles?.([file]) },
-    decorate(ranges, layer = 'external') { decorationLayers.set(layer, ranges.map(range => ({ ...range }))); decorations = [...decorationLayers.values()].flat(); const selection = readSelection(); blocks.forEach((block, index) => draw(elements()[index], block, revealFor(index, selection))); if (selection) setSelection(selection.anchor, selection.focus); sweep() },
+    decorate(ranges, layer = 'external') {
+      const before = pendingDecorations ?? shownDecorations()
+      decorationLayers.set(layer, ranges.map(range => ({ ...range })))
+      decorations = [...decorationLayers.values()].flat()
+      // A block is not drawn again under a composition, which would end it; it is drawn once the composition is done.
+      if (composing) { pendingDecorations = before; return }
+      redecorate(before)
+    },
     stats() { const text = blocks.flatMap(block => block.kind === 'code' ? [] : [block.source.slice(block.prefix)]).join(' ').replace(/[*_~`#>|=$\[\]()]/g, ' '); const words = typeof Intl.Segmenter === 'function' ? [...new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text)].filter(part => part.isWordLike).length : (text.match(/\S+/g)?.length ?? 0); return { words, characters: [...toMarkdown(blocks)].length, blocks: blocks.length } },
     find(query, caseSensitive = false) { if (!query) return []; const text = caseSensitive ? toMarkdown(blocks) : toMarkdown(blocks).toLocaleLowerCase(); const needle = caseSensitive ? query : query.toLocaleLowerCase(); const matches: { start: number; end: number }[] = []; for (let start = text.indexOf(needle); start >= 0; start = text.indexOf(needle, start + needle.length)) matches.push({ start, end: start + query.length }); return matches },
     selectRange(start, end = start) { const a = posOf(start), b = posOf(end); clearBlocks(); elements()[a.block].focus(); setSelection(a, b); applyReveal() },
