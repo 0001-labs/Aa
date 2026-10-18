@@ -57,6 +57,8 @@
   ],
   "scripts": {
     "dev": "vp dev",
+    "site:build": "vp build",
+    "deploy": "vp run site:build && CLOUDFLARE_ACCOUNT_ID=ce6189d5ac975158991e207a3c4e1cd5 vp exec wrangler deploy",
     "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts && vp build --config vite.config.react.ts && vp build --config vite.config.collaboration.ts && vp build --config vite.config.convex.ts && vp build --config vite.config.diagram.ts && vp build --config vite.config.diagram-language.ts && vp build --config vite.config.marker.ts",
     "check": "vp exec tsc --noEmit",
     "test": "vp test",
@@ -75,7 +77,8 @@
     "react-dom": "19.2.4",
     "typescript": "^6.0.3",
     "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "wrangler": "^4.151.1"
   },
   "packageManager": "pnpm@11.7.0",
   "peerDependencies": {
