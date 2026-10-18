@@ -236,6 +236,15 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 .aa-caption:empty::before { content: attr(data-placeholder); color: var(--aa-placeholder, GrayText); }
 .aa-atom[data-atom="equation-block"] { display: block; }
 
+/* A fenced block an atom draws whole, a diagram: the drawing on the paper, not
+   in a code box, wider ones scrolled rather than cut; with the caret in it, its
+   words as code and the drawing half a line under them. The drawing starts at
+   the block's edge, as the words do. */
+.aa-block[data-fence][data-drawn] { padding: 0; border-radius: 0; background: none; font-size: inherit; }
+.aa-block[data-fence] > .aa-atom { display: block; max-width: 100%; overflow-x: auto; font-family: "Inter Arrows", var(--aa-typeface, var(--typeface-regular, system-ui)), system-ui, sans-serif; font-size: var(--aa-size, var(--type-size-default, 14px)); }
+.aa-block[data-fence] > .aa-atom > * { margin-inline-start: 0; }
+.aa-block[data-fence] > .aa-atom[data-preview] { margin-top: 0.5lh; }
+
 .aa-peer-caret { position: relative; display: inline; border-left: calc(1px * var(--sf, 1)) solid var(--aa-accent, Highlight); }
 .aa-peer-caret::after { content: attr(data-label); position: absolute; bottom: 100%; left: 0; font-size: calc(10px * var(--sf, 1)); white-space: nowrap; background: var(--aa-accent, Highlight); color: HighlightText; }
 .aa-block[data-kind=callout][data-level] > span:not(.aa-syntax):not(.aa-callout-body) { font-weight: bold; }

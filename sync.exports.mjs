@@ -1,9 +1,10 @@
 /**
  * What a product copies from Aa with Sync 1 (`sync1`): the built editor, its
  * styles and types, into a folder the copy owns whole. Aa is built first.
- * `entries` adds the optional builds: react, collaboration, convex.
+ * `entries` adds the optional builds: react, collaboration, convex, diagram.
+ * A diagram brings its marker drawing (marker.js) with it.
  */
-const optional = ['react', 'collaboration', 'convex']
+const optional = ['react', 'collaboration', 'convex', 'diagram', 'marker']
 // The maps are not copied, so the lines pointing at them go too, and the
 // optional entries import the core from beside them rather than the package.
 const script = text => text.toString().replace(/\n?\/\/# sourceMappingURL=\S*\s*$/, '\n').replace(/from\s*["']@0001(?:-labs)?\/aa["']/g, 'from "./aa.js"')
@@ -15,7 +16,8 @@ export default {
       owned: true,
       build: ({ run }) => run('vp', ['run', 'build']),
       files({ read, tree, exists, options }) {
-        const entries = options.entries ?? []
+        const entries = [...(options.entries ?? [])]
+        if (entries.includes('diagram') && !entries.includes('marker')) entries.push('marker')
         for (const entry of entries) if (!optional.includes(entry)) throw new Error(`Aa has no entry "${entry}"; it has ${optional.join(', ')}`)
         if (!exists('dist/aa.js')) throw new Error('Aa is not built: run vp run build in Aa')
         const files = new Map([

@@ -19,7 +19,11 @@ import { paintSelection } from './selection'
  * drawn into the element Aa gives it. What `draw` returns is called once the
  * atom leaves the page, to stop whatever it started.
  */
-export type Atom = AtomSyntax & { draw?(element: HTMLElement, source: string): void | (() => void) }
+export type Atom = AtomSyntax & {
+  draw?(element: HTMLElement, source: string): void | (() => void)
+  /** A block that starts one, offered in the toolbar and the slash menu: its name, icon and first source. */
+  insert?: { label: string; icon: string; source: string; keywords?: string }
+}
 
 /** A picture drawn as itself. */
 export const imageAtom: Atom = {
@@ -888,7 +892,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     },
     stats() { const text = blocks.flatMap(block => block.kind === 'code' ? [] : [block.source.slice(block.prefix)]).join(' ').replace(/[*_~`#>|=$\[\]()]/g, ' '); const words = typeof Intl.Segmenter === 'function' ? [...new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text)].filter(part => part.isWordLike).length : (text.match(/\S+/g)?.length ?? 0); return { words, characters: [...toMarkdown(blocks)].length, blocks: blocks.length } },
     find(query, caseSensitive = false) { if (!query) return []; const text = caseSensitive ? toMarkdown(blocks) : toMarkdown(blocks).toLocaleLowerCase(); const needle = caseSensitive ? query : query.toLocaleLowerCase(); const matches: { start: number; end: number }[] = []; for (let start = text.indexOf(needle); start >= 0; start = text.indexOf(needle, start + needle.length)) matches.push({ start, end: start + query.length }); return matches },
-    selectRange(start, end = start) { const a = posOf(start), b = posOf(end); clearBlocks(); elements()[a.block].focus(); setSelection(a, b); applyReveal() },
+    selectRange(start, end = start) { const a = posOf(start), b = posOf(end); clearBlocks(); elements()[a.block].focus(); setSelection(a, b); applyReveal({ anchor: a, focus: b }) },
     transaction(action) {
       const before = toMarkdown(blocks)
       transactionDepth++

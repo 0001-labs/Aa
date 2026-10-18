@@ -1,5 +1,6 @@
 import './src/aa.css'
-import { createEditor, defineAaEditor, type AaEditorElement } from './src/index'
+import { createEditor, defineAaEditor, imageAtom, type AaEditorElement } from './src/index'
+import { diagramAtom } from './src/diagram'
 
 const editor = document.getElementById('editor') as AaEditorElement
 editor.options = {
@@ -69,7 +70,17 @@ $$
 > A quote, in italics, with *emphasis* and ~~a change of mind~~ in it.
 
 \`\`\`ts
-const editor = createEditor(host, { value })
+const editor = createEditor(host, { value, atoms: [imageAtom, diagramAtom] })
+\`\`\`
+
+A diagram is written too: click it to change its words, and it is drawn again as you type. Type /diagram to start one.
+
+\`\`\`diagram
+# Writing a diagram
+
+[Words] @ 0 3
+[Drawing] @ 6 3 light-green
+Words -> Drawing
 \`\`\`
 
 ---

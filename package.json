@@ -29,6 +29,14 @@
       "types": "./dist/collaboration.d.ts",
       "import": "./dist/collaboration.js"
     },
+    "./diagram": {
+      "types": "./dist/diagram.d.ts",
+      "import": "./dist/diagram.js"
+    },
+    "./marker": {
+      "types": "./dist/marker.d.ts",
+      "import": "./dist/marker.js"
+    },
     "./convex": {
       "types": "./dist/convex.d.ts",
       "import": "./dist/convex.js"
@@ -45,7 +53,7 @@
   ],
   "scripts": {
     "dev": "vp dev",
-    "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts && vp build --config vite.config.react.ts && vp build --config vite.config.collaboration.ts && vp build --config vite.config.convex.ts",
+    "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts && vp build --config vite.config.react.ts && vp build --config vite.config.collaboration.ts && vp build --config vite.config.convex.ts && vp build --config vite.config.diagram.ts && vp build --config vite.config.marker.ts",
     "check": "vp exec tsc --noEmit",
     "test": "vp test",
     "release": "node scripts/release.mjs"

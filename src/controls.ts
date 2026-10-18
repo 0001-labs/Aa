@@ -42,8 +42,28 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
 }
 export function defineAaToolbar() { if (!customElements.get('aa-toolbar')) customElements.define('aa-toolbar', AaToolbarElement) }
 
+/**
+ * A command that starts a block an atom draws (a diagram): in place of an
+ * empty block, or after the one the caret is in, the caret on its first line
+ * of words so they show for writing.
+ */
+function inserting(atom: NonNullable<EditorOptions['atoms']>[number]): Command | null {
+  const insert = atom.insert
+  if (!insert) return null
+  return { id: `insert-${atom.name}`, label: insert.label, icon: insert.icon, keywords: insert.keywords, run: editor => {
+    const block = editor.activeBlock()
+    const empty = !block || !block.block.source.trim()
+    const start = block ? (empty ? block.start : block.end) : editor.value.length
+    const lead = empty ? (block || !editor.value ? '' : '\n\n') : '\n\n'
+    editor.replace(start, block && empty ? block.end : start, lead + insert.source)
+    const line = insert.source.indexOf('\n') + 1
+    editor.selectRange(start + lead.length + line)
+  } }
+}
+
 export function createControls(editor: Editor, options: EditorOptions): () => void {
   defineAaToolbar()
+  const inserts = (options.atoms ?? []).map(inserting).filter((command): command is Command => !!command)
   const host = editor.element
   const toolbar = document.createElement('aa-toolbar') as AaToolbarElement
   toolbar.className = 'aa-controls aa-toolbar'; toolbar.hidden = true; toolbar.editor = editor
@@ -52,6 +72,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const marks = ['bold', 'italic', 'strike', 'code', 'link', 'equation'] as const
   toolbar.actions = [...marks.map(mark => ({ id: mark, icon: mark, label: { bold: 'Bold', italic: 'Italic', strike: 'Strikethrough', code: 'Code', link: 'Link', equation: 'Equation' }[mark], run: () => { restore(); editor.format(mark) } })),
     { id: 'turn', icon: 'text', label: 'Turn into', run: () => { restore(); const active = editor.activeBlock(); if (active) open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), toolbar.getBoundingClientRect()) } },
+    ...inserts.map(command => ({ ...command, run: () => { restore(); command.run(editor) } })),
     ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
   ]
   if (options.onFiles) toolbar.actions = [...toolbar.actions, { id: 'image', label: 'Image or file', icon: 'image', run: () => {
@@ -140,7 +161,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     choices = commands.filter(command => command.enabled?.(editor) !== false)
     active = 0; menu.hidden = false; paint(); moveMenu(rect)
   }
-  const builtin: Command[] = kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) }))
+  const builtin: Command[] = [...kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), ...inserts]
   if (options.onFiles) builtin.push({ id: 'image', label: 'Image or file', icon: 'image', run: () => {
     const input = document.createElement('input'); input.type = 'file'; input.multiple = true
     input.addEventListener('change', () => Array.from(input.files ?? []).forEach(file => editor.insertFile(file)), { once: true }); input.click()

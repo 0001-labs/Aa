@@ -5,7 +5,7 @@
  * if it were not there, and the text still reads straight back.
  */
 
-import { blockRuns, DEFAULT_ATOMS, type AtomSyntax, type Block } from './markdown'
+import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block } from './markdown'
 import { tableAlignments, tableRows } from './table'
 import { icons } from './icons'
 
@@ -79,6 +79,12 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     element.removeAttribute('data-body-active')
   }
   if (block.kind === 'table') { renderTable(element, block, decorations); renderCarets(element, decorations); return }
+  // A fenced block an atom draws (a diagram) is that drawing; with the caret
+  // in it, its words are written as code and the drawing follows under them.
+  const fenced = fencedAtom(block, atoms)
+  element.toggleAttribute('data-drawn', !!fenced && !reveal)
+  if (fenced) element.dataset.fence = fenced.name
+  else delete element.dataset.fence
 
   // An atom already drawn for the same words is kept rather than drawn
   // again, so a picture does not load twice as the caret moves past it.
@@ -94,7 +100,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   let destination: DocumentFragment | HTMLElement = fragment
   let visible = false
   let lastBreak = false
-  for (const run of blockRuns(block, atoms)) {
+  for (const run of fenced && reveal ? blockRuns(block, atoms.filter(atom => atom !== fenced)) : blockRuns(block, atoms)) {
     if (block.kind === 'callout' && run.from >= block.source.indexOf('\n') && block.source.includes('\n') && destination === fragment) { fragment.append(body); destination = body }
     lastBreak = run.kind === 'break'
     if (run.kind === 'break') { destination.append(document.createElement('br')); continue }
@@ -126,6 +132,13 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     node.textContent = text
     decorateNode(node, run.from, decorations)
     destination.append(node)
+  }
+  // The drawing under the words reads back as nothing: the words are its source.
+  if (fenced && reveal) {
+    const preview = draw(fenced.name, block.source)
+    preview.dataset.source = ''
+    preview.dataset.preview = ''
+    fragment.append(preview)
   }
   // A block with no line to stand on gets one: an empty block, one ending on
   // a line break, or one whose every character is hidden syntax.

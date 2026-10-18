@@ -34,6 +34,19 @@ import '@0001-labs/aa/aa.css'
 
 The ref exposes `editor`, `focus()`, `undo()` and `redo()`. Keep capability arrays and callbacks that define atoms or drawing stable to preserve the editor instance. React is an optional peer dependency.
 
+## Diagrams
+
+A fenced ` ```diagram ` block is boxes and lines on Design system 1's squares, written rather than drawn (the language is in `src/diagram-language.ts`). Give the editor the diagram atom and it draws them in place: click one to edit its words as code, with the drawing following under them, and start one from the toolbar or `/diagram`.
+
+```ts
+import { createEditor, imageAtom } from '@0001-labs/aa'
+import { diagramAtom, defineAaDiagram } from '@0001-labs/aa/diagram'
+defineAaDiagram() // <aa-diagram>, or a product's own name: defineAaDiagram('ezo-diagram')
+createEditor(host, { atoms: [imageAtom, diagramAtom], toolbar: true })
+```
+
+`<aa-diagram source="…">` draws one anywhere. Its measures are Design system 1's (`--ds-grid-unit`, the palette); a product hands in its own with `--aa-diagram-unit`, `--aa-diagram-stroke`, `--aa-diagram-ink`, `--aa-diagram-cell`, `--aa-diagram-radius` and `--aa-diagram-paper`. Charts and marker squares load `@0001-labs/aa/marker` only when a diagram has one. The entry touches no page globals until an element is made, so `layoutDiagram` can run on a server.
+
 ## Collaboration and Convex
 
 ```ts

@@ -1,8 +1,9 @@
 {
   "Design system 1": {
-    "commit": "9c7e9d24f10626a1dd70ab7345909f1a9b5a4165",
+    "commit": "adfa830ab9ad52453a78f6e6a4722158ea2c9019",
     "version": "0.3.0-alpha.13",
     "files": {
+      "src/icons/connect.svg": "5ec3b25d77d13a88d50abba9c6b15d9856798511c0bc4d6736237736598f2d95",
       "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab"
     }
   }

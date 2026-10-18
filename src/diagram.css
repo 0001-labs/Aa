@@ -1,0 +1,354 @@
+/* A diagram stands on Design system 1's squares. Every edge and every line
+   is centred on a grid coordinate, half a stroke either side of it, the way
+   a board rules its cells, so a diagram on ruled paper lies on the ruling.
+   A product hands in its own measures through the --aa-diagram-* properties;
+   otherwise they are Design system 1's. */
+:host {
+  --diagram-unit: var(--aa-diagram-unit, var(--ds-grid-unit, calc(20px * var(--sf, 1))));
+  --diagram-ink: var(--aa-diagram-ink, var(--text-color, light-dark(#1e1e1e, #fff)));
+  --diagram-stroke: var(--aa-diagram-stroke, 1px);
+  display: block;
+  position: relative;
+  box-sizing: border-box;
+  width: calc(var(--diagram-columns, 0) * var(--diagram-unit));
+  height: calc(var(--diagram-rows, 1) * var(--diagram-unit));
+  /* A diagram wider than what holds it (more than a list's three columns)
+     stands centred on the same axis and reaches past it on both sides, as a
+     wide list's board does. A margin's percentage is of the holder's width;
+     the half-difference is rounded to the nearest whole square so that an
+     odd width still lands on the ruling, and a holder a few pixels short
+     does not move it a square. Writing on a board sets it to nothing: there
+     the diagram starts at its column's edge, as the words do. */
+  margin-inline-start: min(0px, round(calc((100% - var(--diagram-columns, 0) * var(--diagram-unit)) / 2), var(--diagram-unit)));
+  color: var(--diagram-ink);
+  /* Read by the element to know the scheme a marker is laid in: it is never edited, so the caret never shows. */
+  caret-color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));
+  font-family: var(--typeface-regular);
+  font-size: var(--type-size-default);
+  font-weight: var(--type-weight-default);
+  letter-spacing: calc(var(--type-letterspacing-default) * var(--sf, 1));
+  line-height: var(--diagram-unit);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+:host([hidden]) {
+  display: none;
+}
+
+/* Lines lie over the boxes, so an arrow's tip and a line's start are drawn
+   whole where they meet a box's edge rather than hidden under it. A line is
+   one stroke with mitred turns and flat ends: it starts on the grid line a
+   box's edge straddles, and ends inside its arrow's mitred point instead of
+   poking a square cap out past it. */
+.lines {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--diagram-stroke);
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  stroke-miterlimit: 4;
+}
+
+.label,
+.box,
+.day {
+  position: absolute;
+  left: calc(var(--x) * var(--diagram-unit));
+  top: calc(var(--y) * var(--diagram-unit));
+  width: calc(var(--w) * var(--diagram-unit));
+  height: var(--diagram-unit);
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+/* A label is writing: it starts on its column's edge, as writing on the
+   board does, and a name runs on past its column rather than being cut. */
+.label {
+  width: max-content;
+  min-width: calc(var(--w) * var(--diagram-unit));
+}
+
+/* A box is an item cell, four squares by one: the cell's paper and the
+   cell's own light hairline (the page's outline colour, which crosses the
+   shadow boundary as a custom property), its words an item's padding in and
+   faded rather than cut at the far edge, and the shape's corners on every
+   corner it does not share with a neighbour. The radius arrives from the
+   page the same way; the square shape leaves it unset. */
+.box {
+  --box-fill: var(--aa-diagram-cell, light-dark(#fff, #000));
+  --box-radius: var(--aa-diagram-radius, 0px);
+  --box-top-left: var(--box-radius);
+  --box-top-right: var(--box-radius);
+  --box-bottom-right: var(--box-radius);
+  --box-bottom-left: var(--box-radius);
+  background-color: var(--box-fill);
+  border-radius: var(--box-top-left) var(--box-top-right) var(--box-bottom-right) var(--box-bottom-left);
+  transition: border-radius 160ms ease-out;
+}
+
+/* A month's day is one square, its number in the square's middle: faint
+   while it wears no colour, as a day of the calendar's year is with nothing
+   on it, and a chip in its pale accent once it does, with the shape's
+   corners wherever it does not touch the next coloured day. A day's name,
+   over the weeks, is in the ink. */
+.day {
+  --box-radius: var(--aa-diagram-radius, 0px);
+  --box-top-left: var(--box-radius);
+  --box-top-right: var(--box-radius);
+  --box-bottom-right: var(--box-radius);
+  --box-bottom-left: var(--box-radius);
+  border-radius: var(--box-top-left) var(--box-top-right) var(--box-bottom-right) var(--box-bottom-left);
+  color: light-dark(#c4c4c4, #5c5c5c);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.day[data-name] {
+  color: inherit;
+}
+
+.day[data-color] {
+  background-color: var(--box-fill);
+  color: var(--black, #2a2a2a);
+}
+
+/* A grid's column is named in a box of its own, as a calendar's day is: the
+   calendar's own day line, straddling the grid line, each box sharing its
+   left line with the one before it. */
+.day[data-head]::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--diagram-stroke) / -2);
+  border: var(--diagram-stroke) solid color-mix(in srgb, var(--diagram-ink) 28%, transparent);
+  border-left-width: 0;
+  pointer-events: none;
+}
+
+.day[data-head]:not([data-shared-left])::after {
+  border-left-width: var(--diagram-stroke);
+}
+
+/* A column's name too long for its square slants up and to the right at 45
+   degrees from the middle of the square's foot, in the ink, with no box, so
+   the column stays one square wide; the rows over the squares hold its rise. */
+.day[data-slant] {
+  overflow: visible;
+  text-align: start;
+  transform-origin: 0 100%;
+  translate: 50% 0;
+  rotate: -45deg;
+}
+
+/* A row's name is in the condensed face, as a calendar's hours are; where it
+   names a line it stands on the line, half a square up from its square. */
+.day[data-row] {
+  font-family: var(--typeface-compressed, var(--typeface-regular));
+}
+
+.day[data-edge] {
+  transform: translateY(-50%);
+}
+
+/* A chart's ink lies over its squares in units of twenty to the square, so
+   the marker's grain and wander keep their size as the page scales. The
+   ruled lines are the page's faint grey; each line is a marker in its
+   accent, deepened a little toward the ink so the pale ones still read on
+   the paper, and lighter where its strokes do not overlap. */
+.chart-ink {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.chart-rules {
+  fill: none;
+  stroke: light-dark(#d6d6d6, #3a3a3a);
+  stroke-width: 1;
+}
+
+/* A chart's card, ruled by hand in the page's quiet grey. */
+.chart-frame {
+  --marker: light-dark(var(--base-darker-grey, #797979), #9a9a9a);
+}
+
+.chart-line,
+.marker-fill {
+  --marker: var(--diagram-ink);
+  opacity: 0.94;
+  mix-blend-mode: multiply;
+}
+
+:host([data-dark]) :is(.chart-line, .marker-fill) {
+  mix-blend-mode: normal;
+}
+
+.marker-pass[data-tone="body"] { fill: var(--marker); }
+.marker-pass[data-tone="pass"] { fill: color-mix(in oklab, var(--marker) 72%, #000); }
+.marker-pass[data-tone="edge"] { fill: color-mix(in oklab, var(--marker) 60%, #000); }
+.marker-pass[data-tone="paper"] { fill: var(--aa-diagram-paper, var(--ds-paper, light-dark(#fff, #1e1e1e))); }
+
+/* A square coloured in is a few strokes laid over one another, each thin
+   enough that where two overlap the colour is deeper, as a marker's is. Its
+   chip's own fill gives way to them; its number stays over them. */
+/* Squares are coloured in with the accents a little deeper than a chip's,
+   the mid tones Anthropic colours its squares in, so that a marker's thin
+   strokes still read as the colour on the paper; on dark paper the accents
+   themselves already stand out, and the plainest is a quiet grey. */
+.marker-fill[data-color="light-green"] { --marker: light-dark(color-mix(in oklab, var(--apple-green, #99ff73) 88%, #1e1e1e), var(--apple-green, #99ff73)); }
+.marker-fill[data-color="light-blue"] { --marker: light-dark(color-mix(in oklab, var(--zenith-blue, #ccccff) 75%, #4a5ae0), color-mix(in oklab, var(--zenith-blue, #ccccff) 85%, #4a5ae0)); }
+.marker-fill[data-color="pink"] { --marker: light-dark(color-mix(in oklab, var(--pink, #f5aad1) 90%, #1e1e1e), var(--pink, #f5aad1)); }
+.marker-fill[data-color="yellow"] { --marker: light-dark(color-mix(in oklab, var(--yellow, #eaff00) 88%, #1e1e1e), var(--yellow, #eaff00)); }
+.marker-fill[data-color="orange"] { --marker: light-dark(color-mix(in oklab, var(--orange, #fec20d) 85%, #e0602a), var(--orange, #fec20d)); }
+.marker-fill[data-color="red"] { --marker: var(--tuned-red, #ff5f5f); }
+.marker-fill[data-color="white"] { --marker: light-dark(#cfccc4, #55534e); }
+
+.day[data-marker] {
+  background-color: transparent;
+}
+
+.chart-line[data-color="light-green"], .chart-name[data-color="light-green"] { --marker: light-dark(color-mix(in oklab, var(--apple-green, #99ff73) 82%, #1e1e1e), var(--apple-green, #99ff73)); }
+.chart-line[data-color="light-blue"], .chart-name[data-color="light-blue"] { --marker: light-dark(color-mix(in oklab, var(--zenith-blue, #ccccff) 55%, #4a5ae0), color-mix(in oklab, var(--zenith-blue, #ccccff) 80%, #4a5ae0)); }
+.chart-line[data-color="pink"], .chart-name[data-color="pink"] { --marker: light-dark(color-mix(in oklab, var(--pink, #f5aad1) 85%, #1e1e1e), var(--pink, #f5aad1)); }
+.chart-line[data-color="yellow"], .chart-name[data-color="yellow"] { --marker: light-dark(color-mix(in oklab, var(--yellow, #eaff00) 82%, #1e1e1e), var(--yellow, #eaff00)); }
+.chart-line[data-color="orange"], .chart-name[data-color="orange"] { --marker: light-dark(color-mix(in oklab, var(--orange, #fec20d) 72%, #e0602a), var(--orange, #fec20d)); }
+.chart-line[data-color="red"], .chart-name[data-color="red"] { --marker: var(--tuned-red, #ff5f5f); }
+.chart-line[data-color="white"], .chart-name[data-color="white"] { --marker: light-dark(#8c8c8c, #a8a8a8); }
+
+/* A chart's names are in the condensed face, as a calendar's hours are: a
+   value on the line it names, a point's name under the plot at its point
+   (the first from the plot's left edge, the last to its right), and a line's
+   last value just after its end, in its marker's colour darkened to read. */
+.chart-name {
+  position: absolute;
+  left: calc(var(--x) * var(--diagram-unit));
+  top: calc(var(--y) * var(--diagram-unit));
+  height: var(--diagram-unit);
+  font-family: var(--typeface-compressed, var(--typeface-regular));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--diagram-ink) 55%, transparent);
+}
+
+.chart-name[data-side="down"] {
+  width: var(--diagram-unit);
+  text-align: end;
+  padding-inline-end: calc(var(--diagram-unit) / 4);
+  box-sizing: border-box;
+  translate: 0 -50%;
+}
+
+.chart-name[data-side="across"][data-align="middle"] { translate: -50% 0; }
+.chart-name[data-side="across"][data-align="end"] { translate: -100% 0; }
+
+.chart-name[data-side="end"] {
+  translate: calc(var(--diagram-unit) / 2) -50%;
+  color: light-dark(color-mix(in oklab, var(--marker) 70%, #1e1e1e), var(--marker));
+}
+
+/* A post-it is a frame the groups placed on it stand on: the lines' ink
+   hairline straddling the grid line, square cornered, the paper showing
+   through unless a colour fills it, edge and all. */
+.post-it {
+  --box-fill: transparent;
+  --box-edge: var(--diagram-ink);
+  position: absolute;
+  left: calc(var(--x) * var(--diagram-unit));
+  top: calc(var(--y) * var(--diagram-unit));
+  width: calc(var(--w) * var(--diagram-unit));
+  height: calc(var(--h) * var(--diagram-unit));
+  background-color: var(--box-fill);
+}
+
+.post-it::after {
+  content: '';
+  position: absolute;
+  inset: calc(-0.5 * var(--diagram-stroke));
+  border: var(--diagram-stroke) solid var(--box-edge);
+  pointer-events: none;
+}
+
+/* Tinted, a post-it is paler than the chips on it in the light theme and
+   dimmed in the dark, so the ink of the names on it reads in both. */
+.post-it[data-color] {
+  --box-edge: var(--post-it-fill);
+  --post-it-fill: light-dark(color-mix(in srgb, var(--box-fill) 45%, #fff), color-mix(in srgb, var(--box-fill) 22%, #000));
+  background-color: var(--post-it-fill);
+}
+
+/* A coloured box is a chip in one of the pale accents, its edge the same
+   colour as its fill, and its words the dark ink in either theme. */
+.box[data-color] {
+  color: var(--black, #2a2a2a);
+}
+
+.box[data-color]::after {
+  border-color: var(--box-fill);
+}
+
+:is(.box, .post-it, .day)[data-color="light-green"] { --box-fill: var(--apple-green, #99ff73); }
+:is(.box, .post-it, .day)[data-color="light-blue"] { --box-fill: var(--zenith-blue, #ccccff); }
+:is(.box, .post-it, .day)[data-color="pink"] { --box-fill: var(--pink, #f5aad1); }
+:is(.box, .post-it, .day)[data-color="yellow"] { --box-fill: var(--yellow, #eaff00); }
+:is(.box, .post-it, .day)[data-color="orange"] { --box-fill: var(--orange, #fec20d); }
+:is(.box, .post-it, .day)[data-color="red"] { --box-fill: var(--tuned-red, #ff5f5f); }
+/* White is the plainest: white in the dark, and the paper's pale grey in the light, where white would not show. */
+:is(.box, .post-it, .day)[data-color="white"] { --box-fill: light-dark(var(--slate-light, #e6e6e6), var(--white, #fff)); }
+
+:is(.box, .day)[data-shared-top] { --box-top-left: 0px; --box-top-right: 0px; }
+:is(.box, .day)[data-shared-right] { --box-top-right: 0px; --box-bottom-right: 0px; }
+:is(.box, .day)[data-shared-bottom] { --box-bottom-right: 0px; --box-bottom-left: 0px; }
+:is(.box, .day)[data-shared-left] { --box-top-left: 0px; --box-bottom-left: 0px; }
+
+.box > span {
+  display: block;
+  height: 100%;
+  padding: 0 var(--item-text-padding, 4px);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: clip;
+  -webkit-mask-image: var(--text-fade-mask);
+  mask-image: var(--text-fade-mask);
+}
+
+/* The hairline straddles the grid line, half a stroke either side, as a
+   cell's does; a shared edge belongs to the next box, so it is drawn once. */
+.box::after {
+  content: '';
+  position: absolute;
+  inset: calc(-0.5 * var(--diagram-stroke));
+  border: var(--outline-stroke, 1px solid light-dark(#e5e5e5, #333));
+  border-width: var(--diagram-stroke);
+  border-radius: inherit;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.box[data-shared-right]::after { border-right-width: 0; }
+.box[data-shared-bottom]::after { border-bottom-width: 0; }
+
+/* Corners are the curve Apple's hardware wears where the browser draws it,
+   as on every cell. */
+@supports (corner-shape: squircle) {
+  .box,
+  .box::after,
+  .day {
+    corner-shape: squircle;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .box {
+    transition: none;
+  }
+}

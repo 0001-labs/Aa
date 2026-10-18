@@ -172,6 +172,15 @@ export type AtomSyntax = {
   name: string
   /** How many characters an atom of this kind takes at `at` in a line, or 0 when none starts there. */
   match(line: string, at: number): number
+  /** A fenced code block in this language is drawn whole as this atom, fences and all: `diagram` for ```diagram. */
+  fence?: string
+}
+
+/** The atom a closed code block is drawn as, by its fence's language, if any is given one. */
+export function fencedAtom<T extends AtomSyntax>(block: Block, atoms: readonly T[]): T | undefined {
+  if (block.kind !== 'code' || !codeClosed(block)) return undefined
+  const language = block.source.slice(0, block.prefix).replace(/^ {0,3}(`{3,}|~{3,})/, '').trim().toLowerCase()
+  return language ? atoms.find(atom => atom.fence?.toLowerCase() === language) : undefined
 }
 
 /** An atom found by a pattern, optionally only where `accept` agrees. */
@@ -330,6 +339,8 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   const lines = block.source.split('\n')
   const closed = block.kind === 'code' && codeClosed(block)
   if (block.kind === 'equation') return [{ kind: 'atom', atom: 'equation-block', from: 0, to: block.source.length, group: [0, block.source.length] }]
+  const fenced = fencedAtom(block, atoms)
+  if (fenced) return [{ kind: 'atom', atom: fenced.name, from: 0, to: block.source.length, group: [0, block.source.length] }]
   let at = 0
   lines.forEach((line, index) => {
     if (index) runs.push({ kind: 'break', from: at - 1, to: at })
