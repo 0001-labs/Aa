@@ -57,7 +57,7 @@ defineAaEditor()
 <aa-editor placeholder="Write"></aa-editor>
 ```
 
-Products copy the built editor with Sync 1 (`/Users/joachim/0001/Sync 1`): `"Aa": { "build": { "to": "client/vendor/aa", "entries": ["react"] } }` in their `sync.json`, then `sync1`, which builds Aa first (`sync.exports.mjs`; `entries` takes react, collaboration, convex and diagram, which brings marker). Aa takes its shared icons from Design system 1 the same way (`sync.json`). On npm it is `@0001-labs/aa`: `vp add @0001-labs/aa`.
+Products copy the built editor with Sync 1 (`/Users/joachim/0001/Sync 1`): `"Aa": { "build": { "to": "client/vendor/aa", "entries": ["react"] } }` in their `sync.json`, then `sync1`, which builds Aa first (`sync.exports.mjs`; `entries` takes react, collaboration, convex and diagram, which brings diagram-language (the language alone, for a page or a server that only reads diagrams) and marker). Aa takes its shared icons from Design system 1 the same way (`sync.json`). On npm it is `@0001-labs/aa`: `vp add @0001-labs/aa`.
 
 ## Releasing to npm
 
