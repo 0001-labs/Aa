@@ -45,7 +45,7 @@ defineAaDiagram() // <aa-diagram>, or a product's own name: defineAaDiagram('ezo
 createEditor(host, { atoms: [imageAtom, diagramAtom], toolbar: true })
 ```
 
-`<aa-diagram source="…">` draws one anywhere. Its measures are Design system 1's (`--ds-grid-unit`, the palette); a product hands in its own with `--aa-diagram-unit`, `--aa-diagram-stroke`, `--aa-diagram-ink`, `--aa-diagram-cell`, `--aa-diagram-radius` and `--aa-diagram-paper`. Charts and marker squares load `@0001-labs/aa/marker` only when a diagram has one. The entry touches no page globals until an element is made, so `layoutDiagram` can run on a server.
+`<aa-diagram source="…">` draws one anywhere. Its measures are Design system 1's (`--ds-grid-unit`, the palette); a product hands in its own with `--aa-diagram-unit`, `--aa-diagram-stroke`, `--aa-diagram-ink`, `--aa-diagram-cell`, `--aa-diagram-radius` and `--aa-diagram-paper`. Charts and marker squares load `@0001-labs/aa/marker` only when a diagram has one. The language alone is `@0001-labs/aa/diagram-language`, for a page or a server that only reads diagrams (`layoutDiagram`, `diagramFences`) and should not carry the element; the diagram entry loads it from beside itself and touches no page globals until an element is made.
 
 ## Collaboration and Convex
 

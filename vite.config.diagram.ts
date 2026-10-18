@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite-plus'
 import { resolve } from 'path'
-// The marker's drawing is its own entry, loaded from beside the diagram once a diagram needs it.
+// The language and the marker's drawing are entries of their own, loaded
+// from beside the diagram: the language so a page or a server can read a
+// diagram without carrying its element, the marker once a diagram needs it.
+const beside = ['./diagram-language', './marker']
 export default defineConfig({
-  plugins: [{ name: 'marker-beside', enforce: 'pre' as const, resolveId: (id: string) => id === './marker' ? { id: './marker.js', external: true } : null }],
+  plugins: [{ name: 'entries-beside', enforce: 'pre' as const, resolveId: (id: string) => beside.includes(id) ? { id: `${id}.js`, external: true } : null }],
   build: {
     copyPublicDir: false,
     outDir: 'dist', emptyOutDir: false,
