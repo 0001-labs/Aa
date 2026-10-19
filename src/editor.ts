@@ -304,7 +304,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const snapshot = (anchor: Pos, focus: Pos): Snapshot => ({ blocks, anchor, focus })
 
   const commit = (next: Block[], anchor: Pos, focus: Pos, kind: ChangeKind) => {
-    const before = blocks
+    const before = blocks, focused = host.contains(document.activeElement)
     clearBlocks()
     const numbered = renumber(next)
     const adjust = (pos: Pos) => ({ ...pos, offset: Math.max(0, pos.offset + numbered[pos.block].prefix - next[pos.block].prefix) })
@@ -313,6 +313,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     setSelection(anchor, focus)
     applyReveal({ anchor, focus })
     showPlaceholder({ anchor, focus })
+    keepCaretInView(focused)
     if (!transactionDepth) {
       history.record(snapshot(anchor, focus), kind)
       options.onChange?.(toMarkdown(blocks))
@@ -322,10 +323,12 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
 
   const restore = (state: Snapshot) => {
+    const focused = host.contains(document.activeElement)
     clearBlocks()
     syncDom(state.blocks)
     setSelection(state.anchor, state.focus)
     applyReveal({ anchor: state.anchor, focus: state.focus })
+    keepCaretInView(focused)
     options.onChange?.(toMarkdown(blocks))
     host.dispatchEvent(new Event('aa-change'))
   }
@@ -560,6 +563,46 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     return element?.getBoundingClientRect() ?? null
   }
 
+  /** How far a view must move to show `start`–`end`: nothing while it is in view, the start first when it does not fit. */
+  const nearest = (start: number, end: number, viewStart: number, viewEnd: number) =>
+    start < viewStart ? start - viewStart : end > viewEnd ? Math.min(end - viewEnd, start - viewStart) : 0
+
+  /**
+   * Keep the caret on screen after Aa moves it itself, as the browser does
+   * after its own typing: each box that scrolls, then the page, moves just far
+   * enough to show it, and nothing moves while it is in view. Only while the
+   * editor has the focus, or had it when the change began, since a block
+   * drawn again can take the focus with it.
+   */
+  const keepCaretInView = (focused = host.contains(document.activeElement)) => {
+    if (!focused) return
+    const rect = caretRect()
+    const node = window.getSelection()?.focusNode
+    if (!rect || !node || !host.contains(node) || (!rect.width && !rect.height && !rect.top && !rect.left)) return
+    let { top, bottom, left, right } = rect
+    for (let box = node instanceof HTMLElement ? node : node.parentElement; box && box !== document.body && box !== document.documentElement; box = box.parentElement) {
+      const style = getComputedStyle(box)
+      const scrollsY = /auto|scroll|overlay/.test(style.overflowY) && box.scrollHeight > box.clientHeight
+      const scrollsX = /auto|scroll|overlay/.test(style.overflowX) && box.scrollWidth > box.clientWidth
+      if (!scrollsY && !scrollsX) continue
+      const edges = box.getBoundingClientRect()
+      const viewTop = edges.top + box.clientTop, viewLeft = edges.left + box.clientLeft
+      const dy = scrollsY ? nearest(top, bottom, viewTop, viewTop + box.clientHeight) : 0
+      const dx = scrollsX ? nearest(left, right, viewLeft, viewLeft + box.clientWidth) : 0
+      if (!dx && !dy) continue
+      const fromTop = box.scrollTop, fromLeft = box.scrollLeft
+      box.scrollBy({ top: dy, left: dx, behavior: 'instant' })
+      top -= box.scrollTop - fromTop; bottom -= box.scrollTop - fromTop
+      left -= box.scrollLeft - fromLeft; right -= box.scrollLeft - fromLeft
+    }
+    // The visual viewport, so a phone's keyboard does not cover the caret.
+    const view = window.visualViewport
+    const viewTop = view?.offsetTop ?? 0, viewLeft = view?.offsetLeft ?? 0
+    const dy = nearest(top, bottom, viewTop, viewTop + (view?.height ?? window.innerHeight))
+    const dx = nearest(left, right, viewLeft, viewLeft + (view?.width ?? window.innerWidth))
+    if (dx || dy) window.scrollBy({ top: dy, left: dx, behavior: 'instant' })
+  }
+
   /** Put the caret in a block at the point under `x`, on its first or last line. */
   const placeAt = (index: number, x: number, edge: 'top' | 'bottom') => {
     const element = elements()[index]
@@ -572,6 +615,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const pos: Pos = node && element.contains(node) ? { block: index, offset: offsetIn(element, node, offset) } : { block: index, offset: edge === 'top' ? startOf(index) : blocks[index].source.length }
     setSelection(pos)
     applyReveal({ anchor: pos, focus: pos })
+    keepCaretInView()
   }
 
   /** Where writing starts in a block: after its prefix. */
@@ -720,11 +764,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (event.key === 'ArrowLeft' && offset === 0 && index > 0) {
       event.preventDefault()
       const pos = { block: index - 1, offset: blocks[index - 1].source.length }
-      setSelection(pos); applyReveal({ anchor: pos, focus: pos })
+      setSelection(pos); applyReveal({ anchor: pos, focus: pos }); keepCaretInView()
     } else if (event.key === 'ArrowRight' && offset === blocks[index].source.length && index + 1 < blocks.length) {
       event.preventDefault()
       const pos = { block: index + 1, offset: startOf(index + 1) }
-      setSelection(pos); applyReveal({ anchor: pos, focus: pos })
+      setSelection(pos); applyReveal({ anchor: pos, focus: pos }); keepCaretInView()
     } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       const up = event.key === 'ArrowUp'
       if (up ? index === 0 : index + 1 >= blocks.length) return
