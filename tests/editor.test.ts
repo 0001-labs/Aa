@@ -20,17 +20,23 @@ describe('renderBlock', () => {
     const after = block('a **b** c', { from: 8, to: 8 })
     expect(after.querySelectorAll('.aa-syntax[data-hidden]')).toHaveLength(2)
   })
-  it('reveals active heading prefixes beside the text and preserves source offsets', () => {
+  it('never shows a heading\'s # while writing in it, and keeps its offsets', () => {
     expect(block('## T').querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(true)
     const active = block('## T', { from: 3, to: 3 })
     const prefix = active.querySelector('.aa-syntax')!
-    expect(prefix.hasAttribute('data-heading-prefix')).toBe(true)
-    expect(prefix.hasAttribute('data-hidden')).toBe(false)
+    expect(prefix.hasAttribute('data-hidden')).toBe(true)
     expect(readBlock(active)).toBe('## T')
-    expect(pointAt(active, 1)).toEqual({ node: prefix.firstChild, offset: 1 })
-    expect(offsetIn(active, prefix.firstChild!, 1)).toBe(1)
+    // The caret's first place in the heading is after its hidden #.
+    const words = active.lastChild!.firstChild!
+    expect(pointAt(active, 0)).toEqual({ node: words, offset: 0 })
+    expect(offsetIn(active, words, 0)).toBe(3)
     expect(block('- T', { from: 2, to: 2 }).querySelector('.aa-syntax')?.hasAttribute('data-hidden')).toBe(true)
     expect(block('## T').dataset).toMatchObject({ kind: 'heading', level: '2' })
+  })
+  it('marks a heading with no words yet, so it can name its level', () => {
+    expect(block('## ', { from: 3, to: 3 }).hasAttribute('data-empty')).toBe(true)
+    expect(block('## T').hasAttribute('data-empty')).toBe(false)
+    expect(block('').hasAttribute('data-empty')).toBe(false)
   })
   it('gives an empty block a line to stand on', () => {
     expect(block('').querySelector('br[data-filler]')).not.toBeNull()

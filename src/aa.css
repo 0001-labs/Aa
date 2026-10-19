@@ -1,6 +1,10 @@
-/* Aa. The editor takes the page's type and colour: its own rule weighs
-   nothing, so any rule of the page's wins. A product sets the --aa-*
-   properties or the Design system 1 tokens they fall back to. */
+/* Aa. Writing is drawn as Design system 1's prose sheet (prose.css) draws the
+   same Markdown read on a page: every line one square, one square between two
+   blocks and two before a heading, a title on two squares, code in 13px on the
+   same lines. Every measure and colour is a Design system 1 token, with its
+   value as the fallback, so a page without the tokens still gets them. The
+   editor's own rule weighs nothing, so any rule of the page's wins, and a
+   product changes one thing with the --aa-* properties. */
 /* Arrows are always Inter: Inter's arrows alone (fonts/LICENSE.md), first in
    every font Aa sets, so the unicode-range draws only arrows with it. */
 @font-face {
@@ -24,13 +28,18 @@
 }
 
 :where(.aa, aa-editor) {
+  /* The square and the scale: Design system 1's, or the older copies' names. */
+  --aa-sf: var(--ds-sf, var(--sf, 1));
+  --aa-unit: var(--ds-unit, var(--1, calc(20px * var(--sf, 1))));
+  --aa-rule-color: var(--aa-rule, var(--ds-border-color, light-dark(#d8d8d8, #3d3d3d)));
   display: block;
-  font-family: "Inter Arrows", var(--aa-typeface, var(--typeface-regular, system-ui)), system-ui, sans-serif;
-  font-size: var(--aa-size, var(--type-size-default, 14px));
-  line-height: var(--aa-line, var(--type-lineheight-default, 1.45));
-  font-weight: var(--aa-weight, var(--type-weight-default, 400));
-  letter-spacing: var(--aa-letterspacing, var(--type-letterspacing-default, normal));
-  color: inherit;
+  font-family: "Inter Arrows", var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))), system-ui, sans-serif;
+  font-feature-settings: var(--aa-font-features, var(--ds-font-features, normal));
+  font-size: var(--aa-size, var(--ds-type-size-default, calc(14px * var(--aa-sf))));
+  line-height: var(--aa-line, var(--aa-unit));
+  font-weight: var(--aa-weight, var(--ds-type-weight-default, 400));
+  letter-spacing: var(--aa-letterspacing, var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf))));
+  color: var(--aa-color, var(--ds-text-color, currentColor));
   -webkit-font-smoothing: antialiased;
 }
 .aa-block {
@@ -42,9 +51,11 @@
   overflow-wrap: anywhere;
   -webkit-user-modify: read-write-plaintext-only;
 }
-.aa-block + .aa-block { margin-top: var(--aa-gap, 1lh); }
-.aa-block[data-selected], .aa-block[data-lifted] { background: var(--aa-selection, var(--accent-color, var(--apple-green, Highlight))); }
-.aa-block[data-selected], .aa-block[data-lifted] { border-radius: calc(2px * var(--sf, 1)); }
+/* One square between two blocks, two before a heading, as prose.css. */
+.aa-block + .aa-block { margin-top: var(--aa-gap, var(--aa-unit)); }
+.aa-block:not([data-kind="heading"]) + .aa-block[data-kind="heading"] { margin-top: calc(2 * var(--aa-gap, var(--aa-unit))); }
+.aa-block[data-selected], .aa-block[data-lifted] { background: var(--aa-selection, var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight)))); }
+.aa-block[data-selected], .aa-block[data-lifted] { border-radius: calc(2px * var(--aa-sf)); }
 /* No handle beside a block: a selected block is taken by the hand, any other
    after a still press (drag.ts), and the hand holds while it is carried. */
 .aa[data-movable] > .aa-block[data-selected] { cursor: grab; }
@@ -72,44 +83,41 @@
 }
 .aa-block[data-kind="bullet"] + .aa-block[data-kind="bullet"] { margin-top: 0; }
 
-/* Markdown stays in the DOM for lossless storage. Active heading prefixes
-   hang beside the text, outside the line, so editing never shifts it. */
+/* Markdown stays in the DOM for lossless storage, and none of it shows while
+   writing: a heading is its size, a bullet its marker, never its # or -. */
 .aa-syntax { display: none; }
-.aa-syntax[data-hidden] { display: none; }
-.aa-syntax[data-heading-prefix] {
-  display: inline-block;
-  position: absolute;
-  right: 100%;
-  top: 0;
-  white-space: pre;
-  color: var(--aa-syntax, color-mix(in srgb, currentColor 38%, transparent));
-}
 
-.aa-b { font-family: "Inter Arrows", var(--aa-typeface-bold, var(--typeface-medium, var(--aa-typeface, var(--typeface-regular, system-ui)))), system-ui, sans-serif; font-weight: var(--aa-weight-bold, var(--type-weight-bold, 600)); }
+/* Words: the medium face for strong, the text's own colour for a link,
+   underlined, and code in the code face at 13px on the same line. */
+.aa-b { font-family: "Inter Arrows", var(--aa-typeface-bold, var(--ds-typeface-medium, var(--typeface-medium, var(--aa-typeface, var(--typeface-regular, system-ui))))), system-ui, sans-serif; font-weight: var(--aa-weight-bold, var(--ds-type-weight-bold, 500)); }
 .aa-i { font-style: italic; }
 .aa-s { text-decoration: line-through; }
-.aa-c, .aa-block[data-kind="code"] { font-family: "Inter Arrows", var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-ligatures: none; }
-.aa-c { font-size: 0.92em; }
-a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: none; cursor: text; }
+.aa-c, .aa-block[data-kind="code"] { font-family: "Inter Arrows", var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--aa-code-size, calc(var(--ds-code-text-size, 13px) * var(--aa-sf))); font-variant-ligatures: none; letter-spacing: 0; }
+.aa-c { padding: 0 calc(4px * var(--aa-sf)); border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: var(--aa-code-fill, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c))); }
+a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: calc(3px * var(--aa-sf)); cursor: text; }
 
-.aa-block[data-kind="heading"] { font-family: "Inter Arrows", var(--aa-typeface-heading, var(--typeface-medium, var(--aa-typeface, var(--typeface-regular, system-ui)))), system-ui, sans-serif; font-weight: var(--aa-weight-heading, var(--type-weight-heading, 600)); }
-.aa-block[data-kind="heading"][data-level="1"] { font-size: var(--aa-h1, var(--type-size-title-1, 1.6em)); line-height: 1.2; }
-.aa-block[data-kind="heading"][data-level="2"] { font-size: var(--aa-h2, var(--type-size-title-2, 1.3em)); line-height: 1.25; }
-.aa-block[data-kind="heading"][data-level="3"] { font-size: var(--aa-h3, var(--type-size-heading, 1.1em)); }
+/* Headings, in the medium face: a title (#) is 20px on two squares, ## and
+   ### 17px and 15px on one, the rest the text's size on one. */
+.aa-block[data-kind="heading"] { font-family: "Inter Arrows", var(--aa-typeface-heading, var(--ds-typeface-medium, var(--typeface-medium, var(--aa-typeface, var(--typeface-regular, system-ui))))), system-ui, sans-serif; font-weight: var(--aa-weight-heading, var(--ds-type-weight-bold, 500)); }
+.aa-block[data-kind="heading"][data-level="1"] { font-size: var(--aa-h1, var(--ds-type-size-display, calc(20px * var(--aa-sf)))); line-height: calc(2 * var(--aa-unit)); letter-spacing: calc(var(--ds-display-text-tracking, -0.4px) * var(--aa-sf)); }
+.aa-block[data-kind="heading"][data-level="2"] { font-size: var(--aa-h2, calc(var(--ds-prose-h2-size, 17px) * var(--aa-sf))); letter-spacing: calc(var(--ds-prose-h2-tracking, -0.34px) * var(--aa-sf)); }
+.aa-block[data-kind="heading"][data-level="3"] { font-size: var(--aa-h3, calc(var(--ds-prose-h3-size, 15px) * var(--aa-sf))); }
 
-.aa-block[data-kind="quote"] { padding-left: 0.75em; border-left: 2px solid var(--aa-rule, color-mix(in srgb, currentColor 25%, transparent)); font-style: italic; }
-.aa-block[data-kind="quote"] .aa-syntax { font-style: normal; }
+/* A quote stands a square in, on a hairline in the muted ink. */
+.aa-block[data-kind="quote"] { padding-left: var(--aa-unit); box-shadow: inset 1px 0 var(--aa-quote-rule, var(--ds-text-color-muted, light-dark(#5f5f5f, #cacaca))); }
 
-.aa-block[data-kind="code"] { padding: 0.5lh 0.75em; border-radius: 4px; background: var(--aa-code-paper, color-mix(in srgb, currentColor 6%, transparent)); font-size: 0.92em; }
+/* A block of code: a square of room around it, its frame a hairline. */
+.aa-block[data-kind="code"] { padding: var(--aa-unit); border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); box-shadow: inset 0 0 0 1px var(--aa-rule-color); background: var(--aa-code-paper, transparent); }
 
-/* A bullet: the marker drawn while its `- ` is hidden, and a box for a tick. */
-.aa-block[data-kind="bullet"] { padding-left: var(--aa-indent, 1.5em); }
+/* A bullet: the marker drawn while its `- ` is hidden, and a box for a tick,
+   a square in from the text's edge. */
+.aa-block[data-kind="bullet"] { padding-left: var(--aa-indent, var(--aa-unit)); }
 .aa-block[data-kind="bullet"]::before {
   content: "";
   position: absolute;
   left: 0;
   top: 0;
-  width: var(--aa-indent, 1.5em);
+  width: var(--aa-indent, var(--aa-unit));
   height: 1lh;
   display: flex;
   align-items: center;
@@ -118,59 +126,76 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
   pointer-events: none;
 }
 .aa-block[data-kind="bullet"]:not([data-checked])::before { content: "•"; }
+/* A box is Design system 1's checkbox: one control (16px) square on the lower
+   sixteen of its line's square, a hairline on the field's ground, filled with
+   the accent and checked in its ink. It stays while its words are edited. */
 .aa-block[data-kind="bullet"][data-checked]::before {
   content: "";
-  width: 0.8em;
-  height: 0.8em;
-  margin: calc((1lh - 0.8em) / 2) calc((var(--aa-indent, 1.5em) - 0.8em) / 2);
+  width: calc(16px * var(--aa-sf));
+  height: calc(16px * var(--aa-sf));
+  margin-top: calc(var(--aa-unit) - 16px * var(--aa-sf));
   box-sizing: border-box;
-  border: 1.5px solid currentColor;
-  border-radius: 2px;
+  border: 1px solid var(--aa-rule-color);
+  border-radius: var(--ds-radius, calc(4px * var(--aa-sf)));
+  background: var(--ds-input-background, light-dark(#e8e8e8, #303030));
   pointer-events: auto;
   cursor: pointer;
 }
-.aa-block[data-kind="bullet"][data-checked="true"]::before { background: currentColor; }
-.aa-block[data-kind="bullet"][data-checked="true"] { color: var(--aa-done, color-mix(in srgb, currentColor 55%, transparent)); }
-.aa-block[data-kind="bullet"][data-active] { padding-left: var(--aa-indent, 1.5em); }
+.aa-block[data-kind="bullet"][data-checked="true"]::before {
+  border-color: transparent;
+  background: var(--ds-accent-color, var(--accent-color, #99ff73)) url("data:image/svg+xml,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M6.68649%2011.884L12.443%206.13601L11.736%205.42715L6.68835%2010.4827L4.26399%208.0501L3.55696%208.74525L6.68649%2011.884Z%22%20fill%3D%22%232a2a2a%22%2F%3E%3C%2Fsvg%3E") center / 100% no-repeat;
+}
+.aa-block[data-kind="bullet"][data-checked="true"] { color: var(--aa-done, var(--ds-text-color-muted, color-mix(in srgb, currentColor 55%, transparent))); }
 
-/* A divider: a hairline while its --- is hidden. */
+/* A divider takes no room, as prose.css's rule: a hairline under the square
+   above it, so the writing around it stands two squares apart. */
+.aa-block + .aa-block[data-kind="divider"] { margin-top: 0; }
 .aa-block[data-kind="divider"] { min-height: 1lh; }
 .aa-block[data-kind="divider"]::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(0.5lh - 0.5px);
+  top: 100%;
   height: 1px;
-  background: var(--aa-rule, color-mix(in srgb, currentColor 25%, transparent));
+  background: var(--aa-rule-color);
 }
 
-/* What to write, until something is. */
-.aa-block[data-placeholder]::before {
-  content: attr(data-placeholder);
+/* What to write, until something is; a heading with no words yet names its
+   level, since its # is never shown. */
+.aa-block[data-placeholder]::before { content: attr(data-placeholder); }
+.aa-block[data-kind="heading"][data-empty]::before { content: "Heading " attr(data-level); }
+.aa-block[data-placeholder]::before,
+.aa-block[data-kind="heading"][data-empty]::before {
   position: absolute;
   left: 0;
   top: 0;
-  color: var(--aa-placeholder, color-mix(in srgb, currentColor 38%, transparent));
+  color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab)));
   pointer-events: none;
   white-space: nowrap;
 }
 
-/* Checkboxes remain visible while their text is edited. */
-
 /* An atom: one thing to the caret, drawn by the product or as its own words. */
 .aa-atom { -webkit-user-modify: read-only; cursor: default; }
 .aa-atom[data-atom="image"] { display: inline-block; max-width: 100%; vertical-align: top; }
-.aa-atom[data-atom="image"] img { display: block; max-width: 100%; height: auto; border-radius: var(--aa-picture-radius, 4px); }
+.aa-atom[data-atom="image"] img { display: block; max-width: 100%; height: auto; border-radius: var(--aa-picture-radius, var(--ds-radius, calc(4px * var(--aa-sf)))); }
 
 /* Controls share the page's square and ink. */
 .aa-controls {
-  --aa-square: var(--1, calc(20px * var(--sf, 1)));
+  --aa-sf: var(--ds-sf, var(--sf, 1));
+  --aa-square: var(--ds-unit, var(--1, calc(20px * var(--sf, 1))));
+  /* Design system 1's Context face: black rows with white words in both
+     themes (the slate in dark), a pixel apart, the pointer's row lighter. */
+  --aa-menu-fill: light-dark(var(--ds-black, #2a2a2a), var(--ds-slate, #1e1e1e));
+  --aa-menu-ink: var(--ds-white, #ffffff);
+  --aa-menu-hover: color-mix(in srgb, var(--aa-menu-fill) 78%, var(--aa-menu-ink));
   position: fixed;
   z-index: var(--aa-controls-layer, 1000);
-  color: var(--text-color, CanvasText);
-  background: var(--background, Canvas);
-  font: var(--type-weight-default, 400) var(--type-size-default, 14px)/var(--aa-square) var(--typeface-regular, system-ui);
+  color: var(--ds-text-color, var(--text-color, CanvasText));
+  background: var(--ds-paper, var(--background, Canvas));
+  font: var(--ds-type-weight-default, 400) var(--ds-type-size-default, calc(14px * var(--aa-sf)))/var(--aa-square) "Inter Arrows", var(--ds-typeface-regular, var(--typeface-regular, system-ui)), system-ui, sans-serif;
+  font-feature-settings: var(--ds-font-features, normal);
+  letter-spacing: var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf)));
 }
 .aa-controls[hidden], .aa-drop-line[hidden] { display: none; }
 .aa-controls button {
@@ -179,81 +204,86 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
   color: inherit; font: inherit; cursor: pointer; display: inline-flex;
   align-items: center; justify-content: center; flex-shrink: 0;
 }
-.aa-controls button:hover, .aa-controls button[data-current] { background: var(--accent-color, var(--apple-green, Highlight)); }
-.aa-controls button:focus-visible { outline: 1px solid currentColor; outline-offset: -1px; }
-.aa-icon { display: inline-block; width: calc(16px * var(--sf, 1)); height: calc(16px * var(--sf, 1)); background: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; flex-shrink: 0; }
+.aa-controls button:hover, .aa-controls button[data-current] { background: var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); }
+.aa-controls button:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: -2px; }
+.aa-icon { display: inline-block; width: calc(16px * var(--aa-sf, var(--sf, 1))); height: calc(16px * var(--aa-sf, var(--sf, 1))); background: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; flex-shrink: 0; }
+/* The toolbar and the block menu are Context menus: rows 19px with the pixel
+   under them (a square's pitch), words 4px in on the lower sixteen, the
+   icon at the row's end, the outer corners rounded as one silhouette. */
 .aa-toolbar {
-  display: flex; height: var(--aa-square); gap: calc(1px * var(--sf, 1)); border: 0;
-  border-radius: var(--aa-menu-radius, calc(4px * var(--sf, 1)));
-  clip-path: inset(0 round var(--aa-menu-radius, calc(4px * var(--sf, 1))));
-  overflow-x: auto; max-width: 100vw; background: transparent; color: var(--white, white);
+  display: flex; height: calc(var(--aa-square) - 1px); gap: 1px; border: 0;
+  border-radius: var(--aa-menu-radius, var(--ds-radius, calc(4px * var(--aa-sf))));
+  clip-path: inset(0 round var(--aa-menu-radius, var(--ds-radius, calc(4px * var(--aa-sf)))));
+  overflow-x: auto; max-width: 100vw; background: transparent; color: var(--aa-menu-ink);
 }
-.aa-toolbar button, .aa-toolbar button:hover, .aa-toolbar button[data-current] { background: var(--black, black); color: var(--white, white); }
+.aa-toolbar button { height: calc(var(--aa-square) - 1px); align-items: flex-end; background: var(--aa-menu-fill); color: var(--aa-menu-ink); }
+.aa-toolbar button:hover, .aa-toolbar button[data-current] { background: var(--aa-menu-hover); color: var(--aa-menu-ink); }
 .aa-toolbar[data-docked] { width: 100%; }
 .aa-menu {
-  display: flex; flex-direction: column; gap: calc(1px * var(--sf, 1));
-  width: calc(4 * var(--aa-square)); max-height: calc(12 * var(--aa-square));
-  overflow-y: auto; border: 0; border-radius: var(--aa-menu-radius, calc(4px * var(--sf, 1)));
-  clip-path: inset(0 round var(--aa-menu-radius, calc(4px * var(--sf, 1))));
-  background: transparent; color: var(--white, white);
-  font-size: calc(13px * var(--sf, 1)); line-height: 1;
+  display: flex; flex-direction: column; gap: 1px;
+  width: calc(4 * var(--aa-square)); max-height: calc(16 * var(--aa-square));
+  overflow-y: auto; border: 0; border-radius: var(--aa-menu-radius, var(--ds-radius, calc(4px * var(--aa-sf))));
+  clip-path: inset(0 round var(--aa-menu-radius, var(--ds-radius, calc(4px * var(--aa-sf)))));
+  background: transparent; color: var(--aa-menu-ink);
+  line-height: calc(16px * var(--aa-sf));
 }
 .aa-menu button {
-  display: flex; width: 100%; justify-content: flex-start; text-align: left;
-  gap: calc(2px * var(--sf, 1)); padding: 0 calc(2px * var(--sf, 1)) 0 calc(3px * var(--sf, 1));
-  white-space: nowrap; background: var(--black, black); color: var(--white, white);
+  display: flex; width: 100%; height: calc(var(--aa-square) - 1px); align-items: flex-end; justify-content: space-between; text-align: start;
+  gap: calc(4px * var(--aa-sf)); padding: 0 calc(4px * var(--aa-sf));
+  white-space: nowrap; background: var(--aa-menu-fill); color: var(--aa-menu-ink);
 }
-.aa-menu button:hover, .aa-menu button[data-current], .aa-menu button:focus-visible { background: var(--black, black); color: var(--white, white); }
-.aa-menu button[data-current] { outline: 1px solid currentColor; outline-offset: -1px; }
-.aa-menu button[data-command="count"] { font-size: calc(10px * var(--sf, 1)); }
+.aa-menu button:hover, .aa-menu button[data-current], .aa-menu button:focus-visible { background: var(--aa-menu-hover); color: var(--aa-menu-ink); }
+.aa-menu button:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px var(--ds-focus-ring, currentColor); }
+.aa-menu button[data-command="count"] { font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf))); }
 .aa-menu button .aa-icon { order: 2; }
 .aa-menu button span:last-child {
   order: 1; flex: 1; min-width: 0; overflow: hidden;
-  mask-image: linear-gradient(to right, black calc(100% - 12px * var(--sf, 1)), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - var(--aa-square)), transparent 100%);
 }
-.aa-menu-empty { display: block; padding-inline: calc(3px * var(--sf, 1)); line-height: var(--aa-square); background: var(--black, black); }
-.aa-drop-line { position: fixed; z-index: 1000; height: 1px; background: var(--accent-color, var(--apple-green, Highlight)); pointer-events: none; }
-.aa-find { display: flex; flex-wrap: wrap; width: calc(16 * var(--aa-square)); max-width: calc(100vw - 2 * var(--aa-square) - 2px); border: 1px solid var(--aa-rule, currentColor); }
-.aa-find input { box-sizing: border-box; font: inherit; color: inherit; background: transparent; width: 50%; min-width: 0; height: var(--aa-square); padding: 0 calc(4px * var(--sf, 1)); border: 0; border-right: 1px solid currentColor; border-radius: 0; }
-.aa-find span[aria-live] { padding-inline: calc(4px * var(--sf, 1)); white-space: nowrap; }
-.aa-find-match, .aa-highlight { background: var(--aa-highlight, var(--yellow, Highlight)); color: var(--aa-highlight-ink, inherit); }
-.aa-block[data-kind="bullet"] { margin-left: calc(var(--aa-depth, 0) * var(--aa-indent, 1.5em)); }
+.aa-menu-empty { display: block; height: calc(var(--aa-square) - 1px); padding: calc(3px * var(--aa-sf)) calc(4px * var(--aa-sf)) 0; box-sizing: border-box; background: var(--aa-menu-fill); }
+.aa-drop-line { position: fixed; z-index: 1000; height: 1px; background: var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); pointer-events: none; }
+.aa-find { display: flex; flex-wrap: wrap; width: calc(16 * var(--aa-square)); max-width: calc(100vw - 2 * var(--aa-square) - 2px); border: 1px solid var(--aa-rule, var(--ds-border-color, currentColor)); }
+.aa-find input { box-sizing: border-box; font: inherit; color: inherit; background: transparent; width: 50%; min-width: 0; height: var(--aa-square); padding: 0 calc(4px * var(--aa-sf)); border: 0; border-right: 1px solid var(--ds-border-color, currentColor); border-radius: 0; }
+.aa-find span[aria-live] { padding-inline: calc(4px * var(--aa-sf)); white-space: nowrap; }
+.aa-find-match, .aa-highlight { background: var(--aa-highlight, var(--ds-yellow, var(--yellow, Highlight))); color: var(--aa-highlight-ink, var(--ds-black, inherit)); }
+.aa-block[data-kind="bullet"] { margin-left: calc(var(--aa-depth, 0) * var(--aa-indent, var(--aa-unit))); }
 .aa-block[data-kind="bullet"][data-number]::before { content: attr(data-number) "."; }
-.aa-block[data-kind="callout"] { padding-left: var(--1, calc(20px * var(--sf, 1))); border-left: 1px solid var(--aa-rule, currentColor); }
-.aa-block[data-kind="callout"]::before { content: ""; position: absolute; left: 0; top: 0; width: var(--1, calc(20px * var(--sf, 1))); height: var(--1, calc(20px * var(--sf, 1))); background: currentColor; mask: var(--aa-callout-icon) center / calc(16px * var(--sf, 1)) no-repeat; cursor: pointer; }
+/* A callout: its icon on the first square, the words on the next, a hairline
+   at its start. */
+.aa-block[data-kind="callout"] { padding-left: var(--aa-unit); box-shadow: inset 1px 0 var(--aa-rule-color); }
+.aa-block[data-kind="callout"]::before { content: ""; position: absolute; left: 0; top: 0; width: var(--aa-unit); height: var(--aa-unit); background: currentColor; mask: var(--aa-callout-icon) 50% 100% / calc(16px * var(--aa-sf)) no-repeat; cursor: pointer; }
 .aa-block[data-folded]:not([data-body-active]) .aa-callout-body { display: none; }
 .aa-block[data-kind="table"] { white-space: normal; }
-/* A table is Design system 1's: rows one square high, each on a hairline at
-   its foot (19px of words, 1px of line), no box and no column lines. The
-   header row keeps the text's weight in the title grey; Markdown's `---:`
-   sets a column of numbers to its end in tabular figures. */
-.aa-block[data-kind="table"] { --aa-table-row: calc(20px * var(--sf, 1)); font-variant-numeric: tabular-nums; }
+/* A table is prose.css's: each row two squares, the words on one square with
+   half a square around them, a hairline at its foot, no box and no column
+   lines; the header row in the medium face, Markdown's `---:` setting a
+   column of numbers to its end in tabular figures. */
+.aa-block[data-kind="table"] { font-variant-numeric: tabular-nums; }
 .aa-table-row { display: grid; grid-template-columns: repeat(var(--aa-columns), minmax(0, 1fr)); }
-.aa-table-cell { box-sizing: border-box; min-height: var(--aa-table-row); padding: 0 calc(var(--aa-table-row) / 2) 0 0; border-bottom: 1px solid var(--aa-table-rule, var(--ds-border-color, color-mix(in srgb, currentColor 15%, transparent))); line-height: calc(var(--aa-table-row) - 1px); white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
-.aa-table-cell:last-child { padding-inline-end: 0; }
+.aa-table-cell { box-sizing: border-box; min-height: calc(2 * var(--aa-unit)); padding: calc(var(--aa-unit) / 2); box-shadow: inset 0 -1px var(--aa-table-rule, var(--aa-rule-color)); line-height: var(--aa-unit); white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
 .aa-table-cell[data-align="center"] { text-align: center; }
 .aa-table-cell[data-align="end"] { text-align: end; }
-.aa-table-row:first-child { color: var(--aa-table-header, var(--ds-title-color, var(--base-darker-grey, color-mix(in srgb, currentColor 55%, transparent)))); }
+.aa-table-row:first-child { color: var(--aa-table-header, inherit); font-family: "Inter Arrows", var(--ds-typeface-medium, var(--typeface-medium, inherit)), system-ui, sans-serif; font-weight: var(--ds-type-weight-bold, 500); }
 .aa-atom video, .aa-atom audio { display: block; max-width: 100%; }
-.aa-caption { display: block; font: inherit; font-size: var(--type-size-small, 10px); min-height: 1lh; outline: none; cursor: text; -webkit-user-modify: read-write-plaintext-only; }
-.aa-caption:empty::before { content: attr(data-placeholder); color: var(--aa-placeholder, GrayText); }
+.aa-caption { display: block; font: inherit; font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf))); color: var(--ds-text-color-muted, inherit); min-height: 1lh; outline: none; cursor: text; -webkit-user-modify: read-write-plaintext-only; }
+.aa-caption:empty::before { content: attr(data-placeholder); color: var(--aa-placeholder, var(--ds-input-placeholder-color, GrayText)); }
 .aa-atom[data-atom="equation-block"] { display: block; }
 
 /* A fenced block an atom draws whole, a diagram: the drawing on the paper, not
    in a code box, wider ones scrolled rather than cut; with the caret in it, its
-   words as code and the drawing half a line under them. The drawing starts at
+   words as code and the drawing a square under them. The drawing starts at
    the block's edge, as the words do. */
-.aa-block[data-fence][data-drawn] { padding: 0; border-radius: 0; background: none; font-size: inherit; }
-.aa-block[data-fence] > .aa-atom { display: block; max-width: 100%; overflow-x: auto; font-family: "Inter Arrows", var(--aa-typeface, var(--typeface-regular, system-ui)), system-ui, sans-serif; font-size: var(--aa-size, var(--type-size-default, 14px)); }
+.aa-block[data-fence][data-drawn] { padding: 0; border-radius: 0; box-shadow: none; background: none; font-size: inherit; letter-spacing: inherit; }
+.aa-block[data-fence] > .aa-atom { display: block; max-width: 100%; overflow-x: auto; font-family: "Inter Arrows", var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))), system-ui, sans-serif; font-size: var(--aa-size, var(--ds-type-size-default, calc(14px * var(--aa-sf)))); letter-spacing: var(--aa-letterspacing, var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf)))); }
 .aa-block[data-fence] > .aa-atom > * { margin-inline-start: 0; }
-.aa-block[data-fence] > .aa-atom[data-preview] { margin-top: 0.5lh; }
+.aa-block[data-fence] > .aa-atom[data-preview] { margin-top: var(--aa-unit); }
 
-.aa-peer-caret { position: relative; display: inline; border-left: calc(1px * var(--sf, 1)) solid var(--aa-accent, Highlight); }
-.aa-peer-caret::after { content: attr(data-label); position: absolute; bottom: 100%; left: 0; font-size: calc(10px * var(--sf, 1)); white-space: nowrap; background: var(--aa-accent, Highlight); color: HighlightText; }
-.aa-block[data-kind=callout][data-level] > span:not(.aa-syntax):not(.aa-callout-body) { font-weight: bold; }
+.aa-peer-caret { position: relative; display: inline; border-left: calc(1px * var(--aa-sf)) solid var(--aa-accent, var(--ds-sharp-blue, Highlight)); }
+.aa-peer-caret::after { content: attr(data-label); position: absolute; bottom: 100%; left: 0; font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf))); white-space: nowrap; background: var(--aa-accent, var(--ds-sharp-blue, Highlight)); color: var(--ds-white, HighlightText); }
+.aa-block[data-kind=callout][data-level] > span:not(.aa-syntax):not(.aa-callout-body) { font-family: "Inter Arrows", var(--ds-typeface-medium, var(--typeface-medium, inherit)), system-ui, sans-serif; font-weight: var(--ds-type-weight-bold, 500); }
 
 .aa-link-editor input { flex: 1; width: auto; }
 
 /* A plain specimen inherits its surrounding face and size without controls. */
-:where(.aa-plain) { font: inherit; letter-spacing: inherit; }
+:where(.aa-plain) { font: inherit; font-feature-settings: inherit; letter-spacing: inherit; color: inherit; }
 :where(.aa-plain) > .aa-block { font: inherit; letter-spacing: inherit; }

@@ -1,8 +1,8 @@
 /**
  * A block drawn from its source, and read back from the screen. Every
- * character of the source is in the DOM as text, syntax included; syntax
- * that is not being edited is not displayed, so the caret passes over it as
- * if it were not there, and the text still reads straight back.
+ * character of the source is in the DOM as text, syntax included; syntax is
+ * never displayed, while writing either, so the caret passes over it as if it
+ * were not there, and the text still reads straight back.
  */
 
 import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block } from './markdown'
@@ -63,6 +63,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   if (block.checked === undefined) delete element.dataset.checked
   else element.dataset.checked = block.checked ? 'true' : 'false'
   element.toggleAttribute('data-active', !!reveal)
+  element.toggleAttribute('data-empty', block.kind === 'heading' && !block.source.slice(block.prefix).trim())
   element.dataset.reveal = revealKey(block, reveal, atoms)
   element.style.setProperty('--aa-depth', String(block.depth ?? 0))
   if (block.number !== undefined) element.dataset.number = String(block.number)
@@ -115,8 +116,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     if (run.kind === 'syntax') {
       const span = document.createElement('span')
       span.className = 'aa-syntax'
-      if (block.kind === 'heading' && run.prefix && reveal) span.setAttribute('data-heading-prefix', '')
-      else span.setAttribute('data-hidden', '')
+      span.setAttribute('data-hidden', '')
       span.textContent = text
       destination.append(span)
       continue
