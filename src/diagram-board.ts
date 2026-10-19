@@ -112,8 +112,10 @@ export class AaDiagramBoardElement extends Base {
     this.#rename.setAttribute('aria-label', 'Name')
     this.#rename.spellcheck = false
     this.#layer.append(this.#ring, this.#ghost, this.#lines, this.#rename)
-    this.#paper.append(this.#drawing, this.#layer)
+    // The drawing stays in the page, slotted onto the paper, so a product's own rules for its diagram element reach it.
+    this.#paper.append(document.createElement('slot'), this.#layer)
     root.append(style, this.#probe, this.#tools, this.#paper)
+    this.append(this.#drawing)
     this.#drawTools()
   }
 

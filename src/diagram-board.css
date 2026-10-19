@@ -33,7 +33,7 @@
 }
 
 /* The drawing starts on the paper's first square, as it stands in writing. */
-.paper > :not(.layer) {
+::slotted(*) {
   margin-inline-start: 0;
 }
 

@@ -11,7 +11,7 @@ function setup(value: string, options = {}) {
 }
 const blockElements = () => Array.from(host!.children) as HTMLElement[]
 /** The drawing a block holds, on its board. */
-const drawingIn = (element: Element) => element.querySelector<AaDiagramBoardElement>('aa-diagram-board')?.shadowRoot?.querySelector('aa-diagram') as AaDiagramElement | null
+const drawingIn = (element: Element) => element.querySelector<AaDiagramBoardElement>('aa-diagram-board')?.querySelector('aa-diagram') as AaDiagramElement | null
 afterEach(() => { editor?.destroy(); host?.remove(); editor = undefined; host = undefined; document.querySelectorAll('aa-toolbar').forEach(node => node.remove()); window.getSelection()?.removeAllRanges() })
 
 const SOURCE = 'Above\n\n```diagram\n[A]\n[B] @ 0 3\nA -> B\n```\n\nBelow'
@@ -23,6 +23,8 @@ describe('a diagram in the editor', () => {
     expect(block.hasAttribute('data-drawn')).toBe(true)
     expect(block.dataset.fence).toBe('diagram')
     expect(drawingIn(block)?.source).toBe('[A]\n[B] @ 0 3\nA -> B')
+    // The drawing stays in the page, so a product's own rules for its element reach it.
+    expect(drawingIn(block)?.parentElement?.localName).toBe('aa-diagram-board')
     expect(readBlock(block)).toBe('```diagram\n[A]\n[B] @ 0 3\nA -> B\n```')
     expect(e.value).toBe(SOURCE)
   })

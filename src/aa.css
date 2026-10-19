@@ -53,7 +53,9 @@
 }
 /* One square between two blocks, two before a heading, as prose.css. */
 .aa-block + .aa-block { margin-top: var(--aa-gap, var(--aa-unit)); }
-.aa-block:not([data-kind="heading"]) + .aa-block[data-kind="heading"] { margin-top: calc(2 * var(--aa-gap, var(--aa-unit))); }
+/* Two before a heading, or what --aa-heading-gap says; weighing no more than
+   the rule above, so a product's own heading rule still wins. */
+:where(.aa-block:not([data-kind="heading"])) + .aa-block[data-kind="heading"] { margin-top: var(--aa-heading-gap, calc(2 * var(--aa-gap, var(--aa-unit)))); }
 .aa-block[data-selected], .aa-block[data-lifted] { background: var(--aa-selection, var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight)))); }
 .aa-block[data-selected], .aa-block[data-lifted] { border-radius: calc(2px * var(--aa-sf)); }
 /* No handle beside a block: a selected block is taken by the hand, any other
