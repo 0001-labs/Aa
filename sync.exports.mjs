@@ -1,6 +1,7 @@
 /**
  * What a product copies from Aa with Sync 1 (`sync1`): the built editor, its
  * styles and types, into a folder the copy owns whole. Aa is built first.
+ * aa.css comes with the Design system 1 sheets it imports, in ds1/.
  * `entries` adds the optional builds: react, collaboration, convex, diagram.
  * A diagram brings its language (diagram-language.js, which a page or a
  * server can read alone) and its marker drawing (marker.js) with it.
@@ -29,6 +30,8 @@ export default {
           ['fonts/LICENSE.md', read('src/fonts/LICENSE.md')],
           ['aa.d.ts', "export * from './index';\n"],
         ])
+        // aa.css imports Design system 1's context bar from beside it.
+        for (const [file, content] of tree('src/ds1', { only: /^[^/]+\.css$/ })) files.set(`ds1/${file}`, content)
         for (const entry of entries) files.set(`${entry}.js`, script(read(`dist/${entry}.js`)))
         const skipped = optional.filter(entry => !entries.includes(entry)).map(entry => `${entry}.d.ts`)
         for (const [file, content] of tree('dist', { only: /^[^/]+\.d\.ts$/ })) if (!skipped.includes(file)) files.set(file, types(content))

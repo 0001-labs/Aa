@@ -143,6 +143,17 @@ describe('controls, decorations and media', () => {
     expect(host!.children[0].hasAttribute('data-selected')).toBe(true)
   })
 
+  it("draws the toolbar as Design system 1's context bar, a toolbar that leaves the focus in the writing", () => {
+    setup('Words', { toolbar: true })
+    const toolbar = document.querySelector('aa-toolbar') as HTMLElement
+    expect(toolbar.classList.contains('ds-context')).toBe(true)
+    expect(toolbar.classList.contains('ds-context--bar')).toBe(true)
+    expect(toolbar.getAttribute('role')).toBe('toolbar')
+    const buttons = [...toolbar.querySelectorAll('button')]
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons.every(button => button.classList.contains('ds-context__item--icon') && !button.hasAttribute('role'))).toBe(true)
+  })
+
   it('keeps caption Select all and paste inside the caption', () => {
     const e = setup('![Sample](/sample.png)')
     const caption = host!.querySelector('.aa-caption') as HTMLElement

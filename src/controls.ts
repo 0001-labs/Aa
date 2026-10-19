@@ -31,11 +31,14 @@ function button(label: string, icon: string, action: () => void, text = false): 
 export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? class {} as typeof HTMLElement : HTMLElement) {
   editor: Editor | null = null
   actions: readonly ToolbarAction[] = []
-  connectedCallback() { this.setAttribute('role', 'toolbar'); this.setAttribute('aria-label', 'Text formatting'); this.refresh() }
+  // Drawn as Design system 1's context bar (ds1/context.css), each cell an icon
+  // one square. A formatting bar that leaves the caret in the writing is a
+  // toolbar, not a menu: it opens without the focus, and Tab reaches its buttons.
+  connectedCallback() { this.classList.add('ds-context', 'ds-context--bar'); this.setAttribute('role', 'toolbar'); this.setAttribute('aria-label', 'Text formatting'); this.refresh() }
   refresh() {
     this.replaceChildren(...this.actions.map(action => {
       const node = button(action.label, action.icon, () => { if (this.editor && !this.editor.readOnly) action.run(this.editor) })
-      node.classList.add('note-menu-row')
+      node.classList.add('note-menu-row', 'ds-context__item--icon')
       return node
     }))
   }

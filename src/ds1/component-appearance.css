@@ -1,0 +1,32 @@
+/* Shape is a surface preference. Keep these base lengths unscaled: each
+ * component resolves them with its own --ds-sf in component-metrics.css. */
+[data-ds-shape="square"],
+:host([data-ds-shape="square"]) {
+  --ds-corner-size: 0px;
+  --ds-corner-shape: round;
+  --ds-button-inset: 0.5px;
+}
+
+[data-ds-shape="rounded"],
+:host([data-ds-shape="rounded"]) {
+  --ds-corner-size: 4px;
+  --ds-corner-shape: round;
+  --ds-button-inset: 2.5px;
+}
+
+[data-ds-shape="circular"],
+:host([data-ds-shape="circular"]) {
+  --ds-corner-size: 999px;
+  --ds-corner-shape: round;
+  --ds-button-inset: 5px;
+}
+
+/* A squircle needs twice an arc's radius for the same apparent corner.
+ * Circular controls keep true semicircles even in a squircle browser. */
+@supports (corner-shape: squircle) {
+  [data-ds-shape="rounded"],
+  :host([data-ds-shape="rounded"]) {
+    --ds-corner-size: 8px;
+    --ds-corner-shape: squircle;
+  }
+}
