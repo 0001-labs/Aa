@@ -33,9 +33,10 @@ createEditor(host, {
 })
 ```
 
-- **When.** A block is asked about once its words rest: after a pause in typing (`PAUSE`, 800 ms), or as soon as the caret leaves it. Only blocks the person typed in are asked about, never text set from outside, code, tables or equations. Nothing is asked or changed during an IME composition.
-- **What is taken.** The answer is compared word by word. Only edits within the words are made: never Markdown's syntax, code, atoms, link addresses or bare addresses, and never the word the caret is in (that one follows once the caret leaves). An answer that rewrites rather than corrects is not taken. An answer for a block that changed since it was asked about is dropped, and its `signal` aborted.
+- **When.** A block is asked about once its words rest: after a pause in typing (`PAUSE`, 400 ms), or as soon as the caret leaves it. Only blocks the person typed in are asked about, never text set from outside, code, tables or equations. Nothing is asked or changed during an IME composition.
+- **What is taken.** The answer is compared word by word. Only edits within the words are made: never Markdown's syntax, code, atoms, link addresses or bare addresses, and never the word the caret is in (that one follows once the caret leaves). An answer that rewrites rather than corrects, changing more than half the block's words, is not taken. An answer for a block that changed since it was asked about is dropped, and its `signal` aborted.
 - **How.** Each correction is an edit from outside: only its block is drawn again, in its own element, and the caret and focus stay among the same words. It is a step of its own to undo; ⌘Z gives back what the person wrote, and a correction taken back is not made again. `onChange` reports it like any change, and collaboration keeps it a step of its own in Yjs's undo.
+- **Seen.** The words a correction changed shimmer once: a band of the accent colour (`--aa-shimmer`, else Design system 1's accent) passes through their letters in under a second, drawn over the text and never in it (`.aa-shimmer`). It only fades with reduced motion, and is not drawn with forced colours.
 - **Off.** `correcting: false` starts it off, `editor.correcting` turns it on and off, and `<aa-editor correct="off">` turns it off on the element. While it corrects, the editor turns the browser's own spelling marks off.
 
 ## React

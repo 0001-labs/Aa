@@ -14,6 +14,7 @@ import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableA
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
 import { createCorrection, type Corrector } from './correction'
+import { shimmer } from './shimmer'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -375,9 +376,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   /**
    * A block's words corrected, put in as an edit from outside: the block is
    * drawn again in its own element and no other, the caret and focus stay
-   * among the same words, and it is a step of its own to undo.
+   * among the same words, it is a step of its own to undo, and the words it
+   * changed shimmer once.
    */
-  const correctBlock = (index: number, source: string, shift: (offset: number) => number) => {
+  const shimmers = new Set<() => void>()
+  const correctBlock = (index: number, source: string, shift: (offset: number) => number, changed: readonly [number, number][]) => {
     const selection = readSelection(), focused = host.contains(document.activeElement)
     const { blocks: next } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, source)
     if (next.length !== blocks.length) return
@@ -390,6 +393,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     // Put back only where it was drawn away, and only while the editor has the focus, which setting a selection could otherwise take.
     const touched = !!selection && Math.min(selection.anchor.block, selection.focus.block) <= index && Math.max(selection.anchor.block, selection.focus.block) >= index
     if (touched && focused) setSelection(anchor, focus)
+    const stop = shimmer(elements()[index], changed)
+    shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000)
     history.record(snapshot(anchor, focus), 'edit')
     options.onChange?.(toMarkdown(blocks))
     host.dispatchEvent(new CustomEvent('aa-change', { detail: { correction: true } }))
@@ -1033,6 +1038,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     destroy() {
       destroyed = true
       correction?.stop()
+      for (const stop of shimmers) stop()
+      shimmers.clear()
       stopSelection()
       stopControls()
       host.removeEventListener('beforeinput', onBeforeInput)

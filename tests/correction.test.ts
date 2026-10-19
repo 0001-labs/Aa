@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createEditor, type Editor, type EditorOptions } from '../src/editor'
 import { AaEditorElement, defineAaEditor } from '../src/element'
-import { PAUSE, corrections, diffWords, pair, wordAround, type CorrectionContext } from '../src/correction'
+import { PAUSE, corrections, correctedWords, diffWords, pair, wordAround, type CorrectionContext } from '../src/correction'
+import { SHIMMER, lightness } from '../src/shimmer'
 import { parseBlocks } from '../src/markdown'
 
 let editor: Editor | undefined, host: HTMLElement | undefined
@@ -50,6 +51,16 @@ describe('what of an answer is taken', () => {
     expect(fix('- [ ] by teh way', '- [x] by the way')).toBe('- [ ] by the way')
     expect(fix('a **teh** b', 'a the b')).toBe('a **teh** b')
   })
+  it('takes a sentence of small corrections whole', () => {
+    const source = 'i dont no wat u mean'
+    const { edits } = corrections(block(source), "I don't know what you mean")
+    expect(edits.reduceRight((out, edit) => out.slice(0, edit.from) + edit.text + out.slice(edit.to), source)).toBe("I don't know what you mean")
+  })
+  it('names the whole words each correction changed, where they now stand', () => {
+    expect(correctedWords('I liek cats', [{ from: 2, to: 6, text: 'like' }, { from: 11, to: 11, text: '.' }])).toEqual([[2, 6], [7, 12]])
+    expect(correctedWords('the the cat', [{ from: 3, to: 7, text: '' }])).toEqual([[0, 3]])
+    expect(correctedWords('a b', [{ from: 1, to: 2, text: '  ' }])).toEqual([[0, 4]])
+  })
   it('takes nothing from an answer that rewrites rather than corrects', () => {
     expect(corrections(block('the cat sat on the mat'), 'a feline was resting upon a rug').edits).toEqual([])
   })
@@ -78,6 +89,30 @@ describe('correction while writing', () => {
     expect(correct.mock.calls[0][0]).toBe('I liek cats')
     expect(e.value).toBe('I like cats')
     expect(e.selection()).toEqual({ start: 11, end: 11 })
+  })
+  it('shimmers the words it corrected once, then takes the shimmer away', async () => {
+    vi.useFakeTimers()
+    const rects = vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue([{ left: 10, top: 20, width: 30, height: 20, right: 40, bottom: 40 }] as unknown as DOMRectList)
+    const correct = vi.fn(async (text: string) => text.replace('liek', 'like'))
+    setup('', correct)
+    type(0, 'I liek cats')
+    await vi.advanceTimersByTimeAsync(PAUSE)
+    const pieces = document.querySelectorAll<HTMLElement>('.aa-shimmer')
+    expect(pieces).toHaveLength(1)
+    expect(pieces[0].getAttribute('aria-hidden')).toBe('true')
+    expect(pieces[0].style.left).toBe('10px')
+    expect(host!.querySelector('.aa-shimmer')).toBeNull()
+    await vi.advanceTimersByTimeAsync(SHIMMER * 2)
+    expect(document.querySelectorAll('.aa-shimmer')).toHaveLength(0)
+    rects.mockRestore()
+  })
+  it('reads how light the letters are, to colour them on a light or a dark page', () => {
+    expect(lightness('rgb(0, 0, 0)')).toBe(0)
+    expect(lightness('rgba(255, 255, 255, 0.9)')).toBeCloseTo(1)
+    expect(lightness('oklch(0.92 0.01 250)')).toBeCloseTo(0.92)
+    expect(lightness('oklch(20% 0 0)')).toBeCloseTo(0.2)
+    expect(lightness('color(srgb 1 1 1)')).toBeCloseTo(1)
+    expect(lightness('canvastext')).toBeNull()
   })
   it('restarts the pause with each letter', async () => {
     vi.useFakeTimers()

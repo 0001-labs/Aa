@@ -7,7 +7,8 @@
  * is safe: the words between Markdown's syntax, never the syntax, never the
  * word the caret is in, never during a composition, and never in a block that
  * changed since it was asked about. Each correction is a step of its own to
- * undo, and one taken back is not made again.
+ * undo, and one taken back is not made again. The words it changed shimmer
+ * once as they are put in (`shimmer.ts`).
  */
 
 import { blockRuns, parseBlocks, type AtomSyntax, type Block, type BlockKind } from './markdown'
@@ -23,14 +24,14 @@ export type CorrectionContext = {
   signal: AbortSignal
 }
 
-/** Given a block's Markdown, the same Markdown with its spelling fixed and its words lightly corrected. */
+/** Given a block's Markdown, the same Markdown with its spelling, grammar and punctuation corrected. */
 export type Corrector = (text: string, context: CorrectionContext) => Promise<string>
 
 /** One change to a block's source: the characters from `from` to `to` give way to `text`. */
 export type Edit = { from: number; to: number; text: string }
 
 /** How long typing rests before the block with the caret is asked about. */
-export const PAUSE = 800
+export const PAUSE = 400
 /** Blocks longer than this are left as written. */
 const LONGEST = 4000
 /** The blocks that are words; code, tables, equations and dividers are not. */
@@ -137,7 +138,7 @@ export function corrections(block: Block, answer: string, options: { atoms?: rea
   const proposed = diffWords(source, text).filter(edit => words.some(([from, to]) => edit.from >= from && edit.to <= to))
   const total = words.reduce((sum, [from, to]) => sum + to - from, 0)
   const changed = proposed.reduce((sum, edit) => sum + weight(source.slice(edit.from, edit.to), edit.text), 0)
-  if (changed > Math.max(8, total / 3)) return { edits: [], partial: false }
+  if (changed > Math.max(12, total / 2)) return { edits: [], partial: false }
   const shape = skeleton(source, options.atoms)
   const edits: Edit[] = []
   let partial = false, current = source, delta = 0
@@ -159,6 +160,25 @@ export function applyEdits(source: string, edits: readonly Edit[]): string {
   let out = source
   for (let i = edits.length - 1; i >= 0; i--) out = out.slice(0, edits[i].from) + edits[i].text + out.slice(edits[i].to)
   return out
+}
+
+/** The words the edits changed, as they stand once made: each edit widened to the whole words it touches. */
+export function correctedWords(source: string, edits: readonly Edit[]): [number, number][] {
+  const text = applyEdits(source, edits)
+  const ranges: [number, number][] = []
+  let delta = 0
+  for (const edit of edits) {
+    const at = edit.from + delta
+    delta += edit.text.length - (edit.to - edit.from)
+    let [from, to] = wordAround(text, at, at + edit.text.length)
+    while (from < to && /\s/.test(text[from])) from++
+    while (to > from && /\s/.test(text[to - 1])) to--
+    if (from === to) continue
+    const last = ranges[ranges.length - 1]
+    if (last && from <= last[1]) last[1] = Math.max(last[1], to)
+    else ranges.push([from, to])
+  }
+  return ranges
 }
 
 /** Where an offset into a source stands once the edits are made. */
@@ -186,8 +206,8 @@ export type CorrectionHost = {
   selection(): { anchor: Pos; focus: Pos } | null
   /** Whether the text may not be touched now: during a composition, or read only. */
   busy(): boolean
-  /** Put a block's corrected source in, as one step to undo, offsets in it moving through `shift`. */
-  apply(index: number, source: string, shift: (offset: number) => number): void
+  /** Put a block's corrected source in, as one step to undo, offsets in it moving through `shift`; `changed` are the words corrected, in the new source. */
+  apply(index: number, source: string, shift: (offset: number) => number, changed: readonly [number, number][]): void
   value(): string
 }
 
@@ -238,7 +258,7 @@ export function createCorrection(host: CorrectionHost, correct: Corrector, enabl
     dirty.delete(block); waiting.delete(block)
     let result = block
     if (edits.length) {
-      host.apply(index, applyEdits(block.source, edits), offset => shift(offset, edits))
+      host.apply(index, applyEdits(block.source, edits), offset => shift(offset, edits), correctedWords(block.source, edits))
       result = host.blocks()[index]
       // What is held back is answered already: the answer holds for the words as they now are.
       if (partial) remember(result.source, answer)

@@ -257,3 +257,33 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
 /* A plain specimen inherits its surrounding face and size without controls. */
 :where(.aa-plain) { font: inherit; letter-spacing: inherit; }
 :where(.aa-plain) > .aa-block { font: inherit; letter-spacing: inherit; }
+
+/* A correction's words shimmer once: a band of the accent colour passes through their letters (`shimmer.ts`).
+   Screen on a light page and multiply on a dark one colour the letters and leave the paper as it is. */
+.aa-shimmer {
+  position: fixed;
+  z-index: 1000;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+  animation: aa-shimmer-show 900ms ease-out both;
+}
+.aa-shimmer[data-dark] { mix-blend-mode: multiply; }
+.aa-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--aa-shimmer-color, var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight)))) 50%, transparent);
+  transform: translateX(-100%);
+  animation: aa-shimmer-pass 900ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: inherit;
+}
+@keyframes aa-shimmer-pass { to { transform: translateX(100%); } }
+@keyframes aa-shimmer-show { 0% { opacity: 0; } 15%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .aa-shimmer::after { transform: none; animation: none; background: var(--aa-shimmer-color, var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight)))); }
+}
+@media (forced-colors: active) {
+  .aa-shimmer { display: none; }
+}
