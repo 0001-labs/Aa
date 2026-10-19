@@ -671,15 +671,24 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
+    // ⌘A selects words, as a word processor does: the block's (a table cell's), then all of the writing. Never the blocks themselves.
     if (mod && key === 'a' && !event.altKey) {
       event.preventDefault()
-      const block = blocks[selection.focus.block]
+      const index = selection.focus.block, block = blocks[index]
       const cell = block.kind === 'table' && !selected ? tableRows(block.source).flat().find(cell => selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) : null
-      if (cell && (selection.anchor.offset !== cell.from || selection.focus.offset !== cell.to)) {
-        setSelection({ block: selection.focus.block, offset: cell.from }, { block: selection.focus.block, offset: cell.to })
-        applyReveal()
-      } else if (selected) selectBlocks(0, blocks.length - 1)
-      else selectBlocks(selection.focus.block)
+      const from = cell ? cell.from : startOf(index), to = cell ? cell.to : block.source.length
+      const [a, b] = order(selection.anchor, selection.focus)
+      const whole = a.block === index && b.block === index && a.offset <= from && b.offset >= to
+      const last = blocks.length - 1
+      const all = !!selected || whole
+      clearBlocks()
+      if (!all) { setSelection({ block: index, offset: from }, { block: index, offset: to }); applyReveal(); return }
+      const end = { block: last, offset: blocks[last].source.length }
+      setSelection({ block: 0, offset: startOf(0) }, end)
+      // A table at either end cannot hold its edge as words: then all the blocks are selected instead.
+      const read = readSelection(), [first, final] = read ? order(read.anchor, read.focus) : []
+      if (!first || !final || first.block !== 0 || first.offset > startOf(0) || comparePos(final, end) !== 0) selectBlocks(0, last)
+      else applyReveal()
       return
     }
     const range = selected ?? select(blocks, selection.anchor.block, selection.focus.block)
