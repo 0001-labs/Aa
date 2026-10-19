@@ -1,11 +1,30 @@
 {
   "Design system 1": {
-    "commit": "d06ca35475b67461b0dec37ff09ec29beb3db648",
+    "commit": "961454dd070423c5b430f328a74153e128a9fe19",
     "version": "0.3.0-alpha.28",
     "dirty": true,
     "files": {
+      "public/ds1/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
+      "public/ds1/component-metrics.css": "1c5c0a1b5e309598e78bd76d95af941688de2d1dcd3e4e14222bd48560ff04c4",
+      "public/ds1/component-tokens.css": "384c5e5ae8ce14172f6268b33fe0bde0bc7f3463f2f31ed97365516e270907c9",
+      "public/ds1/fonts.css": "3a9c7d801717bcafa7b690d49bdf82e34a5a92a4f55d0c3edd9fe13b71d5496a",
+      "public/ds1/fonts/GT-America-Compressed-Regular.woff2": "8acf3fcd5aa8e2c21ee47b7cf8a516f6baca1ad0bd0022e7768c0fb8c1503fe1",
+      "public/ds1/fonts/GT-America-Standard-Medium.woff2": "57a819df4570d528961dea2c9c564b2f87600e9ebc5ece8d4704663c4d11f03a",
+      "public/ds1/fonts/GT-America-Standard-Regular.woff2": "32184a4696344f2fd36a788c56ac8dc001d81d6a5c5298855d7058ce3994e207",
+      "public/ds1/fonts/GT-Canon-M-Standard-Medium-Trial.woff2": "9d8add5fe678298dc5b14017a86c740ecca13db80d597ff22ca986e69bbce5d8",
+      "public/ds1/fonts/Inter-Arrows.woff2": "7237566e2944e4d1fce01a0c5ae16ae0473fa5da9178449b2da79f685ab0c907",
+      "public/ds1/fonts/Inter-LICENSE.md": "28088cf903dbcbf839b2a7456cc7ef41f9e8a3fb3d02f414005bfb3190ae85a6",
+      "public/ds1/fonts/Iosevka-LICENSE.md": "7990153bc1136e869d256ae25c9596ef02c31a465bf5a4f4659a4f0a28fdda2e",
+      "public/ds1/fonts/Iosevka-Regular.woff2": "f0144494f64bc543d1310b7341c838c866b282d078b08c20d8215a509b961d32",
+      "public/ds1/grid.css": "effe1e772aa2c08b309fb06be427955d24ef73e37dbacc549714edc040275c29",
+      "public/ds1/one.css": "f2e5fc9a2375250f69f26baf124ca8d34b4b2269a8383d5642ebeb905897da42",
+      "public/ds1/palette.css": "a0fdc3dd2df5c9d05dd18f429be421355fcf3141356ad1d03ea64fc9d570cff0",
+      "public/ds1/text.css": "56701cab5597c237dfee489719c01d53c2eb23d10ffc0f40ec5cee29a340805f",
+      "src/icons/box.svg": "915679ba8bc7ef80a7355336ff0521177b7752878166af00c17f589e34e6aa14",
       "src/icons/connect.svg": "5ec3b25d77d13a88d50abba9c6b15d9856798511c0bc4d6736237736598f2d95",
+      "src/icons/cursor.svg": "7a204a31698b0454b366e569daff662c88f85983d3c526dfe084951436ddc2a3",
       "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab",
+      "src/icons/right.svg": "8bb9dafaff1156d3f03e04c7d7a9f89913094453eaa51ceea20a58ed7de57c0e",
       "src/icons/slash.svg": "f861cf1387dcc4989fcd253a8b793af1288bf37fab6098dd737fb4c1690b0112"
     }
   }

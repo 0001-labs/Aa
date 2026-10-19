@@ -1,6 +1,6 @@
 # Aa
 
-Edit formatted text with the toolbar or typed Markdown shortcuts. Aa stores Markdown and keeps its syntax hidden, including while editing. One editable element per block preserves source offsets through formatting and atoms. Command/Control-K opens a URL field to add or edit a link.
+Edit formatted text with the toolbar or typed Markdown shortcuts. Aa stores Markdown and keeps its syntax hidden, including while editing, a heading's `#` too. It draws writing as Design system 1's `prose.css` draws the same Markdown on a page, from the `--ds-*` tokens with their values as fallbacks; `--aa-*` properties change one measure. One editable element per block preserves source offsets through formatting and atoms. Command/Control-K opens a URL field to add or edit a link.
 
 ```ts
 import { createEditor } from '@0001-labs/aa'
@@ -51,7 +51,7 @@ The ref exposes `editor`, `focus()`, `undo()` and `redo()`; `correct` and `corre
 
 ## Diagrams
 
-A fenced ` ```diagram ` block is boxes and lines on Design system 1's squares, written rather than drawn (the language is in `src/diagram-language.ts`). Give the editor the diagram atom and it draws them in place: click one to edit its words as code, with the drawing following under them, and start one from the toolbar or `/diagram`.
+A fenced ` ```diagram ` block is boxes and lines on Design system 1's squares, stored as words (the language is in `src/diagram-language.ts`). Give the editor the diagram atom and it draws them in place on a board: press one for its squares and its tools (choose and move, box, post-it, line, arrow, the colours, delete), double-press a box to name it, and drag a box to move it. Every change is written back as words, one step of undo. Words, or the caret in the block, shows the words as code with the board under them. Start one from the toolbar or `/diagram`.
 
 ```ts
 import { createEditor, imageAtom } from '@0001-labs/aa'

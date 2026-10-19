@@ -1,0 +1,532 @@
+/* version 0.3.0-alpha.28 */
+
+@import "./grid.css";
+@import "./component-tokens.css";
+@import "./text.css";
+/* The faces and typeface tokens (fonts.css), and the named palette colours as
+   --one-* tokens (palette.css, written from palette.ts). */
+@import "./fonts.css";
+@import "./palette.css";
+
+input {
+  padding: 0;
+}
+
+:root {
+  /* Design system 1 colors */
+
+  /* Default scale for CSS-only usage. The device helper can override this. */
+  --sf: 1;
+
+  /* Base/[color]  */
+
+  --white: rgb(255 255 255);
+  --light-grey: #e8e8e8;
+  --base-light-grey: #e8e8e8;
+  --base-darker-grey: #797979;
+  --base-slate: #1e1e1e;
+  --slate: #1e1e1e;
+  --slate-light: #e6e6e6;
+  --slate-dark: #3c3c3c;
+  --stealth: #554455;
+  --black: #2a2a2a;
+
+  /* Accent/[color]  */
+  --tuned-red: #ff5f5f;
+  --pink: #f5aad1;
+  --sharp-blue: #594dff;
+  --zenith-blue: #ccccff;
+  --every-green: #979441;
+  --apple-green: #99ff73;
+  --chartreuse-green: #ccff4d;
+  --yellow: #eaff00;
+  --orange: #fec20d;
+
+  --accent-color: var(--apple-green);
+
+  /* 4-page component colors */
+
+  /* ds-grid color */
+  --grid-color: light-dark(var(--grid-color-light), var(--grid-color-dark));
+  --grid-color-light: #1e1e1e2b;
+  --grid-color-dark: var(--white);
+
+  /* typefaces: fonts.css */
+
+  /* typefaces sizes and weight */
+
+  --type-size-default: calc(14px * var(--sf));
+  --type-size-small: calc(10px * var(--sf));
+  --type-weight-default: 400;
+  --type-lineheight-default: calc(16px * var(--sf));
+  --type-size-heading: calc(13px * var(--sf));
+  --type-letterspacing-default: calc(-0.3px * var(--sf));
+  --type-weight-bold: 500;
+
+  --type-size-japanese-default: calc(12px * var(--sf));
+  --type-size-japanese-heading: calc(14px * var(--sf));
+  --type-lineheight-japanese-default: calc(17px * var(--sf));
+  --type-weight-product: var(--type-weight-bold);
+  --type-weight-heading: var(--type-weight-bold);
+  --type-size-book: 9px;
+  --type-weight-book: 400;
+  --type-lineheight-book: 15px;
+
+  /* ----------------------------------------------------------
+   SIZING SCALE
+   - Define a base unit ( --1 ) and derive all other sizes
+   - Larger sizes are simple multipliers (×2, ×3, ×4)
+   - Smaller sizes use fractional multipliers (0.1, 0.25, 0.8)
+   ---------------------------------------------------------- */
+
+  /* Layouts */
+
+  /* Home layout (used for lists) */
+  --home-layout: calc(var(--unit) * var(--sf)) calc(var(--unit) * var(--sf))
+    calc(var(--unit) * var(--sf)) calc(var(--unit) * var(--sf))
+    calc(var(--oct) * var(--sf));
+  --home-layout-areas: "banner" "." "header" "." "lists";
+
+  /* App layout */
+  --app-layout: calc(var(--unit) * var(--sf)) calc(var(--unit) * var(--sf))
+    calc(var(--unit) * var(--sf)) calc(var(--double) * var(--sf))
+    calc(var(--dozen) * var(--sf)) calc(var(--unit) * var(--sf))
+    calc(var(--quad) * var(--sf)) calc(var(--double) * var(--sf));
+  --app-layout-areas: "banner" "." "header" "." "main" "page-dots" "." "footer";
+
+  /* Settings layout */
+  --settings-layout: calc(var(--unit) * var(--sf)) calc(var(--unit) * var(--sf))
+    1fr;
+  --settings-layout-areas: "banner" "." "settings";
+
+  /* size */
+  --outline-stroke: 1px solid var(--slate-light);
+  --outline-stroke-mobile: 2px solid var(--sharp-blue);
+  --item-width: calc(79px * var(--sf));
+  --item-height: calc(19px * var(--sf));
+  --margin-correction: calc(1px * var(--sf));
+
+  --column-width: calc(var(--quad) * var(--sf));
+
+  --column-header-height: calc(var(--unit) * var(--sf));
+  --column-header-width: calc(var(--quad) * var(--sf));
+
+  /* ----------------------------------------------------------
+   SURFACE COLORS
+   - 
+   ---------------------------------------------------------- */
+
+  --background: light-dark(var(--white), var(--black));
+  --dialog-background: var(--background);
+
+  /* button */
+  --button-background-color-primary: var(--accent-color);
+  --button-background-color-secondary: light-dark(var(--slate-light), var(--slate-dark));
+  --button-text-color: light-dark(var(--black), var(--white));
+  --button-text-color-on-light: var(--black);
+  --button-text-color-secondary: light-dark(
+    var(--slate-dark),
+    var(--slate-light)
+  );
+
+  /* text-color */
+  --text-color: light-dark(var(--black), var(--white));
+  --text-color-dimmed: light-dark(var(--slate), var(--slate-light));
+
+  /* icon colors */
+  --icon-background: light-dark(var(--slate-light), var(--slate-dark));
+  --icon-color: light-dark(var(--black), var(--white));
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  color-scheme: light dark;
+}
+
+:root.light-theme {
+  color-scheme: light;
+}
+
+:root.dark-theme {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.light-theme):not(.dark-theme) {
+    color-scheme: light;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-theme):not(.dark-theme) {
+    color-scheme: dark;
+  }
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* ----------------------------------------------------------
+   CSS-ONLY COMPONENTS
+   Native HTML classes that do not require the JavaScript bundle.
+   The text classes (.ds-text, its sizes and tones) are text.css.
+   ---------------------------------------------------------- */
+
+.ds-button {
+  appearance: none;
+  box-sizing: border-box;
+  min-height: calc(var(--08) * var(--sf));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0 calc(var(--025) * var(--sf));
+  background: transparent;
+  color: var(--button-text-color);
+  cursor: pointer;
+  font-family: var(--typeface-regular);
+  font-size: var(--type-size-default);
+  line-height: var(--type-lineheight-default);
+  letter-spacing: var(--type-letterspacing-default);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-button--primary {
+  background: var(--button-background-color-primary);
+  color: var(--button-text-color-on-light);
+}
+
+.ds-button--secondary {
+  background: var(--button-background-color-secondary);
+  color: var(--button-text-color-secondary);
+}
+
+.ds-button:hover:not(:disabled, [aria-disabled="true"]) {
+  filter: brightness(0.96);
+}
+
+.ds-button:active:not(:disabled, [aria-disabled="true"]) {
+  transform: translateY(1px);
+}
+
+.ds-button:focus-visible,
+.ds-input:focus-visible {
+  outline: 2px solid var(--sharp-blue);
+  outline-offset: 2px;
+}
+
+.ds-button:disabled,
+.ds-button[aria-disabled="true"],
+.ds-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ds-input {
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--unit) * var(--sf));
+  border: 1px solid transparent;
+  padding: 0 calc(2px * var(--sf));
+  background: var(--button-background-color-secondary);
+  color: var(--button-text-color-secondary);
+  font-family: var(--typeface-regular);
+  font-size: var(--type-size-default);
+  line-height: var(--type-lineheight-default);
+  letter-spacing: var(--type-letterspacing-default);
+}
+
+.ds-input::placeholder {
+  color: var(--base-darker-grey);
+}
+
+.ds-card {
+  box-sizing: border-box;
+  padding: calc(var(--half) * var(--sf));
+  border: var(--outline-stroke);
+  background: var(--background);
+  color: var(--text-color);
+}
+
+.matrix__board {
+  position: relative;
+  left: calc(-20px * var(--sf));
+  width: calc(240px * var(--sf));
+  display: flex;
+}
+
+.matrix__board--vertical {
+  position: relative;
+  left: calc(20.5px * var(--sf));
+  display: flex;
+  flex-direction: row;
+  align-items: start;
+}
+
+.matrix__board--horizontal {
+  position: relative;
+  top: calc(19.5px * var(--sf));
+  left: calc(-239.5px * var(--sf));
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+}
+
+.matrix__column {
+  display: flex;
+  flex-direction: column;
+}
+
+.matrix__row {
+  display: flex;
+  flex-direction: row;
+}
+
+.matrix__column-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--item-width);
+  height: var(--item-height);
+  margin-right: var(--margin-correction);
+  margin-bottom: var(--margin-correction);
+  background-color: light-dark(var(--white), var(--black));
+}
+
+.matrix__row-header {
+  position: relative;
+  /* top: calc(0.5px * var(--sf)); */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--unit) * var(--sf));
+  height: calc(var(--unit) * var(--sf));
+  /* margin-right: var(--margin-correction);
+  margin-bottom: var(--margin-correction); */
+  background-color: light-dark(rgb(220 241 213), var(--slate-dark));
+}
+
+.matrix__column-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #64f814;
+}
+
+.matrix__row-content {
+  display: flex;
+  align-items: center;
+  background-color: light-dark(#dbe4ee, var(--slate-dark));
+}
+
+.matrix__row-content--dragging {
+  background-color: #b4f6ac;
+}
+
+.matrix__column-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--item-width);
+  height: var(--item-height);
+  margin-right: var(--margin-correction);
+  margin-bottom: var(--margin-correction);
+  outline: var(--outline-stroke);
+}
+
+.matrix__row-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--item-width);
+  height: var(--item-height);
+  margin-right: var(--margin-correction);
+  outline: var(--outline-stroke);
+}
+
+.board__container {
+  position: relative;
+  top: calc(0.5px * var(--sf));
+}
+
+.board {
+  position: relative;
+  top: calc(0.5px * var(--sf));
+  left: calc(0.5px * var(--sf));
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--margin-correction);
+  flex-wrap: nowrap;
+  touch-action: pan-x;
+  cursor: move;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.column__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--item-width);
+  height: var(--item-height);
+  background-color: #00000000;
+  opacity: 1;
+}
+
+.column__header:hover {
+  background-color: var(--slate-light);
+  outline: 0.5px solid var(--slate-light);
+  opacity: 1;
+}
+
+.mobile .column__header {
+  outline: var(--outline-stroke-mobile);
+}
+
+.column__header.dragging {
+  background-color: var(--slate-light);
+  opacity: 1;
+}
+
+.move-icon {
+  color: var(--slate);
+  width: 16px;
+  height: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.column__header:hover .move-icon {
+  opacity: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.column__header.dragging .move-icon {
+  opacity: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.header {
+  display: flex;
+  justify-content: center;
+  width: calc(var(--item-width) * var(--sf));
+  height: calc(var(--item-height) * var(--sf));
+}
+
+.header.dragging {
+  outline: calc(var(--outline-stroke) * var(--sf)) solid var(--black);
+  outline-offset: calc(var(--outline-stroke-offset) * var(--sf));
+  background-color: var(--white);
+}
+
+.card {
+  position: relative;
+  left: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--item-width);
+  height: var(--item-height);
+  margin-top: var(--margin-correction);
+  margin-right: var(--margin-correction);
+  outline: var(--outline-stroke);
+  background-color: light-dark(var(--white), var(--slate-dark));
+  color: var(--text-color-primary);
+}
+
+.mobile .card {
+  outline: var(--outline-stroke-mobile);
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  width: var(--item-width);
+  height: 19px;
+  margin-top: 1px;
+  z-index: 99;
+  margin-bottom: 2px;
+  padding-left: calc(3px * var(--sf));
+  color: var(--text-color-primary);
+  outline: var(--outline-stroke);
+  background-color: transparent;
+}
+
+.item-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: var(--item-width);
+  height: 100%;
+}
+
+.item-container.mobile {
+  margin-left: calc(0.25px * var(--sf));
+}
+
+.group-children {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-container.dragging .group-children {
+  display: none;
+}
+
+.item-text {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: start;
+  width: var(--item-width);
+  padding-left: calc(5px * var(--sf));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grouped-item {
+  width: var(--item-width);
+  background-color: transparent;
+}
+
+.grouped-item .card {
+  width: var(--item-width);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+tr {
+  background-color: transparent;
+}
+
+td {
+  text-align: left;
+}

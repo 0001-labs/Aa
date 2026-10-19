@@ -67,13 +67,13 @@ $$
 a^2 + b^2 = c^2
 $$
 
-> A quote, in italics, with *emphasis* and ~~a change of mind~~ in it.
+> A quote, on its hairline, with *emphasis* and ~~a change of mind~~ in it.
 
 \`\`\`ts
 const editor = createEditor(host, { value, atoms: [imageAtom, diagramAtom] })
 \`\`\`
 
-A diagram is written too: click it to change its words, and it is drawn again as you type. Type /diagram to start one.
+A diagram is drawn on its own board: press it for the squares and the tools. Pick Box and press a square, draw a Line from one box to another, choose a colour, double-press a box to name it, or drag a box to move it. Words writes it as code instead. Type /diagram to start one.
 
 \`\`\`diagram
 # Writing a diagram

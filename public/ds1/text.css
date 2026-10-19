@@ -1,0 +1,70 @@
+@import "./component-metrics.css";
+
+/*
+ * Text on the grid, as plain classes on native text.
+ *
+ * Interface copy on a page without Lit: a label, a message, a title. Each line
+ * is one square (`--ds-unit`), so a paragraph of any length stands on whole
+ * squares, and a display title takes two. The `ds-text` element draws the same
+ * words when they come from a translation key.
+ *
+ * one.css and controls.css both import this file, so a page that loads either
+ * of them, or both, has one definition of these classes.
+ *
+ *   ds-text                                14 on a one-square line, the text colour
+ *   ds-text--small                         10
+ *   ds-text--heading                       13, medium
+ *   ds-text--display                       20 on two squares, medium
+ *   ds-text--strong                        medium
+ *   ds-text--muted, --title, --danger      tones
+ */
+
+.ds-text {
+  margin: 0;
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+
+.ds-text--small {
+  font-size: var(--ds-type-size-small);
+}
+
+.ds-text--heading {
+  font-family: var(--ds-typeface-medium);
+  font-size: var(--ds-type-size-heading);
+  font-weight: var(--ds-type-weight-bold);
+}
+
+.ds-text--display {
+  font-family: var(--ds-typeface-medium);
+  font-size: var(--ds-type-size-display);
+  font-weight: var(--ds-type-weight-bold);
+  line-height: calc(2 * var(--ds-unit));
+  letter-spacing: calc(var(--ds-display-text-tracking, -0.4px) * var(--ds-sf, 1));
+}
+
+.ds-text--strong {
+  font-family: var(--ds-typeface-medium);
+  font-weight: var(--ds-type-weight-bold);
+}
+
+.ds-text--muted {
+  color: var(--ds-text-color-muted);
+}
+
+.ds-text--title {
+  color: var(--ds-title-color);
+}
+
+.ds-text--danger {
+  color: var(--ds-danger-color);
+}
+
+.ds-text--warning {
+  color: var(--ds-warning-color);
+}

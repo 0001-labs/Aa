@@ -1,7 +1,8 @@
 {
   "sources": {
     "Design system 1": {
-      "icons": { "to": "src/icons", "icons": ["duplicate", "connect", "slash"] }
+      "icons": { "to": "src/icons", "icons": ["duplicate", "connect", "slash", "cursor", "box", "right"] },
+      "root": { "to": "public/ds1" }
     }
   }
 }

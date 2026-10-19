@@ -28,9 +28,12 @@
 
 import { layoutDiagram, type Diagram, type DiagramChart, type DiagramDay, type DiagramSegment } from './diagram-language'
 import type { Atom } from './editor'
+import { defineAaDiagramBoard, type AaDiagramBoardElement } from './diagram-board'
 import styles from './diagram.css?inline'
 
 export * from './diagram-language'
+export * from './diagram-edit'
+export { AaDiagramBoardElement, defineAaDiagramBoard } from './diagram-board'
 
 // The marker's drawing loads only once a diagram holds a chart or squares
 // coloured in with it, so the many pages that draw diagrams without one never carry it.
@@ -352,20 +355,21 @@ export const DIAGRAM_START = '```diagram\n[Idea]\n[Plan] @ 6 0\nIdea -> Plan\n``
 
 /**
  * Fenced ```diagram blocks drawn in place in an editor: `atoms: [imageAtom,
- * diagramAtom]`. Outside the block the drawing stands in for its words; with
- * the caret in it the words are written as code and the drawing follows
+ * diagramAtom]`. The drawing stands in for its words on a board
+ * (`diagram-board.ts`): pressed, it shows its squares and the tools that
+ * draw on them, and writes what is drawn back as words. Its Words tool, or
+ * the caret moved into the block, writes the words as code with the board
  * under them. Its toolbar button and slash command start one.
  */
 export const diagramAtom: Atom = {
   name: 'diagram',
   fence: 'diagram',
   match: () => 0,
-  insert: { label: 'Diagram', icon: 'connect', keywords: 'chart boxes lines flow', source: DIAGRAM_START },
+  insert: { label: 'Diagram', icon: 'connect', keywords: 'chart boxes lines flow draw', source: DIAGRAM_START },
   draw(holder, source) {
-    const name = diagramTag || defineAaDiagram()
-    const diagram = document.createElement(name) as AaDiagramElement
-    diagram.source = source.replace(/\r\n?/g, '\n').split('\n').slice(1, -1).join('\n')
-    holder.append(diagram)
+    const board = document.createElement(defineAaDiagramBoard()) as AaDiagramBoardElement
+    board.block = { source, tag: diagramTag || defineAaDiagram() }
+    holder.append(board)
   },
 }
 

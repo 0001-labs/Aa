@@ -1,0 +1,22 @@
+@import "./component-appearance.css";
+
+/* Resolve dimensions where a component is drawn. Inherited calc() values have
+ * already used their ancestor's scale. Base tokens stay unscaled and inherit;
+ * resolved tokens can still be overridden directly on a component.
+ * data-ds-surface gives ordinary layout elements the same scaled measures.
+ */
+:root,
+:host,
+:where([data-ds-surface]) {
+  --ds-unit: calc(var(--ds-1, 20px) * var(--ds-sf, 1));
+  --ds-control-height: calc(var(--ds-control-size, var(--ds-08, 16px)) * var(--ds-sf, 1));
+  --ds-row-height: calc(var(--ds-row-size, var(--ds-1, 20px)) * var(--ds-sf, 1));
+  --ds-type-size-default: calc(var(--ds-text-size, 14px) * var(--ds-sf, 1));
+  --ds-type-size-small: calc(var(--ds-small-text-size, 10px) * var(--ds-sf, 1));
+  --ds-type-size-heading: calc(var(--ds-heading-text-size, 13px) * var(--ds-sf, 1));
+  --ds-type-size-display: calc(var(--ds-display-text-size, 20px) * var(--ds-sf, 1));
+  --ds-type-lineheight-default: calc(var(--ds-text-leading, 16px) * var(--ds-sf, 1));
+  --ds-type-letterspacing-default: calc(var(--ds-text-tracking, -0.3px) * var(--ds-sf, 1));
+  --ds-radius: calc(var(--ds-corner-size, 4px) * var(--ds-sf, 1));
+  --ds-radius-card: calc(var(--ds-card-corner-size, 4px) * var(--ds-sf, 1));
+}

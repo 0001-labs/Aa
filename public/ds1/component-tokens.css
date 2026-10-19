@@ -1,0 +1,137 @@
+@import "./component-metrics.css";
+
+/* Shared component tokens. Scoped names keep embedded documents independent.
+ * Products may set tokens at their surface; component implementations stay shared.
+ */
+:root {
+  /* Component scale is independent of an embedded document. */
+  --ds-sf: 1;
+
+  /* ----------------------------------------------------------
+   SIZING SCALE
+   One base unit and its multipliers, as in DS one.
+   ---------------------------------------------------------- */
+
+  --ds-1: 20px;
+  --ds-01: calc(var(--ds-1) * 0.1);
+  --ds-025: calc(var(--ds-1) * 0.25);
+  --ds-05: calc(var(--ds-1) * 0.5);
+  --ds-08: calc(var(--ds-1) * 0.8);
+  --ds-2: calc(var(--ds-1) * 2);
+  --ds-3: calc(var(--ds-1) * 3);
+  --ds-4: calc(var(--ds-1) * 4);
+
+  /* ----------------------------------------------------------
+   PALETTE
+   The same values as palette.ts and one.css; the accent is Apple green.
+   ---------------------------------------------------------- */
+
+  --ds-white: #ffffff;
+  --ds-black: #2a2a2a;
+  --ds-slate: #1e1e1e;
+  --ds-slate-light: #e6e6e6;
+  --ds-slate-dark: #3c3c3c;
+  --ds-grey: #797979;
+
+  --ds-tuned-red: #ff5f5f;
+  --ds-red-for-blood: #de0331;
+  --ds-pink: #f5aad1;
+  --ds-sharp-blue: #594dff;
+  --ds-zenith-blue: #ccccff;
+  --ds-apple-green: #99ff73;
+  /* Dark Apple green keeps a white switch thumb clear in either scheme. */
+  --ds-switch-track-on: #529d36;
+  --ds-yellow: #eaff00;
+  --ds-orange: #fec20d;
+
+  --ds-accent-color: var(--ds-apple-green);
+
+  /* ----------------------------------------------------------
+   TYPE
+   ---------------------------------------------------------- */
+
+  --ds-typeface-regular:
+    "Inter Arrows", "GT America", "GT-America-Standard-Regular", Inter, system-ui, -apple-system, sans-serif;
+  /* The medium face for headings and strong text; one.css loads it as GT-America-Standard-Medium. */
+  --ds-typeface-medium:
+    "Inter Arrows", "GT-America-Standard-Medium", "GT America", Inter, system-ui, -apple-system, sans-serif;
+  --ds-typeface-compressed: "Inter Arrows", "GT-America-Compressed-Regular", var(--ds-typeface-regular);
+  --ds-typeface-mono: "Inter Arrows", "Iosevka", "Iosevka Extended", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Japanese and Chinese: Noto Sans when cjk.css (or the product) loads it,
+     else the reader's own face. Latin keeps GT America. */
+  --ds-typeface-regular-jp:
+    "Inter Arrows", "GT America", "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, "Noto Sans CJK JP", sans-serif;
+  --ds-typeface-regular-zh-hans:
+    "Inter Arrows", "GT America", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --ds-typeface-regular-zh-hant:
+    "Inter Arrows", "GT America", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Noto Sans CJK TC", sans-serif;
+  /* GT America exposes circular dots as stylistic set 05. */
+  --ds-font-features: "ss05" 1;
+
+  --ds-type-weight-default: 400;
+  --ds-type-weight-bold: 500;
+
+  /* ----------------------------------------------------------
+   SURFACES
+   The chrome's `--chrome-panel-*` tokens read these.
+   ---------------------------------------------------------- */
+
+  --ds-paper: light-dark(#f4f4f4, #2c2c2c);
+  --ds-text-color: light-dark(var(--ds-black), var(--ds-white));
+  --ds-text-color-muted: light-dark(#5f5f5f, #cacaca);
+  --ds-title-color: light-dark(var(--ds-grey), #9a9a9a);
+  /* Text that reports a failure or warns of a loss. Red for blood on light
+     paper and Tuned red on dark: both palette colours, legible as 14px text. */
+  --ds-danger-color: light-dark(var(--ds-red-for-blood), var(--ds-tuned-red));
+  /* Text that asks for care before something goes wrong. Orange is too light
+     for text on light paper and so is its dark-mode version, so light paper
+     takes Orange's dim (#4c3f1a, its pastel in dark mode); dark paper takes
+     Orange itself. Both read above 4.5:1 as 14px text. */
+  --ds-warning-color: light-dark(#4c3f1a, var(--ds-orange));
+  /* What went well or is done. Apple green is too light for text and marks on
+     light paper, so light paper takes it deepened with the ink (Money's green
+     for money in); dark paper takes Apple green itself. */
+  --ds-success-color: light-dark(color-mix(in oklab, var(--ds-apple-green) 30%, var(--ds-black)), var(--ds-apple-green));
+  --ds-border-color: light-dark(#d8d8d8, #3d3d3d);
+  --ds-fill: light-dark(var(--ds-slate-light), var(--ds-slate-dark));
+  --ds-fill-hover: light-dark(#e2e2e2, #404040);
+  --ds-focus-ring: var(--ds-sharp-blue);
+  /* A row a person presses (ds-row, .ds-row, a tree's rows, ds-sidebar): under
+     the pointer, pressed, and the current destination or selected row, which
+     also takes the medium weight. */
+  --ds-row-fill-hover: var(--ds-fill);
+  --ds-row-fill-press: color-mix(in srgb, var(--ds-fill-hover) 92%, var(--ds-text-color));
+  --ds-row-fill-current: var(--ds-fill-hover);
+  --ds-row-current-weight: var(--ds-type-weight-bold);
+
+  --ds-button-text-color: var(--ds-text-color);
+  --ds-button-background-color-primary: var(--ds-accent-color);
+  --ds-button-text-color-on-accent: var(--ds-black);
+  --ds-button-background-color-secondary: var(--ds-fill);
+  --ds-icon-color: currentColor;
+
+  /* Shared fields, including the row treatment of a form's settings rows. */
+  --ds-input-background: light-dark(#e8e8e8, #303030);
+  --ds-input-color: light-dark(#2a2a2a, #f5f5f5);
+  --ds-input-placeholder-color: light-dark(#797979, #ababab);
+  --ds-input-disabled-color: light-dark(#555555, #d0d0d0);
+  --ds-input-reveal-color: light-dark(#1e1e1e, #f5f5f5);
+}
+
+/* A page written in Japanese or Chinese sets its labels in that language's
+   face: Chinese in Simplified characters, as the shared words are written,
+   unless it says Traditional. */
+:root:lang(ja) {
+  --ds-typeface-regular: var(--ds-typeface-regular-jp);
+}
+
+:root:lang(zh) {
+  --ds-typeface-regular: var(--ds-typeface-regular-zh-hans);
+}
+
+:root:lang(zh-Hant),
+:root:lang(zh-TW),
+:root:lang(zh-HK),
+:root:lang(zh-MO) {
+  --ds-typeface-regular: var(--ds-typeface-regular-zh-hant);
+}

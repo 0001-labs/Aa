@@ -1,0 +1,58 @@
+/* Design system 1's named colours as tokens: --one-<colour> and --one-<colour>-pastel,
+   each light-dark(light, dark), and the named pastels (--one-zenith-blue,
+   --one-comfortable-green). light-dark() follows the page's color-scheme, which
+   one.css sets. Written by scripts/write-palette-css.ts from palette.ts; never edit it
+   by hand. */
+
+:root {
+  /* Palette: written by scripts/write-palette-css.ts from DS1/1-root/palette.ts. */
+  --one-red-for-blood: light-dark(#de0331, #9c374c);
+  --one-red-for-blood-pastel: light-dark(#fecdd7, #4b1b25);
+  --one-dark-red-variant: light-dark(#c50124, #d20126);
+  --one-dark-red-variant-pastel: light-dark(#ffccd5, #4c1a23);
+  --one-tuned-red: light-dark(#ff5f5f, #9d3636);
+  --one-tuned-red-pastel: light-dark(#ffcccc, #4c1a1a);
+  --one-signal-red: light-dark(#ff4438, #9d3c36);
+  --one-signal-red-pastel: light-dark(#ffcfcc, #4c1d1a);
+  --one-sand: light-dark(#dbc88f, #84774f);
+  --one-sand-pastel: light-dark(#f3ecd8, #403926);
+  --one-orange: light-dark(#fec20d, #9d8336);
+  --one-orange-pastel: light-dark(#fff2cc, #4c3f1a);
+  --one-old-gold: light-dark(#b69e55, #7e7455);
+  --one-old-gold-pastel: light-dark(#f0ebdb, #3d3829);
+  --one-drip-yellow: light-dark(#fde70c, #9c9337);
+  --one-drip-yellow-pastel: light-dark(#fffacc, #4c471a);
+  --one-every-green: light-dark(#979441, #7e7d55);
+  --one-every-green-pastel: light-dark(#f0efdb, #3d3c29);
+  --one-yellow: light-dark(#eaff00, #959d36);
+  --one-yellow-pastel: light-dark(#fbffcc, #484c1a);
+  --one-chartreuse: light-dark(#ccff4d, #809d36);
+  --one-chartreuse-pastel: light-dark(#f2ffcf, #3e4c1a);
+  --one-comfortable-green: var(--one-chartreuse-pastel);
+  --one-apple-green: light-dark(#99ff73, #529d36);
+  --one-apple-green-pastel: light-dark(#daffcc, #284c1a);
+  --one-metal-green: light-dark(#026d5b, #04cfad);
+  --one-metal-green-pastel: light-dark(#cdfef6, #1b4b43);
+  --one-hysteric-blue: light-dark(#69d8fb, #39839b);
+  --one-hysteric-blue-pastel: light-dark(#cdf2fe, #1b3f4b);
+  --one-winning-blue: light-dark(#0275fa, #37669c);
+  --one-winning-blue-pastel: light-dark(#cce4ff, #1a314c);
+  --one-sharp-blue: light-dark(#594dff, #3d369d);
+  --one-sharp-blue-pastel: light-dark(#ccccff, #1d1a4c);
+  --one-zenith-blue: var(--one-sharp-blue-pastel);
+  --one-purple: light-dark(#e63aaf, #924178);
+  --one-purple-pastel: light-dark(#f9d2ed, #46203a);
+  --one-pink: light-dark(#f5aad1, #92416b);
+  --one-pink-pastel: light-dark(#fad1e6, #471f34);
+  --one-white: light-dark(#ffffff, #1f1f1f);
+  --one-egg: light-dark(#f9f6ef, #392e15);
+  --one-light-grey: light-dark(#e8e8e8, #303030);
+  --one-slate-light: light-dark(#e6e6e6, #323232);
+  --one-darker-grey: light-dark(#797979, #848484);
+  --one-stealth: light-dark(#554455, #b09cb0);
+  --one-slate-dark: light-dark(#3c3c3c, #b3b3b3);
+  --one-ink: light-dark(#2c2c2b, #c0c0bf);
+  --one-black: light-dark(#2a2a2a, #c0c0c0);
+  --one-slate: light-dark(#1e1e1e, #cacaca);
+  /* Palette: end */
+}
