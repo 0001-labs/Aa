@@ -165,7 +165,8 @@ if (dryRun) {
 }
 
 step(tagged ? `Committing (${gitTag} is tagged already)` : `Committing and tagging ${gitTag}`)
-if (touched.length) must('git', ['commit', '-m', `Release ${pkg.name} ${to}`, '--', ...touched])
+const product = { aa: 'AA', 'design-system-1': 'DS1', idv1: 'IDv1', drag: 'DRAG', worktrees: 'Worktrees' }[pkg.name.split('/').pop()]
+if (touched.length) must('git', ['commit', '-m', `${product}: Release ${pkg.name} ${to}`, '--', ...touched])
 if (!tagged) must('git', ['tag', '-a', gitTag, '-m', `${pkg.name} ${to}`])
 
 console.log(`\n✓ Published ${pkg.name}@${to} under "${tag}": https://www.npmjs.com/package/${pkg.name}/v/${to}`)
