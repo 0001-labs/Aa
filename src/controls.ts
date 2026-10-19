@@ -207,8 +207,11 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       delete toolbar.dataset.docked
       const range = window.getSelection()?.rangeCount ? window.getSelection()!.getRangeAt(0) : null
       const rect = range?.getBoundingClientRect?.() ?? host.getBoundingClientRect()
-      toolbar.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - toolbar.getBoundingClientRect().width))}px`
-      toolbar.style.top = `${Math.max(0, rect.top - toolbar.getBoundingClientRect().height)}px`
+      // As Design system 1's context bar: half a square above the selection, below it when there is no room.
+      const box = toolbar.getBoundingClientRect(), half = (box.height + 1) / 2
+      const above = rect.top - half - box.height
+      toolbar.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - box.width))}px`
+      toolbar.style.top = `${above >= 0 ? above : rect.bottom + half}px`
     }
   }
   const selectionChanged = () => {
