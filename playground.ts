@@ -4,6 +4,7 @@ import { diagramAtom } from './src/diagram'
 
 const editor = document.getElementById('editor') as AaEditorElement
 editor.options = {
+  atoms: [imageAtom, diagramAtom],
   drawEquation: (element, tex, displayMode) => {
     let active = true
     element.textContent = tex
