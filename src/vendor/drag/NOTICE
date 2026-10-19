@@ -1,0 +1,13 @@
+@0001-labs/drag
+Copyright 0001 labs. Licensed under the MIT License (see LICENSE).
+
+src/sortable.ts carries over the motion of @hello-pangea/dnd: how siblings
+move out of the way by the lifted item's size, when a sibling moves as the
+lifted item passes its centre, and the timings and curves of that motion.
+
+@hello-pangea/dnd
+Copyright 2019 Atlassian Pty Ltd
+Copyright 2021 Gabriel Santerre
+Licensed under the Apache License, Version 2.0:
+https://www.apache.org/licenses/LICENSE-2.0
+https://github.com/hello-pangea/dnd

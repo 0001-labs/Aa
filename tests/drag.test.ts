@@ -14,9 +14,11 @@ function setup(value: string, options: EditorOptions = {}) {
   return editor
 }
 function place() {
-  Array.from(host!.children).forEach((block, index) => {
+  const blocks = Array.from(host!.children)
+  blocks.forEach((block, index) => {
     Object.defineProperty(block, 'getBoundingClientRect', { configurable: true, value: () => new DOMRect(0, 40 * index, 400, 20) })
   })
+  Object.defineProperty(host!, 'getBoundingClientRect', { configurable: true, value: () => new DOMRect(0, 0, 400, 40 * blocks.length) })
 }
 const block = (index: number) => host!.children[index] as HTMLElement
 function pointer(type: string, target: EventTarget, y: number, init: PointerEventInit = {}) {
@@ -24,9 +26,12 @@ function pointer(type: string, target: EventTarget, y: number, init: PointerEven
   target.dispatchEvent(event)
   return event
 }
-const lifted = () => Array.from(host!.children).filter(element => element.hasAttribute('data-lifted')).map(element => Array.from(host!.children).indexOf(element))
+/** The blocks being carried: the one lifted into the overlay, hidden in its place, and the selected ones dimmed beside it. */
+const lifted = () => Array.from(host!.children).filter(element => (element as HTMLElement).style.visibility === 'hidden' || element.hasAttribute('data-ghost')).map(element => Array.from(host!.children).indexOf(element))
+/** The block lands, or goes home, once its drop has played. */
+const settle = () => vi.runAllTimers()
 
-describe('moving blocks without a handle', () => {
+describe('moving blocks without a handle, on the Drag library', () => {
   it('draws no grip and no plus beside a block, hovered or not', () => {
     setup('One\n\nTwo', { toolbar: true })
     block(0).dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
@@ -42,10 +47,13 @@ describe('moving blocks without a handle', () => {
     vi.advanceTimersByTime(1)
     expect(lifted()).toEqual([0])
     expect(host!.hasAttribute('data-dragging')).toBe(true)
+    expect(document.querySelector('[data-drag-preview]')?.hasAttribute('data-lifted')).toBe(true)
     pointer('pointermove', window, 70)
-    expect((document.querySelector('.aa-drop-line') as HTMLElement).hidden).toBe(false)
+    // The block it passes steps aside by the lifted block's whole size, rather than a line being drawn.
+    expect(block(1).style.translate).toMatch(/^0(px)? -20px$/)
     pointer('pointermove', window, 115)
     pointer('pointerup', window, 115)
+    settle()
     expect(e.value).toBe('Two\n\nThree\n\nOne')
     expect(block(2).hasAttribute('data-selected')).toBe(true)
     expect(host!.hasAttribute('data-dragging')).toBe(false)
@@ -70,6 +78,7 @@ describe('moving blocks without a handle', () => {
     vi.advanceTimersByTime(HOLD)
     expect(lifted()).toEqual([1])
     pointer('pointerup', window, 50)
+    settle()
     expect(e.value).toBe('One\n\nTwo')
     expect(e.selection()).toEqual({ start: 6, end: 6 })
     expect(block(1).hasAttribute('data-selected')).toBe(false)
@@ -84,6 +93,7 @@ describe('moving blocks without a handle', () => {
     expect(lifted()).toEqual([0, 1])
     pointer('pointermove', window, 115)
     pointer('pointerup', window, 115)
+    settle()
     expect(e.value).toBe('Three\n\nOne\n\nTwo')
     expect([1, 2].map(index => block(index).hasAttribute('data-selected'))).toEqual([true, true])
   })
@@ -97,6 +107,7 @@ describe('moving blocks without a handle', () => {
     const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
     block(0).dispatchEvent(escape)
     expect(escape.defaultPrevented).toBe(true)
+    settle()
     expect(lifted()).toEqual([])
     pointer('pointerup', window, 75)
     expect(e.value).toBe('One\n\nTwo')
@@ -130,6 +141,37 @@ describe('moving blocks without a handle', () => {
     pointer('pointerdown', block(0), 10)
     vi.advanceTimersByTime(HOLD)
     expect(lifted()).toEqual([])
+  })
+
+  it('leaves a press on a diagram board, with a modifier key, or a double click to the page', () => {
+    const e = setup('One\n\nTwo')
+    const board = document.createElement('span'); board.setAttribute('data-aa-interactive', ''); block(0).append(board)
+    pointer('pointerdown', board, 10)
+    vi.advanceTimersByTime(HOLD)
+    expect(lifted()).toEqual([])
+    pointer('pointerup', window, 10)
+    pointer('pointerdown', block(0), 10, { shiftKey: true })
+    vi.advanceTimersByTime(HOLD)
+    expect(lifted()).toEqual([])
+    pointer('pointerup', window, 10)
+    pointer('pointerdown', block(1), 50)
+    block(1).dispatchEvent(new MouseEvent('mousedown', { bubbles: true, detail: 2 }))
+    vi.advanceTimersByTime(HOLD)
+    expect(lifted()).toEqual([])
+    expect(e.value).toBe('One\n\nTwo')
+  })
+
+  it('makes each block an item of the engine, kept while blocks are drawn again', () => {
+    const e = setup('One\n\nTwo')
+    expect(block(0).getAttribute('data-drag-handle')).toBe('text')
+    expect(block(0).hasAttribute('aria-describedby')).toBe(false)
+    e.replace(0, 3, 'Uno')
+    place()
+    pointer('pointerdown', block(0), 10)
+    vi.advanceTimersByTime(HOLD)
+    expect(lifted()).toEqual([0])
+    pointer('pointerup', window, 10)
+    settle()
   })
 
   it('lands files dropped from outside between blocks, the caret where they land', () => {
