@@ -121,7 +121,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     if (event.pointerType !== 'mouse' || event.button !== 0 || event.shiftKey || event.altKey || event.metaKey || event.ctrlKey || !movable()) return
     const target = event.target as HTMLElement
     const block = target.closest?.('.aa-block') as HTMLElement | null
-    if (!block || block.parentElement !== host || target.closest('button, input, textarea, select, video, audio, .aa-caption')) return
+    if (!block || block.parentElement !== host || target.closest('button, input, textarea, select, video, audio, .aa-caption, [data-aa-interactive]')) return
     const selected = children().filter(element => element.hasAttribute('data-selected'))
     if (selected.includes(block)) {
       // Selected blocks go as soon as the press moves, so the press does not

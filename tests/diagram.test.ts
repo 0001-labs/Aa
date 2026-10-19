@@ -256,7 +256,7 @@ test('aa-diagram draws a month\'s days on their squares, the coloured ones as ch
   expect(css).toContain(':is(.box, .post-it, .day)[data-color="pink"]')
   expect(css).toContain(':is(.box, .post-it, .day)[data-color="white"]')
   expect(css).toContain('.day[data-head]::after')
-  expect(css).toMatch(/\.day\[data-row\] \{\s+font-family: var\(--typeface-compressed/)
+  expect(css).toMatch(/\.day\[data-row\] \{\s+font-family: var\(--ds-typeface-compressed, var\(--typeface-compressed/)
   expect(css).toMatch(/\.day\[data-edge\] \{\s+transform: translateY\(-50%\)/)
   element.remove()
 })
@@ -298,7 +298,7 @@ test('a colour as a box\'s last word fills that box alone, over its group\'s', (
 
 test('red is a diagram colour, filled with the palette\'s tuned red', () => {
   expect(layoutDiagram('Missing @ 0 0 red\n  Passkeys').boxes[0].color).toBe('red')
-  expect(read('../src/diagram.css')).toContain('[data-color="red"] { --box-fill: var(--tuned-red, #ff5f5f); }')
+  expect(read('../src/diagram.css')).toContain('[data-color="red"] { --box-fill: var(--ds-tuned-red, var(--tuned-red, #ff5f5f)); }')
 })
 
 test('a line\'s turns are arcs as round as a cell\'s corner, never more than half a run', async () => {

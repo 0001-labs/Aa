@@ -228,8 +228,10 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     return elements().indexOf(block as HTMLElement)
   }
 
+  /** A caption, or an atom that edits itself where it is drawn (a diagram's board), has the keys: the caret is not the editor's. */
+  const ownControl = () => !!document.activeElement?.closest?.('.aa-caption, [data-aa-interactive]')
   const readSelection = (): Selection2 | null => {
-    if (document.activeElement?.closest?.('.aa-caption')) return null
+    if (ownControl()) return null
     if (selected) {
       const first = Math.min(selected.anchor, selected.focus), last = Math.max(selected.anchor, selected.focus)
       return { anchor: { block: first, offset: 0 }, focus: { block: last, offset: blocks[last].source.length } }
@@ -325,11 +327,16 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const restore = (state: Snapshot) => {
     const focused = host.contains(document.activeElement)
+    // Undone on a diagram's board, the board keeps the keys: the change is drawn again, not opened as words.
+    const onBoard = !!document.activeElement?.closest?.('[data-aa-interactive]')
     clearBlocks()
     syncDom(state.blocks)
-    setSelection(state.anchor, state.focus)
-    applyReveal({ anchor: state.anchor, focus: state.focus })
-    keepCaretInView(focused)
+    if (onBoard) applyReveal(null)
+    else {
+      setSelection(state.anchor, state.focus)
+      applyReveal({ anchor: state.anchor, focus: state.focus })
+      keepCaretInView(focused)
+    }
     options.onChange?.(toMarkdown(blocks))
     host.dispatchEvent(new Event('aa-change'))
   }
@@ -669,15 +676,24 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
+    // ⌘A selects words, as a word processor does: the block's (a table cell's), then all of the writing. Never the blocks themselves.
     if (mod && key === 'a' && !event.altKey) {
       event.preventDefault()
-      const block = blocks[selection.focus.block]
+      const index = selection.focus.block, block = blocks[index]
       const cell = block.kind === 'table' && !selected ? tableRows(block.source).flat().find(cell => selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) : null
-      if (cell && (selection.anchor.offset !== cell.from || selection.focus.offset !== cell.to)) {
-        setSelection({ block: selection.focus.block, offset: cell.from }, { block: selection.focus.block, offset: cell.to })
-        applyReveal()
-      } else if (selected) selectBlocks(0, blocks.length - 1)
-      else selectBlocks(selection.focus.block)
+      const from = cell ? cell.from : startOf(index), to = cell ? cell.to : block.source.length
+      const [a, b] = order(selection.anchor, selection.focus)
+      const whole = a.block === index && b.block === index && a.offset <= from && b.offset >= to
+      const last = blocks.length - 1
+      const all = !!selected || whole
+      clearBlocks()
+      if (!all) { setSelection({ block: index, offset: from }, { block: index, offset: to }); applyReveal(); return }
+      const end = { block: last, offset: blocks[last].source.length }
+      setSelection({ block: 0, offset: startOf(0) }, end)
+      // A table at either end cannot hold its edge as words: then all the blocks are selected instead.
+      const read = readSelection(), [first, final] = read ? order(read.anchor, read.focus) : []
+      if (!first || !final || first.block !== 0 || first.offset > startOf(0) || comparePos(final, end) !== 0) selectBlocks(0, last)
+      else applyReveal()
       return
     }
     const range = selected ?? select(blocks, selection.anchor.block, selection.focus.block)
@@ -860,7 +876,31 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (element && element.parentElement === host) readBack(element)
     if (pendingDecorations) redecorate(pendingDecorations)
   }
-  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !document.activeElement?.closest?.('.aa-caption') && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); showPlaceholder(); host.dispatchEvent(new Event('aa-selectionchange')); correction?.moved() } }
+  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !ownControl() && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); showPlaceholder(); host.dispatchEvent(new Event('aa-selectionchange')); correction?.moved() } }
+  /**
+   * An atom that edits itself where it is drawn (a diagram's board) hands
+   * back its block's whole new source in `aa-atom-change`. The block is
+   * written again as one step of undo, and the caret stays where it was, so
+   * a diagram changed on its board is not opened as words.
+   */
+  const onAtomChange = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: unknown }>).detail?.source
+    const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
+    if (destroyed || readOnly || typeof source !== 'string' || !element || element.parentElement !== host) return
+    event.stopPropagation()
+    const index = elements().indexOf(element)
+    if (index < 0 || blocks[index].source === source) return
+    const kept = readSelection()
+    const { blocks: next } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, source)
+    clearBlocks()
+    syncDom(renumber(next))
+    const clamp = (pos: Pos): Pos => ({ block: Math.min(pos.block, blocks.length - 1), offset: Math.min(pos.offset, blocks[Math.min(pos.block, blocks.length - 1)].source.length) })
+    if (kept) { setSelection(clamp(kept.anchor), clamp(kept.focus)); applyReveal({ anchor: clamp(kept.anchor), focus: clamp(kept.focus) }) }
+    const at = kept ? clamp(kept.focus) : { block: Math.min(index, blocks.length - 1), offset: 0 }
+    history.record(snapshot(at, at), 'edit')
+    options.onChange?.(toMarkdown(blocks))
+    host.dispatchEvent(new Event('aa-change'))
+  }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
@@ -919,6 +959,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('pointerdown', onPointerDown)
   host.addEventListener('drop', onDrop)
   host.addEventListener('paste', onPaste)
+  host.addEventListener('aa-atom-change', onAtomChange)
   host.addEventListener('compositionstart', onCompositionStart)
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
@@ -1051,6 +1092,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('pointerdown', onPointerDown)
       host.removeEventListener('drop', onDrop)
       host.removeEventListener('paste', onPaste)
+      host.removeEventListener('aa-atom-change', onAtomChange)
       host.removeEventListener('compositionstart', onCompositionStart)
       host.removeEventListener('compositionend', onCompositionEnd)
       document.removeEventListener('selectionchange', onSelectionChange)

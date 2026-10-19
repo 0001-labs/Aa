@@ -4,6 +4,7 @@ import { diagramAtom } from './src/diagram'
 
 const editor = document.getElementById('editor') as AaEditorElement
 editor.options = {
+  atoms: [imageAtom, diagramAtom],
   drawEquation: (element, tex, displayMode) => {
     let active = true
     element.textContent = tex
@@ -42,7 +43,7 @@ Aa is the text editor of 0001's products. Write formatted text using the toolbar
 
 Each paragraph is a block of its own, edited on its own, as Notion's are. Enter starts a new one and Shift-Enter breaks a line within it. Type / in a block to change its style.
 
-Hold a block still for a moment, then drag it to move it; a selected block drags at once. Escape selects a block. ⌘A selects this block, then the whole document. Shift-Up and Shift-Down extend a block selection. ⌘D duplicates it; ⌘Shift-Up and ⌘Shift-Down move it. Backspace removes it. ⌘Enter ticks a box; ⌘Option-0 through 8 change its kind. Paste a URL over selected words to make a link; ⌘Shift-V keeps it plain. ⌘Shift-S strikes selected words, including words across blocks.
+Hold a block still for a moment, then drag it to move it; a selected block drags at once. Escape selects a block. ⌘A selects a block’s words, then all of them. Shift-Up and Shift-Down extend a block selection. ⌘D duplicates it; ⌘Shift-Up and ⌘Shift-Down move it. Backspace removes it. ⌘Enter ticks a box; ⌘Option-0 through 8 change its kind. Paste a URL over selected words to make a link; ⌘Shift-V keeps it plain. ⌘Shift-S strikes selected words, including words across blocks.
 
 - A bullet
 - Another, with a [link](https://ezo.gs) and some \`code\`
@@ -67,13 +68,13 @@ $$
 a^2 + b^2 = c^2
 $$
 
-> A quote, in italics, with *emphasis* and ~~a change of mind~~ in it.
+> A quote, on its hairline, with *emphasis* and ~~a change of mind~~ in it.
 
 \`\`\`ts
 const editor = createEditor(host, { value, atoms: [imageAtom, diagramAtom] })
 \`\`\`
 
-A diagram is written too: click it to change its words, and it is drawn again as you type. Type /diagram to start one.
+A diagram is drawn on its own board: press it for the squares and the tools. Pick Box and press a square, draw a Line from one box to another, choose a colour, double-press a box to name it, or drag a box to move it. Words writes it as code instead. Type /diagram to start one.
 
 \`\`\`diagram
 # Writing a diagram

@@ -129,6 +129,24 @@ export type DiagramLabel = { text: string; x: number; y: number; w: number; titl
 /** A frame groups stand on, drawn under them, in squares like a box. */
 export type DiagramPostIt = { text: string; x: number; y: number; w: number; h: number; color?: DiagramColor }
 /**
+ * A group as it was written, for whatever edits the diagram where it is
+ * drawn: the source line it starts on and the last line under it (by number
+ * from one), its name, its boxes and the line each is written on, and the
+ * squares it was set on. `box` is `[Box]`, a group that is one box; `stack`
+ * a name over boxes; the rest are what their brackets say.
+ */
+export type DiagramGroup = {
+  kind: 'box' | 'stack' | 'post-it' | 'month' | 'grid' | 'chart'
+  line: number
+  end: number
+  name?: string
+  boxes: { text: string; line: number; color?: DiagramColor }[]
+  x: number; y: number; w: number; h: number
+  /** Whether its place is written (`@ x y`), or it took the next along. */
+  placed: boolean
+  color?: DiagramColor
+}
+/**
  * A day of a month, one square: its number, the colour it wears, and the
  * edges it shares with the coloured days beside it. `name` marks a day's
  * name, on the row over the weeks.
@@ -163,6 +181,8 @@ export type DiagramChart = {
 /** A straight run between two points, in squares: halves where it meets a box's centre. */
 export type DiagramSegment = { x1: number; y1: number; x2: number; y2: number }
 export type DiagramLine = { segments: DiagramSegment[]; arrow: boolean }
+/** Where a line is written: its source line, and the two names it joins as written there. */
+export type DiagramJoin = { line: number; from: string; to: string }
 
 export type Diagram = {
   /** Squares across and down, from the top left square to the far edge of the last. */
@@ -174,6 +194,10 @@ export type Diagram = {
   days: DiagramDay[]
   charts: DiagramChart[]
   lines: DiagramLine[]
+  /** Every group as written, in the order written, with the squares it stands on. */
+  groups: DiagramGroup[]
+  /** Where each of `lines` is written, by the same place in the list. */
+  joins: DiagramJoin[]
   /** Lines of the source that said nothing the diagram understood, by number from one. */
   unread: number[]
 }
@@ -181,6 +205,10 @@ export type Diagram = {
 type Group = {
   label?: string
   boxes: string[]
+  /** The source line each box is written on. */
+  boxLines: number[]
+  /** The last source line the group holds. */
+  end: number
   /** A box's own colour, by its place among the boxes, over the group's. */
   tints?: (DiagramColor | undefined)[]
   x?: number
@@ -379,6 +407,7 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     const indented = /^\s/.test(text)
     const bullet = BULLET.exec(line)
     if ((indented || bullet) && current) {
+      current.end = number
       // A post-it holds groups placed on it, not boxes written under it.
       if (current.postIt) { unread.push(number); return }
       // Under a month, a colour and the days that wear it, or the days' names.
@@ -434,6 +463,7 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
       if (!box) return
       const tinted = BOX_COLOR.exec(box)
       current.boxes.push((tinted ? tinted[1] : box).replace(SINGLE, '$1'))
+      current.boxLines.push(number)
       if (tinted) (current.tints ??= [])[current.boxes.length - 1] = tinted[2].toLowerCase() as DiagramColor
       return
     }
@@ -483,7 +513,7 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     const month = MONTH.exec(name)
     if (month) {
       const label = name.replace(MONTH, '').trim()
-      current = { label: label || undefined, boxes: [], x, y, w: DIAGRAM_MONTH_WIDTH, month: { year: Number(month[1]), month: Number(month[2]), marks: new Map(), ...(month[3] ? { marker: true as const } : {}) }, line: number }
+      current = { label: label || undefined, boxes: [], boxLines: [], x, y, w: DIAGRAM_MONTH_WIDTH, month: { year: Number(month[1]), month: Number(month[2]), marks: new Map(), ...(month[3] ? { marker: true as const } : {}) }, line: number, end: number }
       groups.push(current)
       return
     }
@@ -492,7 +522,7 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     if (chart) {
       const label = name.replace(CHART, '').trim()
       const columns = Math.min(DIAGRAM_GRID_SIDE, Number(chart[1])), rows = Math.min(DIAGRAM_GRID_SIDE, Number(chart[2]))
-      current = { label: label || undefined, boxes: [], x, y, w: CHART_PAD + CHART_BEFORE + columns + CHART_AFTER + CHART_PAD, chart: { columns, rows, series: [] }, line: number }
+      current = { label: label || undefined, boxes: [], boxLines: [], x, y, w: CHART_PAD + CHART_BEFORE + columns + CHART_AFTER + CHART_PAD, chart: { columns, rows, series: [] }, line: number, end: number }
       groups.push(current)
       return
     }
@@ -501,7 +531,7 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     if (grid) {
       const label = name.replace(GRID, '').trim()
       const columns = Math.min(DIAGRAM_GRID_SIDE, Number(grid[1])), rows = Math.min(DIAGRAM_GRID_SIDE, Number(grid[2]))
-      current = { label: label || undefined, boxes: [], x, y, w: columns, grid: { columns, rows, marks: new Map(), ...(grid[3] ? { marker: true as const } : {}) }, line: number }
+      current = { label: label || undefined, boxes: [], boxLines: [], x, y, w: columns, grid: { columns, rows, marks: new Map(), ...(grid[3] ? { marker: true as const } : {}) }, line: number, end: number }
       groups.push(current)
       return
     }
@@ -510,10 +540,10 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     const side = Math.max(DIAGRAM_BOX_WIDTH, onColumn(w ?? h ?? DIAGRAM_POST_IT_SIZE))
     // A box is an item's width whatever width is written for it.
     current = postIt
-      ? { label: postIt[1].trim(), boxes: [], x, y, w: side, h: side, postIt: true, color, line: number }
+      ? { label: postIt[1].trim(), boxes: [], boxLines: [], x, y, w: side, h: side, postIt: true, color, line: number, end: number }
       : single
-        ? { boxes: [single[1].trim()], x, y, w: DIAGRAM_BOX_WIDTH, color, line: number }
-        : { label: name || undefined, boxes: [], x, y, w: DIAGRAM_BOX_WIDTH, color, line: number }
+        ? { boxes: [single[1].trim()], boxLines: [number], x, y, w: DIAGRAM_BOX_WIDTH, color, line: number, end: number }
+        : { label: name || undefined, boxes: [], boxLines: [], x, y, w: DIAGRAM_BOX_WIDTH, color, line: number, end: number }
     groups.push(current)
   })
 
@@ -539,6 +569,7 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
   const top = title === undefined ? 0 : 3
   let cursorX = 0, cursorY = top, rowBottom = top
   const rects = new Map<Group, Rect>()
+  const unplaced = new Set<Group>()
   for (const group of groups) {
     // A grid is a column wider for its rows' names, known only once its lines are read.
     if (group.grid) group.w = group.grid.columns + (group.grid.down ? 1 : 0)
@@ -553,6 +584,7 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
         ? (group.label ? 1 : 0) + (group.grid.across ? gridHeadRows(group.grid.across) : 0) + group.grid.rows + (group.grid.down && group.grid.down.length > group.grid.rows ? 1 : 0)
         : group.h ?? Math.max(1, (group.label ? 1 : 0) + group.boxes.length)
     if (group.x === undefined || group.y === undefined) {
+      unplaced.add(group)
       if (cursorX > 0 && cursorX + group.w > DIAGRAM_FLOW_COLUMNS) {
         cursorX = 0
         cursorY = rowBottom + GUTTER
@@ -713,9 +745,11 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     if (right > left && into !== undefined) stems.set(a, Math.min(right - 0.5, Math.max(left + 0.5, into)))
   }
   const lines: DiagramLine[] = []
+  const written: DiagramJoin[] = []
   for (const { join, a, b } of ends) {
     if (!a || !b || a === b) { unread.push(join.line); continue }
     lines.push({ segments: route(a, b, nameMiddle, stems.get(a)), arrow: join.arrow })
+    written.push({ line: join.line, from: join.from, to: join.to })
   }
 
   let columns = 0, rows = 0
@@ -732,7 +766,18 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     columns = Math.max(columns, Math.ceil(Math.max(s.x1, s.x2)))
     rows = Math.max(rows, Math.ceil(Math.max(s.y1, s.y2)))
   }
-  return { columns, rows, labels, postIts, boxes, days, charts, lines, unread: [...new Set(unread)].sort((p, q) => p - q) }
+  const kinds = (group: Group): DiagramGroup['kind'] => group.postIt ? 'post-it' : group.month ? 'month' : group.grid ? 'grid' : group.chart ? 'chart' : group.label === undefined ? 'box' : 'stack'
+  const sources: DiagramGroup[] = groups.map(group => ({
+    kind: kinds(group), line: group.line, end: group.end,
+    ...(group.label === undefined ? {} : { name: group.label }),
+    boxes: group.boxes.map((text, index) => {
+      const color = group.tints?.[index]
+      return color ? { text, line: group.boxLines[index], color } : { text, line: group.boxLines[index] }
+    }),
+    ...rects.get(group)!, placed: !unplaced.has(group),
+    ...(group.color ? { color: group.color } : {}),
+  }))
+  return { columns, rows, labels, postIts, boxes, days, charts, lines, groups: sources, joins: written, unread: [...new Set(unread)].sort((p, q) => p - q) }
 }
 
 /**

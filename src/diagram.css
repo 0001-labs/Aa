@@ -5,7 +5,7 @@
    otherwise they are Design system 1's. */
 :host {
   --diagram-unit: var(--aa-diagram-unit, var(--ds-grid-unit, calc(20px * var(--sf, 1))));
-  --diagram-ink: var(--aa-diagram-ink, var(--text-color, light-dark(#1e1e1e, #fff)));
+  --diagram-ink: var(--aa-diagram-ink, var(--ds-text-color, var(--text-color, light-dark(#1e1e1e, #fff))));
   --diagram-stroke: var(--aa-diagram-stroke, 1px);
   display: block;
   position: relative;
@@ -23,10 +23,11 @@
   color: var(--diagram-ink);
   /* Read by the element to know the scheme a marker is laid in: it is never edited, so the caret never shows. */
   caret-color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));
-  font-family: var(--typeface-regular);
-  font-size: var(--type-size-default);
-  font-weight: var(--type-weight-default);
-  letter-spacing: calc(var(--type-letterspacing-default) * var(--sf, 1));
+  font-family: var(--ds-typeface-regular, var(--typeface-regular));
+  font-feature-settings: var(--ds-font-features, normal);
+  font-size: var(--ds-type-size-default, var(--type-size-default));
+  font-weight: var(--ds-type-weight-default, var(--type-weight-default));
+  letter-spacing: var(--ds-type-letterspacing-default, calc(var(--type-letterspacing-default) * var(--sf, 1)));
   line-height: var(--diagram-unit);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
@@ -150,7 +151,7 @@
 /* A row's name is in the condensed face, as a calendar's hours are; where it
    names a line it stands on the line, half a square up from its square. */
 .day[data-row] {
-  font-family: var(--typeface-compressed, var(--typeface-regular));
+  font-family: var(--ds-typeface-compressed, var(--typeface-compressed, var(--ds-typeface-regular, var(--typeface-regular))));
 }
 
 .day[data-edge] {
@@ -205,7 +206,7 @@
    the mid tones Anthropic colours its squares in, so that a marker's thin
    strokes still read as the colour on the paper; on dark paper the accents
    themselves already stand out, and the plainest is a quiet grey. */
-.marker-fill[data-color="light-green"] { --marker: light-dark(color-mix(in oklab, var(--apple-green, #99ff73) 88%, #1e1e1e), var(--apple-green, #99ff73)); }
+.marker-fill[data-color="light-green"] { --marker: light-dark(color-mix(in oklab, var(--apple-green, #99ff73) 88%, #1e1e1e), var(--ds-apple-green, var(--apple-green, #99ff73))); }
 .marker-fill[data-color="light-blue"] { --marker: light-dark(color-mix(in oklab, var(--zenith-blue, #ccccff) 75%, #4a5ae0), color-mix(in oklab, var(--zenith-blue, #ccccff) 85%, #4a5ae0)); }
 .marker-fill[data-color="pink"] { --marker: light-dark(color-mix(in oklab, var(--pink, #f5aad1) 90%, #1e1e1e), var(--pink, #f5aad1)); }
 .marker-fill[data-color="yellow"] { --marker: light-dark(color-mix(in oklab, var(--yellow, #eaff00) 88%, #1e1e1e), var(--yellow, #eaff00)); }
@@ -234,7 +235,7 @@
   left: calc(var(--x) * var(--diagram-unit));
   top: calc(var(--y) * var(--diagram-unit));
   height: var(--diagram-unit);
-  font-family: var(--typeface-compressed, var(--typeface-regular));
+  font-family: var(--ds-typeface-compressed, var(--typeface-compressed, var(--ds-typeface-regular, var(--typeface-regular))));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: color-mix(in srgb, var(--diagram-ink) 55%, transparent);
@@ -296,12 +297,12 @@
   border-color: var(--box-fill);
 }
 
-:is(.box, .post-it, .day)[data-color="light-green"] { --box-fill: var(--apple-green, #99ff73); }
-:is(.box, .post-it, .day)[data-color="light-blue"] { --box-fill: var(--zenith-blue, #ccccff); }
-:is(.box, .post-it, .day)[data-color="pink"] { --box-fill: var(--pink, #f5aad1); }
-:is(.box, .post-it, .day)[data-color="yellow"] { --box-fill: var(--yellow, #eaff00); }
-:is(.box, .post-it, .day)[data-color="orange"] { --box-fill: var(--orange, #fec20d); }
-:is(.box, .post-it, .day)[data-color="red"] { --box-fill: var(--tuned-red, #ff5f5f); }
+:is(.box, .post-it, .day)[data-color="light-green"] { --box-fill: var(--ds-apple-green, var(--apple-green, #99ff73)); }
+:is(.box, .post-it, .day)[data-color="light-blue"] { --box-fill: var(--ds-zenith-blue, var(--zenith-blue, #ccccff)); }
+:is(.box, .post-it, .day)[data-color="pink"] { --box-fill: var(--ds-pink, var(--pink, #f5aad1)); }
+:is(.box, .post-it, .day)[data-color="yellow"] { --box-fill: var(--ds-yellow, var(--yellow, #eaff00)); }
+:is(.box, .post-it, .day)[data-color="orange"] { --box-fill: var(--ds-orange, var(--orange, #fec20d)); }
+:is(.box, .post-it, .day)[data-color="red"] { --box-fill: var(--ds-tuned-red, var(--tuned-red, #ff5f5f)); }
 /* White is the plainest: white in the dark, and the paper's pale grey in the light, where white would not show. */
 :is(.box, .post-it, .day)[data-color="white"] { --box-fill: light-dark(var(--slate-light, #e6e6e6), var(--white, #fff)); }
 
