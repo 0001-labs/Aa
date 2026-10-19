@@ -1,10 +1,12 @@
 {
   "Design system 1": {
-    "commit": "adfa830ab9ad52453a78f6e6a4722158ea2c9019",
-    "version": "0.3.0-alpha.13",
+    "commit": "d06ca35475b67461b0dec37ff09ec29beb3db648",
+    "version": "0.3.0-alpha.28",
+    "dirty": true,
     "files": {
       "src/icons/connect.svg": "5ec3b25d77d13a88d50abba9c6b15d9856798511c0bc4d6736237736598f2d95",
-      "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab"
+      "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab",
+      "src/icons/slash.svg": "f861cf1387dcc4989fcd253a8b793af1288bf37fab6098dd737fb4c1690b0112"
     }
   }
 }

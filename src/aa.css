@@ -43,8 +43,12 @@
   -webkit-user-modify: read-write-plaintext-only;
 }
 .aa-block + .aa-block { margin-top: var(--aa-gap, 1lh); }
-.aa-block[data-selected] { background: var(--aa-selection, var(--accent-color, var(--apple-green, Highlight))); }
-.aa-block[data-selected] { border-radius: calc(2px * var(--sf, 1)); }
+.aa-block[data-selected], .aa-block[data-lifted] { background: var(--aa-selection, var(--accent-color, var(--apple-green, Highlight))); }
+.aa-block[data-selected], .aa-block[data-lifted] { border-radius: calc(2px * var(--sf, 1)); }
+/* No handle beside a block: a selected block is taken by the hand, any other
+   after a still press (drag.ts), and the hand holds while it is carried. */
+.aa[data-movable] > .aa-block[data-selected] { cursor: grab; }
+.aa[data-dragging], .aa[data-dragging] *, .aa[data-dragging] *::before { cursor: grabbing; -webkit-user-select: none; user-select: none; }
 /* The mask joins wrapped lines into one softly rounded silhouette. The
    native selection still owns editing, copying and touch handles. */
 .aa-block[data-aa-selection] { isolation: isolate; }
@@ -208,7 +212,6 @@ a.aa-link { color: var(--aa-link, var(--base-blue, #1f5fd1)); text-decoration: n
   mask-image: linear-gradient(to right, black calc(100% - 12px * var(--sf, 1)), transparent 100%);
 }
 .aa-menu-empty { display: block; padding-inline: calc(3px * var(--sf, 1)); line-height: var(--aa-square); background: var(--black, black); }
-.aa-grip { display: flex; background: transparent; }
 .aa-drop-line { position: fixed; z-index: 1000; height: 1px; background: var(--accent-color, var(--apple-green, Highlight)); pointer-events: none; }
 .aa-find { display: flex; flex-wrap: wrap; width: calc(16 * var(--aa-square)); max-width: calc(100vw - 2 * var(--aa-square) - 2px); border: 1px solid var(--aa-rule, currentColor); }
 .aa-find input { box-sizing: border-box; font: inherit; color: inherit; background: transparent; width: 50%; min-width: 0; height: var(--aa-square); padding: 0 calc(4px * var(--sf, 1)); border: 0; border-right: 1px solid currentColor; border-radius: 0; }

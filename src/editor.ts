@@ -49,6 +49,12 @@ export type EditorOptions = {
   value?: string
   readOnly?: boolean
   placeholder?: string
+  /**
+   * What an empty block shows while the caret is in it, so the slash menu is
+   * found without a button beside the block: "Type / for styles" unless set,
+   * nothing for ''. Never without menus or in a read-only editor.
+   */
+  blockPlaceholder?: string
   /** Called after every change the person made, with the document as Markdown. */
   onChange?: (value: string) => void
   /** The atoms to read and draw; a picture unless told otherwise. */
@@ -80,7 +86,8 @@ export type Editor = {
   format(mark: 'bold' | 'italic' | 'strike' | 'code' | 'link' | 'equation' | 'highlight'): void
   turnInto(kind: TurnKind): void
   blockAction(action: 'delete' | 'duplicate' | 'up' | 'down'): void
-  moveBlock(from: number, to: number): void
+  /** Move `count` blocks from `from` so the first stands at `to` once they have left; they stay selected, the editor focused. */
+  moveBlock(from: number, to: number, count?: number): void
   indent(direction: -1 | 1): void
   toggle(open?: boolean): void
   table(action: TableAction): void
@@ -102,6 +109,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let blocks: Block[] = fromMarkdown(options.value ?? '')
   let readOnly = !!options.readOnly
   let placeholder = options.placeholder ?? ''
+  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? 'Type / for styles'
   let composing = false
   let destroyed = false
   let selected: BlockSelection | null = null
@@ -162,11 +170,18 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     return element
   }
 
-  const showPlaceholder = () => {
-    const first = host.firstElementChild as HTMLElement | null
-    if (!first) return
-    if (blocks.length === 1 && !blocks[0].source && placeholder) first.dataset.placeholder = placeholder
-    else delete first.dataset.placeholder
+  /**
+   * An empty document shows the product's placeholder; an empty paragraph
+   * with the caret in it says how to reach the styles.
+   */
+  const showPlaceholder = (selection = readSelection()) => {
+    const caret = selection && !selected && !readOnly && comparePos(selection.anchor, selection.focus) === 0 ? selection.focus.block : -1
+    elements().forEach((element, index) => {
+      const block = blocks[index]
+      const text = blocks.length === 1 && !block.source && placeholder ? placeholder : index === caret && !block.source && block.kind === 'paragraph' ? blockPlaceholder : ''
+      if (text) element.dataset.placeholder = text
+      else if (element.dataset.placeholder !== undefined) delete element.dataset.placeholder
+    })
   }
 
   const renderAll = () => {
@@ -285,6 +300,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     syncDom(numbered)
     setSelection(anchor, focus)
     applyReveal({ anchor, focus })
+    showPlaceholder({ anchor, focus })
     if (!transactionDepth) {
       history.record(snapshot(anchor, focus), kind)
       options.onChange?.(toMarkdown(blocks))
@@ -736,7 +752,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     sweep()
   }
 
-  const onCompositionStart = () => { composing = true }
+  // A placeholder would stand over the words being composed in an empty block.
+  const onCompositionStart = (event: CompositionEvent) => { composing = true; const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null; if (element) delete element.dataset.placeholder }
   const onCompositionEnd = (event: CompositionEvent) => {
     composing = false
     if ((event.target as HTMLElement).closest?.('.aa-caption')) { onInput(event); return }
@@ -744,7 +761,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (element && element.parentElement === host) readBack(element)
     if (pendingDecorations) redecorate(pendingDecorations)
   }
-  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !document.activeElement?.closest?.('.aa-caption') && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); host.dispatchEvent(new Event('aa-selectionchange')) } }
+  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !document.activeElement?.closest?.('.aa-caption') && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); showPlaceholder(); host.dispatchEvent(new Event('aa-selectionchange')) } }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
@@ -815,6 +832,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     readOnly = value
     describe()
     clearBlocks()
+    showPlaceholder()
     for (const element of elements()) { element.contentEditable = value || element.dataset.kind === 'table' ? 'false' : 'true'; element.dataset.readonly = String(value); element.querySelectorAll<HTMLElement>('[data-cell], .aa-caption').forEach(cell => cell.contentEditable = value ? 'false' : 'true') }
     host.dispatchEvent(new Event('aa-change'))
   }
@@ -877,7 +895,16 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; if (mark === 'link') { insertLink(selection); return }; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark]) },
     turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
     blockAction(action) { if (readOnly) return; const selection = readSelection(); if (selection) changeBlocks(action, selected ?? select(blocks, selection.anchor.block, selection.focus.block)) },
-    moveBlock(from, to) { if (readOnly || from < 0 || to < 0 || from >= blocks.length || to >= blocks.length || from === to) return; const next = [...blocks], moved = next.splice(from, 1)[0]; next.splice(to, 0, moved); const pos = { block: to, offset: moved.prefix }; commit(next, pos, pos, 'edit'); selectBlocks(to) },
+    moveBlock(from, to, count = 1) {
+      if (readOnly || count < 1 || from < 0 || to < 0 || from + count > blocks.length || to + count > blocks.length || from === to) return
+      const next = [...blocks], moved = next.splice(from, count)
+      next.splice(to, 0, ...moved)
+      const pos = { block: to, offset: moved[0].prefix }
+      commit(next, pos, pos, 'edit')
+      // The moved blocks keep the keys: ⌘⇧↑, Backspace or another drag act on them next.
+      elements()[to].focus({ preventScroll: true })
+      selectBlocks(to, to + count - 1)
+    },
     indent(direction) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = indentBlocks(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), direction); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
     toggle(open) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = toggleCallout(blocks, selection.focus.block, open) ?? toggleBox(blocks, selection.focus.block); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
     table(action) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const index = selection.focus.block, block = blocks[index]; if (block.kind !== 'table') return; const rows = tableRows(block.source); let row = 0, column = 0; rows.forEach((cells, r) => cells.forEach((cell, c) => { if (selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) { row = r; column = c } })); const source = editTable(block, action, row, column); const change = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: block.source.length }, source); const pos = { block: index, offset: tableRows(source)[Math.min(row, tableRows(source).length - 1)][Math.min(column, tableRows(source)[0].length - 1)].from }; commit(change.blocks, pos, pos, 'edit') },

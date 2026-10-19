@@ -134,15 +134,13 @@ describe('controls, decorations and media', () => {
     const toolbar = document.querySelector('.aa-toolbar') as HTMLElement
     expect(toolbar.hidden).toBe(false)
     expect(toolbar.hasAttribute('data-docked')).toBe(true)
-    expect(toolbar.querySelector('[aria-label="Add a block"]')).not.toBeNull()
-  })
-  it('lets the block grip start native dragging', () => {
-    setup('Drag me')
-    const handle = document.querySelector('.aa-grip button')!
-    const event = new Event('pointerdown', { bubbles: true, cancelable: true })
-    handle.dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(false)
-    expect((handle as HTMLButtonElement).draggable).toBe(true)
+    expect(toolbar.querySelector('[aria-label="Add a block"]')).toBeNull()
+    // Touch reaches the block commands, moving blocks among them, from the toolbar.
+    ;(toolbar.querySelector('[aria-label="Block commands"]') as HTMLButtonElement).click()
+    const menu = document.querySelector('.aa-menu') as HTMLElement
+    expect(menu.hidden).toBe(false)
+    expect(menu.querySelector('[data-command="up"]')).not.toBeNull()
+    expect(host!.children[0].hasAttribute('data-selected')).toBe(true)
   })
 
   it('keeps caption Select all and paste inside the caption', () => {

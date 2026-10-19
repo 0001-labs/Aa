@@ -1,6 +1,6 @@
 import type { Editor, EditorOptions } from './editor'
 import type { TurnKind } from './document'
-import { parseBlocks } from './markdown'
+import { createDragging } from './drag'
 
 import { icons } from './icons'
 export type ToolbarAction = { id: string; label: string; icon: string; run(editor: Editor): void }
@@ -15,7 +15,7 @@ const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'toggle-h1', label: 'Heading 1', icon: 'h1' }, { kind: 'toggle-h2', label: 'Heading 2', icon: 'h2' }, { kind: 'toggle-h3', label: 'Heading 3', icon: 'h3' },
   { kind: 'table', label: 'Table', icon: 'table' }, { kind: 'equation', label: 'Equation', icon: 'equation' },
 ]
-function button(label: string, icon: string, action: () => void, text = false, draggable = false): HTMLButtonElement {
+function button(label: string, icon: string, action: () => void, text = false): HTMLButtonElement {
   const node = document.createElement('button')
   node.type = 'button'; node.title = label; node.setAttribute('aria-label', label)
   const picture = document.createElement('span')
@@ -24,7 +24,7 @@ function button(label: string, icon: string, action: () => void, text = false, d
   if (svg) picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/currentColor/g, 'black'))}")`
   node.append(picture)
   if (text) { const name = document.createElement('span'); name.textContent = label; node.append(name) }
-  if (!draggable) node.addEventListener('pointerdown', event => event.preventDefault())
+  node.addEventListener('pointerdown', event => event.preventDefault())
   node.addEventListener('click', action)
   return node
 }
@@ -79,8 +79,10 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const input = document.createElement('input'); input.type = 'file'; input.multiple = true
     input.addEventListener('change', () => { restore(); options.onFiles?.(Array.from(input.files ?? [])) }, { once: true }); input.click()
   } }]
+  // Touch has no ⌘/ and keeps its long press for selecting words: the block
+  // commands, moving a block among them, are a button above the keyboard.
   if (window.matchMedia?.('(pointer: coarse)').matches) toolbar.actions = [...toolbar.actions,
-    { id: 'add', label: 'Add a block', icon: 'plus', run: () => { restore(); hovered = editor.activeBlock()?.index ?? -1; const block = editor.activeBlock(); if (block) { editor.replace(block.end, block.end, '\n\n/'); updateCommands() } } },
+    { id: 'block', label: 'Block commands', icon: 'slash', run: () => { restore(); target = editor.activeBlock()?.index ?? -1; blockMenu() } },
     { id: 'indent', label: 'Indent', icon: 'indent', run: () => { restore(); editor.indent(1) } },
     { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => { restore(); editor.indent(-1) } },
   ]
@@ -92,11 +94,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
 
   const menu = document.createElement('div')
   menu.className = 'aa-controls aa-menu'; menu.hidden = true; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Block commands')
-  const grip = document.createElement('div')
-  grip.className = 'aa-controls aa-grip'; grip.hidden = true
-  const dropLine = document.createElement('div'); dropLine.className = 'aa-drop-line'; dropLine.hidden = true
   const findBar = document.createElement('div'); findBar.className = 'aa-controls aa-find'; findBar.hidden = true; findBar.setAttribute('role', 'search')
-  overlayRoot.append(menu, grip, dropLine, findBar)
+  overlayRoot.append(menu, findBar)
   const linkBar = document.createElement('form')
   linkBar.className = 'aa-controls aa-find aa-link-editor'; linkBar.hidden = true
   linkBar.setAttribute('aria-label', 'Edit link')
@@ -127,9 +126,9 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   cancelLink.addEventListener('click', finishLink)
   linkBar.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); finishLink() } })
   host.addEventListener('aa-link-request', requestLink)
-  let hovered = -1, active = 0, choices: readonly Command[] = [], slash: { from: number; to: number } | null = null
+  let target = -1, active = 0, choices: readonly Command[] = [], slash: { from: number; to: number } | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
-  let drag = -1, destination = -1, disposed = false
+  let disposed = false
   const moveMenu = (rect: DOMRect) => {
     const size = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--sf')) || 1)
     menu.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - 4 * size))}px`
@@ -167,8 +166,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     input.addEventListener('change', () => Array.from(input.files ?? []).forEach(file => editor.insertFile(file)), { once: true }); input.click()
   } })
   const blockMenu = () => {
-    if (hovered < 0) return
-    if (editor.activeBlock()?.index !== hovered || editor.activeBlock()?.block.kind !== 'table') editor.selectBlocks(hovered)
+    if (target < 0) return
+    if (editor.activeBlock()?.index !== target || editor.activeBlock()?.block.kind !== 'table') editor.selectBlocks(target)
     const commands: Command[] = [
       ...builtin, { id: 'duplicate', label: 'Duplicate', icon: 'duplicate', run: () => editor.blockAction('duplicate') },
       { id: 'delete', label: 'Delete', icon: 'delete', run: () => editor.blockAction('delete') },
@@ -182,19 +181,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const count = editor.stats()
     commands.push({ id: 'count', label: `${count.words} words, ${count.characters} characters`, icon: 'text', run: () => {} })
     slash = null
-    open(commands, grip.getBoundingClientRect())
+    open(commands, (host.children[target] ?? host).getBoundingClientRect())
   }
-  const handle = button('Block menu', 'handle', blockMenu, false, true)
-  handle.draggable = true
-  handle.addEventListener('dragstart', event => {
-    drag = hovered; event.dataTransfer?.setData('application/x-aa-block', String(drag)); if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
-  })
-  handle.addEventListener('dragend', () => { drag = -1; dropLine.hidden = true })
-  grip.append(handle, button('Add a block', 'plus', () => {
-    editor.selectBlocks(hovered)
-    const block = editor.activeBlock(); if (!block) return
-    editor.replace(block.end, block.end, '\n\n/'); updateCommands()
-  }))
   const updateCommands = () => {
     if (disposed || editor.readOnly || options.menus === false) { close(); return }
     const block = editor.activeBlock(), selection = editor.selection()
@@ -231,14 +219,6 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     saved = selection
     timer = setTimeout(() => { if (!disposed && options.toolbar && !editor.readOnly) { toolbar.hidden = false; positionToolbar() } }, 140)
   }
-  const hover = (event: MouseEvent) => {
-    if (editor.readOnly || options.menus === false) return
-    const block = (event.target as HTMLElement).closest('.aa-block') as HTMLElement | null
-    if (!block || block.parentElement !== host) return
-    hovered = Array.from(host.children).indexOf(block)
-    const rect = block.getBoundingClientRect(), size = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--sf')) || 1)
-    grip.style.left = `${Math.max(0, rect.left - 2 * size)}px`; grip.style.top = `${rect.top}px`; grip.hidden = false
-  }
   const query = document.createElement('input'); query.placeholder = 'Find'; query.setAttribute('aria-label', 'Find')
   const replacement = document.createElement('input'); replacement.placeholder = 'Replace'; replacement.setAttribute('aria-label', 'Replace')
   const result = document.createElement('span'); result.setAttribute('aria-live', 'polite')
@@ -269,7 +249,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       event.preventDefault(); event.stopImmediatePropagation(); findBar.hidden = false
       const rect = host.getBoundingClientRect(); findBar.style.left = `${Math.max(0, rect.left)}px`; findBar.style.top = `${Math.max(0, rect.top)}px`; refreshFind(); query.focus(); return
     }
-    if (mod && event.key === '/') { event.preventDefault(); event.stopImmediatePropagation(); hovered = editor.activeBlock()?.index ?? -1; blockMenu(); return }
+    if (mod && event.key === '/') { event.preventDefault(); event.stopImmediatePropagation(); target = editor.activeBlock()?.index ?? -1; blockMenu(); return }
     if (menu.hidden) return
     if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); return }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -278,36 +258,12 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     if (event.key === 'Enter' && choices[active]) { event.preventDefault(); event.stopImmediatePropagation(); run(choices[active]) }
   }
   menu.addEventListener('keydown', keyboard)
-  const outside = (event: PointerEvent) => { if (!menu.contains(event.target as Node) && !grip.contains(event.target as Node)) close(); if (!host.contains(event.target as Node) && !toolbar.contains(event.target as Node)) toolbar.hidden = true }
-  const dragOver = (event: DragEvent) => {
-    if (editor.readOnly) return
-    if (drag < 0 && !Array.from(event.dataTransfer?.types ?? []).includes('Files')) return
-    const block = (event.target as HTMLElement).closest('.aa-block') as HTMLElement | null
-    if (!block || block.parentElement !== host) return
-    event.preventDefault()
-    const rect = block.getBoundingClientRect(), below = event.clientY > rect.top + rect.height / 2
-    destination = Array.from(host.children).indexOf(block) + (below ? 1 : 0)
-    dropLine.style.left = `${rect.left}px`; dropLine.style.top = `${below ? rect.bottom : rect.top}px`; dropLine.style.width = `${rect.width}px`; dropLine.hidden = false
-  }
-  const drop = (event: DragEvent) => {
-    dropLine.hidden = true
-    if (drag < 0 && destination >= 0 && !editor.readOnly && event.dataTransfer?.files.length && options.onFiles) {
-      event.preventDefault(); event.stopImmediatePropagation()
-      const blocks = parseBlocks(editor.value)
-      const at = destination < blocks.length ? blocks[destination].start : editor.value.length
-      editor.selectRange(at, at)
-      options.onFiles(Array.from(event.dataTransfer.files)); destination = -1; return
-    }
-    if (drag < 0 || destination < 0 || editor.readOnly) return
-    event.preventDefault(); event.stopImmediatePropagation()
-    editor.moveBlock(drag, destination > drag ? destination - 1 : destination)
-    drag = -1; destination = -1
-  }
-  const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; grip.hidden = true; linkBar.hidden = true; linkTarget = null } }
-  const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); hovered = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
+  const outside = (event: PointerEvent) => { if (!menu.contains(event.target as Node)) close(); if (!host.contains(event.target as Node) && !toolbar.contains(event.target as Node)) toolbar.hidden = true }
+  const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; linkBar.hidden = true; linkTarget = null } }
+  const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); target = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
   const viewport = (event: Event) => {
     if (event.target instanceof Node && menu.contains(event.target)) return
-    positionToolbar(); grip.hidden = true
+    positionToolbar()
     if (!menu.hidden) {
       const block = editor.activeBlock()
       const rect = block ? host.children[block.index]?.getBoundingClientRect() : null
@@ -316,22 +272,19 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   host.addEventListener('aa-selectionchange', selectionChanged)
   host.addEventListener('aa-change', changed)
-  host.addEventListener('mousemove', hover)
   host.addEventListener('contextmenu', contextMenu)
   host.addEventListener('keydown', keyboard, true)
-  host.addEventListener('dragover', dragOver)
-  host.addEventListener('drop', drop, true)
   document.addEventListener('pointerdown', outside)
   window.addEventListener('resize', viewport)
   window.addEventListener('scroll', viewport, true)
   window.visualViewport?.addEventListener('resize', viewport)
+  const stopDragging = createDragging(editor, options, overlayRoot)
   return () => {
-    disposed = true; clearTimeout(timer)
-    toolbar.remove(); menu.remove(); grip.remove(); dropLine.remove(); findBar.remove(); linkBar.remove(); host.removeEventListener('aa-link-request', requestLink)
+    disposed = true; clearTimeout(timer); stopDragging()
+    toolbar.remove(); menu.remove(); findBar.remove(); linkBar.remove(); host.removeEventListener('aa-link-request', requestLink)
     host.removeEventListener('aa-selectionchange', selectionChanged); host.removeEventListener('aa-change', changed)
-    host.removeEventListener('mousemove', hover); host.removeEventListener('keydown', keyboard, true)
+    host.removeEventListener('keydown', keyboard, true)
     host.removeEventListener('contextmenu', contextMenu)
-    host.removeEventListener('dragover', dragOver); host.removeEventListener('drop', drop, true)
     document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', viewport); window.removeEventListener('scroll', viewport, true)
     window.visualViewport?.removeEventListener('resize', viewport)
   }

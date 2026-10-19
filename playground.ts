@@ -40,9 +40,9 @@ Aa is the text editor of 0001's products. Write formatted text using the toolbar
 
 ## Blocks
 
-Each paragraph is a block of its own, edited on its own, as Notion's are. Enter starts a new one and Shift-Enter breaks a line within it.
+Each paragraph is a block of its own, edited on its own, as Notion's are. Enter starts a new one and Shift-Enter breaks a line within it. Type / in a block to change its style.
 
-Escape selects a block. ⌘A selects this block, then the whole document. Shift-Up and Shift-Down extend a block selection. ⌘D duplicates it; ⌘Shift-Up and ⌘Shift-Down move it. Backspace removes it. ⌘Enter ticks a box; ⌘Option-0 through 8 change its kind. Paste a URL over selected words to make a link; ⌘Shift-V keeps it plain. ⌘Shift-S strikes selected words, including words across blocks.
+Hold a block still for a moment, then drag it to move it; a selected block drags at once. Escape selects a block. ⌘A selects this block, then the whole document. Shift-Up and Shift-Down extend a block selection. ⌘D duplicates it; ⌘Shift-Up and ⌘Shift-Down move it. Backspace removes it. ⌘Enter ticks a box; ⌘Option-0 through 8 change its kind. Paste a URL over selected words to make a link; ⌘Shift-V keeps it plain. ⌘Shift-S strikes selected words, including words across blocks.
 
 - A bullet
 - Another, with a [link](https://ezo.gs) and some \`code\`
@@ -59,7 +59,7 @@ Escape selects a block. ⌘A selects this block, then the whole document. Shift-
 | Capability | Try it |
 | --- | --- |
 | Tables | Tab moves between cells; Enter leaves the table |
-| Menus | Type /, or use the handle beside a block |
+| Menus | Type / for styles, ⌘/ for the block's commands |
 
 ==Highlight a thought==, or write an equation: $E = mc^2$.
 
