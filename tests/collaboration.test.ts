@@ -23,6 +23,21 @@ function relay() {
 function connect(e: Editor, transport: CollaborationTransport, id: string, onError?: (error: unknown) => void) { const c = connectCollaboration(e, transport, { id, onError }); connections.push(c); return c }
 
 describe('collaboration', () => {
+  it('makes a correction its own step to undo, apart from the typing just before it', async () => {
+    vi.useFakeTimers()
+    try {
+      const shared = relay(), host = document.createElement('div'); document.body.append(host); hosts.push(host)
+      const a = createEditor(host, { value: 'start\n\nend', menus: false, correct: async text => text.replace('Teh', 'The') }); editors.push(a)
+      const ca = connect(a, shared.transport, 'a'); await ca.ready
+      const first = host.children[0] as HTMLElement
+      first.textContent = 'Teh start'; first.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
+      a.selectRange(a.value.length); document.dispatchEvent(new Event('selectionchange'))
+      await vi.advanceTimersByTimeAsync(0); await ca.flush()
+      expect(a.value).toBe('The start\n\nend'); expect(shared.value()).toBe(a.value)
+      expect(a.undo()).toBe(true); await ca.flush()
+      expect(a.value).toBe('Teh start\n\nend')
+    } finally { vi.useRealTimers() }
+  })
   it('initializes once and converges after concurrent edits delivered twice', async () => {
     const shared = relay(), a = editor('start'), b = editor('ignored local draft')
     const ca = connect(a, shared.transport, 'a'), cb = connect(b, shared.transport, 'b')

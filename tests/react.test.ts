@@ -19,4 +19,15 @@ describe('React binding', () => {
     expect(document.querySelector('.aa-toolbar')).toBeNull()
     container.remove()
   })
+  it('passes the correct call through and turns correcting on and off', async () => {
+    const container = document.createElement('div'); document.body.append(container)
+    const root = createRoot(container), ref = createRef<AaEditorRef>()
+    const correct = async (text: string) => text
+    await act(async () => { root.render(createElement(AaEditor, { value: 'Hello', ref, correct })) })
+    expect(ref.current?.editor?.correcting).toBe(true)
+    await act(async () => { root.render(createElement(AaEditor, { value: 'Hello', ref, correct, correcting: false })) })
+    expect(ref.current?.editor?.correcting).toBe(false)
+    await act(async () => { root.unmount() })
+    container.remove()
+  })
 })

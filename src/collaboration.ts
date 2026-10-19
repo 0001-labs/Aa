@@ -82,10 +82,14 @@ export function connectCollaboration(editor: Editor, transport: CollaborationTra
     } catch (error) { fail(error) } finally { applying = false }
   }
   const stop = transport.subscribe(receive)
-  const local = () => {
+  const local = (event: Event) => {
     if (applying || !initialized || stopped) return
     const change = textChange(text.toString(), editor.value)
+    // A correction is a step of its own to undo, apart from the typing around it.
+    const correction = (event as CustomEvent<{ correction?: boolean } | null>).detail?.correction
+    if (correction) undo.stopCapturing()
     doc.transact(() => { if (change.end > change.start) text.delete(change.start, change.end - change.start); if (change.text) text.insert(change.start, change.text) }, LOCAL)
+    if (correction) undo.stopCapturing()
   }
   const publish = () => {
     if (!initialized || stopped || applying || !transport.publishSelection) return

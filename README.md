@@ -23,6 +23,21 @@ Nothing is drawn beside a block. Enter starts a new one, `/` opens the styles, a
 
 `selection()`, `selectRange()`, `replace()` and `transaction()` work in Markdown offsets. `decorate([{ from, to, className, label }], layer)` adds comments, matches or peer carets without changing Markdown. `stats()` returns word and character counts. Call `destroy()` to release listeners, menus and atom resources.
 
+## Correction while writing
+
+Give the editor a `correct` call and it corrects the person's words as they write, in place, with no suggestions or underlines: the corrected text simply replaces what was written. The product makes the call (Aa holds no model or key); Aa decides when to ask and how much of the answer to take.
+
+```ts
+createEditor(host, {
+  correct: (markdown, { kind, before, after, signal }) => api.correct({ markdown, before, after }, { signal }),
+})
+```
+
+- **When.** A block is asked about once its words rest: after a pause in typing (`PAUSE`, 800 ms), or as soon as the caret leaves it. Only blocks the person typed in are asked about, never text set from outside, code, tables or equations. Nothing is asked or changed during an IME composition.
+- **What is taken.** The answer is compared word by word. Only edits within the words are made: never Markdown's syntax, code, atoms, link addresses or bare addresses, and never the word the caret is in (that one follows once the caret leaves). An answer that rewrites rather than corrects is not taken. An answer for a block that changed since it was asked about is dropped, and its `signal` aborted.
+- **How.** Each correction is an edit from outside: only its block is drawn again, in its own element, and the caret and focus stay among the same words. It is a step of its own to undo; ⌘Z gives back what the person wrote, and a correction taken back is not made again. `onChange` reports it like any change, and collaboration keeps it a step of its own in Yjs's undo.
+- **Off.** `correcting: false` starts it off, `editor.correcting` turns it on and off, and `<aa-editor correct="off">` turns it off on the element. While it corrects, the editor turns the browser's own spelling marks off.
+
 ## React
 
 ```tsx
@@ -32,7 +47,7 @@ import '@0001-labs/aa/aa.css'
 <AaEditor value={markdown} onChange={setMarkdown} toolbar />
 ```
 
-The ref exposes `editor`, `focus()`, `undo()` and `redo()`. Keep capability arrays and callbacks that define atoms or drawing stable to preserve the editor instance. React is an optional peer dependency.
+The ref exposes `editor`, `focus()`, `undo()` and `redo()`; `correct` and `correcting` are props. Keep capability arrays and callbacks that define atoms or drawing stable to preserve the editor instance. React is an optional peer dependency.
 
 ## Diagrams
 

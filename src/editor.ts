@@ -13,6 +13,7 @@ import { indentBlocks, renumber, toggleCallout } from './document'
 import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableAction } from './table'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
+import { createCorrection, type Corrector } from './correction'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -55,7 +56,7 @@ export type EditorOptions = {
    * nothing for ''. Never without menus or in a read-only editor.
    */
   blockPlaceholder?: string
-  /** Called after every change the person made, with the document as Markdown. */
+  /** Called after every change the person made, and every correction, with the document as Markdown. */
   onChange?: (value: string) => void
   /** The atoms to read and draw; a picture unless told otherwise. */
   atoms?: readonly Atom[]
@@ -66,6 +67,14 @@ export type EditorOptions = {
   blockCommands?: readonly Command[]
   menus?: boolean
   drawEquation?: (element: HTMLElement, source: string, display: boolean) => void | (() => void)
+  /**
+   * Corrects the person's words as they write, in place: Aa sends a block's
+   * Markdown once its words rest and puts the answer in, one step to undo.
+   * The product makes the call; without it, nothing is corrected.
+   */
+  correct?: Corrector
+  /** Whether `correct` starts on; `editor.correcting` turns it on and off. */
+  correcting?: boolean
 }
 
 export type Editor = {
@@ -98,6 +107,8 @@ export type Editor = {
   selectRange(start: number, end?: number): void
   transaction(action: () => void): void
   setHistoryProvider(provider: { undo(): boolean; redo(): boolean } | null): void
+  /** Whether the words are corrected as they are written; always false without `correct`. */
+  correcting: boolean
   destroy(): void
 }
 
@@ -293,6 +304,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const snapshot = (anchor: Pos, focus: Pos): Snapshot => ({ blocks, anchor, focus })
 
   const commit = (next: Block[], anchor: Pos, focus: Pos, kind: ChangeKind) => {
+    const before = blocks
     clearBlocks()
     const numbered = renumber(next)
     const adjust = (pos: Pos) => ({ ...pos, offset: Math.max(0, pos.offset + numbered[pos.block].prefix - next[pos.block].prefix) })
@@ -305,6 +317,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       history.record(snapshot(anchor, focus), kind)
       options.onChange?.(toMarkdown(blocks))
       host.dispatchEvent(new Event('aa-change'))
+      correction?.written(before, kind !== 'edit')
     }
   }
 
@@ -317,8 +330,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     host.dispatchEvent(new Event('aa-change'))
   }
 
-  const undo = () => { if (readOnly) return false; if (historyProvider) return historyProvider.undo(); const state = history.undo(); if (state) restore(state); return !!state }
-  const redo = () => { if (readOnly) return false; if (historyProvider) return historyProvider.redo(); const state = history.redo(); if (state) restore(state); return !!state }
+  const undo = () => { if (readOnly) return false; correction?.undoing(); if (historyProvider) return historyProvider.undo(); const state = history.undo(); if (state) restore(state); return !!state }
+  const redo = () => { if (readOnly) return false; correction?.stop(); if (historyProvider) return historyProvider.redo(); const state = history.redo(); if (state) restore(state); return !!state }
 
   /** The block the browser just changed, read back into the document. */
   const readBack = (element: HTMLElement) => {
@@ -353,6 +366,43 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const { blocks: next, caret } = replaceRange(blocks, selection.anchor, selection.focus, text)
     commit(next, caret, caret, kind)
   }
+
+  // ----- correction -----
+
+  /**
+   * A block's words corrected, put in as an edit from outside: the block is
+   * drawn again in its own element and no other, the caret and focus stay
+   * among the same words, and it is a step of its own to undo.
+   */
+  const correctBlock = (index: number, source: string, shift: (offset: number) => number) => {
+    const selection = readSelection(), focused = host.contains(document.activeElement)
+    const { blocks: next } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, source)
+    if (next.length !== blocks.length) return
+    const keep = (pos: Pos): Pos => pos.block === index ? { block: index, offset: shift(pos.offset) } : pos
+    const end = { block: index, offset: next[index].source.length }
+    const anchor = selection ? keep(selection.anchor) : end, focus = selection ? keep(selection.focus) : end
+    blocks = next
+    draw(elements()[index], blocks[index], revealFor(index, selection && { anchor, focus }))
+    sweep()
+    // Put back only where it was drawn away, and only while the editor has the focus, which setting a selection could otherwise take.
+    const touched = !!selection && Math.min(selection.anchor.block, selection.focus.block) <= index && Math.max(selection.anchor.block, selection.focus.block) >= index
+    if (touched && focused) setSelection(anchor, focus)
+    history.record(snapshot(anchor, focus), 'edit')
+    options.onChange?.(toMarkdown(blocks))
+    host.dispatchEvent(new CustomEvent('aa-change', { detail: { correction: true } }))
+  }
+  const spellcheck = host.getAttribute('spellcheck')
+  /** Correcting, the browser's own marks and suggestions are left out: the words are corrected, not underlined. */
+  const markSpelling = (on: boolean) => { if (on) host.setAttribute('spellcheck', 'false'); else if (spellcheck === null) host.removeAttribute('spellcheck'); else host.setAttribute('spellcheck', spellcheck) }
+  const correction = options.correct ? createCorrection({
+    blocks: () => blocks,
+    atoms,
+    selection: readSelection,
+    busy: () => readOnly || composing || destroyed || transactionDepth > 0,
+    apply: correctBlock,
+    value: () => toMarkdown(blocks),
+  }, options.correct, options.correcting !== false) : null
+  if (correction?.enabled) markSpelling(true)
 
   // ----- events -----
 
@@ -761,7 +811,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (element && element.parentElement === host) readBack(element)
     if (pendingDecorations) redecorate(pendingDecorations)
   }
-  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !document.activeElement?.closest?.('.aa-caption') && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); showPlaceholder(); host.dispatchEvent(new Event('aa-selectionchange')) } }
+  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !document.activeElement?.closest?.('.aa-caption') && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); showPlaceholder(); host.dispatchEvent(new Event('aa-selectionchange')); correction?.moved() } }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
@@ -833,6 +883,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     describe()
     clearBlocks()
     showPlaceholder()
+    correction?.stop()
     for (const element of elements()) { element.contentEditable = value || element.dataset.kind === 'table' ? 'false' : 'true'; element.dataset.readonly = String(value); element.querySelectorAll<HTMLElement>('[data-cell], .aa-caption').forEach(cell => cell.contentEditable = value ? 'false' : 'true') }
     host.dispatchEvent(new Event('aa-change'))
   }
@@ -933,8 +984,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       }
     },
     setHistoryProvider(provider) { historyProvider = provider },
+    get correcting() { return !!correction?.enabled },
+    set correcting(value: boolean) { if (!correction || correction.enabled === value) return; correction.enabled = value; markSpelling(value) },
     destroy() {
       destroyed = true
+      correction?.stop()
       stopSelection()
       stopControls()
       host.removeEventListener('beforeinput', onBeforeInput)

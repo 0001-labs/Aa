@@ -3,10 +3,11 @@ import { createEditor, type Editor, type EditorOptions } from './editor'
 /**
  * `<aa-editor>`: the editor as an element, in the page's own DOM so the
  * page's type and colours reach it. `value` is the Markdown; `input` fires
- * on every change the person makes.
+ * on every change the person makes. With `options.correct`, words are
+ * corrected as they are written, unless `correct="off"`.
  */
 export class AaEditorElement extends (typeof HTMLElement === 'undefined' ? class {} as typeof HTMLElement : HTMLElement) {
-  static observedAttributes = ['readonly', 'placeholder']
+  static observedAttributes = ['readonly', 'placeholder', 'correct']
   #editor: Editor | null = null
   #pending: string | null = null
   /** Set before connection; custom actions, files and equation drawing stay with the product. */
@@ -34,6 +35,7 @@ export class AaEditorElement extends (typeof HTMLElement === 'undefined' ? class
       readOnly: this.hasAttribute('readonly'),
       placeholder: this.getAttribute('placeholder') ?? '',
       toolbar: this.options.toolbar ?? this.hasAttribute('toolbar'),
+      correcting: this.options.correcting !== false && this.getAttribute('correct') !== 'off',
       onChange: value => { this.options.onChange?.(value); this.dispatchEvent(new Event('input', { bubbles: true })) },
     })
   }
@@ -48,6 +50,7 @@ export class AaEditorElement extends (typeof HTMLElement === 'undefined' ? class
     if (!this.#editor) return
     if (name === 'readonly') this.#editor.readOnly = value !== null
     if (name === 'placeholder') this.#editor.placeholder = value ?? ''
+    if (name === 'correct') this.#editor.correcting = value !== 'off'
   }
 
   get value(): string { return this.#editor ? this.#editor.value : this.#pending ?? this.getAttribute('value') ?? '' }
