@@ -327,8 +327,10 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     if (coarse()) dock(toolbar)
     else {
       delete toolbar.dataset.docked; toolbar.style.width = ''
-      const range = window.getSelection()?.rangeCount ? window.getSelection()!.getRangeAt(0) : null
-      const rect = range?.getBoundingClientRect?.() ?? host.getBoundingClientRect()
+      // Over the selected words, measured from where they are in the Markdown: with the focus in the bar's own
+      // field the page's selection is the field's, and a pinch-zoomed page pans as it is typed in.
+      const words = saved ? editor.rangeOf(saved.start, saved.end) : null
+      const rect = words?.getBoundingClientRect?.() ?? host.getBoundingClientRect()
       // As Design system 1's context bar: half a square above the selection, below it when there is no room.
       const box = toolbar.getBoundingClientRect(), half = (box.height + 1) / 2
       const above = rect.top - half - box.height

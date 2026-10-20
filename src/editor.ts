@@ -136,6 +136,8 @@ export type Editor = {
   stats(): { words: number; characters: number; blocks: number }
   find(query: string, caseSensitive?: boolean): { start: number; end: number }[]
   selectRange(start: number, end?: number): void
+  /** The words from `start` to `end`, offsets into the Markdown, as a range in the page: to stand something over them. */
+  rangeOf(start: number, end: number): Range | null
   transaction(action: () => void): void
   setHistoryProvider(provider: { undo(): boolean; redo(): boolean } | null): void
   /** Whether the words are corrected as they are written; always false without `correct`. */
@@ -1411,6 +1413,13 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     },
     stats() { const text = blocks.flatMap(block => block.kind === 'code' ? [] : [block.source.slice(block.prefix)]).join(' ').replace(/[*_~`#>|=$\[\]()]/g, ' '); const words = typeof Intl.Segmenter === 'function' ? [...new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text)].filter(part => part.isWordLike).length : (text.match(/\S+/g)?.length ?? 0); return { words, characters: [...toMarkdown(blocks)].length, blocks: blocks.length } },
     find(query, caseSensitive = false) { if (!query) return []; const text = caseSensitive ? toMarkdown(blocks) : toMarkdown(blocks).toLocaleLowerCase(); const needle = caseSensitive ? query : query.toLocaleLowerCase(); const matches: { start: number; end: number }[] = []; for (let start = text.indexOf(needle); start >= 0; start = text.indexOf(needle, start + needle.length)) matches.push({ start, end: start + query.length }); return matches },
+    rangeOf(start, end) {
+      const a = posOf(start), b = posOf(end), els = elements()
+      if (!els[a.block] || !els[b.block]) return null
+      const from = pointAt(els[a.block], Math.min(a.offset, blocks[a.block].source.length)), to = pointAt(els[b.block], Math.min(b.offset, blocks[b.block].source.length))
+      const range = document.createRange(); range.setStart(from.node, from.offset); range.setEnd(to.node, to.offset)
+      return range
+    },
     selectRange(start, end = start) { const a = posOf(start), b = posOf(end); clearBlocks(); elements()[a.block].focus(); setSelection(a, b); applyReveal({ anchor: a, focus: b }) },
     transaction(action) {
       const before = toMarkdown(blocks)

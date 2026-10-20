@@ -351,6 +351,26 @@ describe('asking AI', () => {
 })
 
 describe('asking about selected words from the bar', () => {
+  it('stays over the words while the field is typed in, though the page pans', () => {
+    vi.useFakeTimers()
+    host = document.createElement('div'); document.body.append(host)
+    const e = editor = createEditor(host, { value: 'One two three', toolbar: true, prompt: async () => 'TWO' })
+    // A range in the writing stands at 100, anything else (the field's selection) at 500.
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockImplementation(function (this: Range) {
+      return new DOMRect(10, host!.contains(this.commonAncestorContainer) ? 100 : 500, 40, 20)
+    })
+    e.selectRange(4, 7); host.dispatchEvent(new Event('aa-selectionchange')); vi.advanceTimersByTime(200)
+    const toolbar = document.querySelector('aa-toolbar') as HTMLElement
+    expect(toolbar.hidden).toBe(false)
+    const top = toolbar.style.top
+    const input = toolbar.querySelector<HTMLInputElement>('.aa-toolbar-ask input')!
+    input.focus()
+    const inField = document.createRange(); inField.selectNodeContents(toolbar)
+    window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(inField)
+    window.dispatchEvent(new Event('scroll'))
+    expect(toolbar.style.top).toBe(top)
+    vi.restoreAllMocks(); vi.useRealTimers()
+  })
   it('puts the answer in the words’ place, one step to undo, and keeps it selected', async () => {
     const asked: PromptContext[] = []
     host = document.createElement('div'); document.body.append(host)
