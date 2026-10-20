@@ -704,7 +704,14 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-composer > .aa-avatar { align-self: flex-start; margin-top: calc((var(--aa-unit) - 16px * var(--aa-sf, 1)) / 2); }
 .aa-composer > .aa-composer-send { align-self: flex-end; }
 .aa-composer-send { color: var(--aa-muted); }
-.aa-composer textarea[hidden] { display: none; }
+.aa-composer-field[hidden] { display: none; }
+/* The field and, behind it, a copy of its words with the people named in their colour: the same type, width and wrapping, so each letter lies on its own. */
+.aa-composer-field { position: relative; display: flex; flex: 1 1 auto; min-width: 0; }
+.aa-composer-backdrop { position: absolute; inset: 0; overflow: hidden; white-space: pre-wrap; overflow-wrap: break-word; line-height: var(--aa-unit); pointer-events: none; }
+.aa-composer textarea { position: relative; }
+.aa-composer textarea[data-mentions]:not([data-asking], [data-listening]) { color: transparent; caret-color: var(--ds-text-color, currentColor); }
+.aa-composer textarea[data-mentions]::selection { color: transparent; }
+.aa-composer-field:has(textarea:is([data-asking], [data-listening])) .aa-composer-backdrop { visibility: hidden; }
 .aa-composer-thinking { flex: 1 1 auto; min-width: 0; line-height: var(--aa-unit); }
 .aa-composer-send:hover { color: inherit; }
 /* The people menu under the composer: the Context face, a person a row. */

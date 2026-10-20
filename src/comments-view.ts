@@ -355,6 +355,25 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
 
   // ----- drawing -----
 
+  /** A text with the people it names set in their colour, as Link's mentions are. */
+  const mentionPieces = (text: string, mentioned: readonly CommentPerson[]): (string | HTMLElement)[] => {
+    const names = mentioned.filter(person => person.name.trim()).sort((a, b) => b.name.length - a.name.length)
+    const pattern = names.length ? new RegExp(names.map(person => `@${person.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).join('|'), 'g') : null
+    if (!pattern) return [text]
+    const pieces: (string | HTMLElement)[] = []
+    let last = 0
+    for (const match of text.matchAll(pattern)) {
+      pieces.push(text.slice(last, match.index))
+      const mention = doc.createElement('span'); mention.className = 'aa-comment-mention'; mention.textContent = match[0]
+      const person = names.find(each => `@${each.name.trim()}` === match[0])
+      if (person) mention.style.setProperty('--aa-person', personColour(person))
+      pieces.push(mention)
+      last = match.index + match[0].length
+    }
+    pieces.push(text.slice(last))
+    return pieces
+  }
+
   const grow = (field: HTMLTextAreaElement) => { field.style.height = '0px'; const height = field.scrollHeight; field.style.height = height ? `${height}px` : '' }
 
   const composer = (key: string, placeholder: string): HTMLElement => {
@@ -369,6 +388,17 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const offered = speaks ? `Press space to speak, or ${lower}` : options.prompt ? `Press space for AI, or ${lower}` : placeholder
     field.rows = 1; field.placeholder = offered; field.setAttribute('aria-label', placeholder)
     field.value = drafts.get(key) ?? ''
+    // A textarea's words are all one colour: the people named are drawn in theirs on a copy of the words behind it, the field's own letters clear over them.
+    const wrap = doc.createElement('span'); wrap.className = 'aa-composer-field'
+    const backdrop = doc.createElement('span'); backdrop.className = 'aa-composer-backdrop'; backdrop.setAttribute('aria-hidden', 'true')
+    wrap.append(backdrop, field)
+    const paint = () => {
+      const named = field.value.includes('@') ? mentionsIn(field.value, [...people.values()]) : []
+      field.toggleAttribute('data-mentions', named.length > 0)
+      // A line break at the end takes room only with something after it.
+      if (named.length) backdrop.replaceChildren(...mentionPieces(field.value, named), '\u200b'); else backdrop.replaceChildren()
+    }
+    paint()
     field.disabled = busy.has(key)
     let asking: AbortController | null = null
     const stopAsking = () => { asking?.abort(); asking = null; delete field.dataset.asking; field.removeAttribute('data-aa-glisten'); field.placeholder = offered }
@@ -382,14 +412,14 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       // While AI thinks, the field gives way to Thinking…, glistening as the prompt does: a textarea's own letters cannot.
       const thinking = Object.assign(doc.createElement('span'), { className: 'aa-composer-thinking', textContent: 'Thinking…' })
       thinking.setAttribute('data-aa-glisten', ''); thinking.setAttribute('role', 'status')
-      field.before(thinking); field.hidden = true; field.readOnly = true
+      wrap.before(thinking); wrap.hidden = true; field.readOnly = true
       try {
         const answer = await options.prompt(said, { kind: 'writing', signal, text: quote, before: sofar, after: '' })
         if (signal.aborted) return
         const words = typeof answer === 'string' ? answer : answer.insert ?? answer.document ?? ''
         field.value = words.trim(); drafts.set(key, field.value)
       } catch (error) { if (!signal.aborted) refused(key, error) }
-      finally { thinking.remove(); field.hidden = false; field.readOnly = false; stopAsking(); grow(field); field.focus() }
+      finally { thinking.remove(); wrap.hidden = false; field.readOnly = false; stopAsking(); paint(); grow(field); field.focus() }
     }
     // Listening, the words heard go into the field as they come, after what was there; any key but Enter and Escape stops it and types on.
     let speaking: { stop(): void; abort(): void } | null = null
@@ -399,14 +429,14 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
         lang: doc.documentElement.lang || navigator.language,
         heard: words => {
           if (!field.isConnected) { speaking?.abort(); return }
-          field.value = `${before}${before && words ? ' ' : ''}${words}`; drafts.set(key, field.value); grow(field)
+          field.value = `${before}${before && words ? ' ' : ''}${words}`; drafts.set(key, field.value); paint(); grow(field)
         },
         end: failure => { speaking = null; delete field.dataset.listening; field.placeholder = failure ?? offered },
       })
       if (speaking) { field.dataset.listening = ''; field.placeholder = 'Listening…' }
     }
     field.addEventListener('blur', () => speaking?.stop())
-    field.addEventListener('input', () => { drafts.set(key, field.value); grow(field); if (!asking) askPeople(field) })
+    field.addEventListener('input', () => { drafts.set(key, field.value); paint(); grow(field); if (!asking) askPeople(field) })
     field.addEventListener('keydown', event => {
       if (menuKeys(event)) return
       if (speaking && !event.isComposing) {
@@ -429,7 +459,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const post = iconButton(key === 'draft' ? 'Comment' : 'Reply', 'send', () => send(key, field.value))
     post.classList.add('aa-composer-send')
     post.disabled = busy.has(key)
-    form.append(field, post)
+    form.append(wrap, post)
     form.addEventListener('submit', event => { event.preventDefault(); send(key, field.value) })
     // The field takes its height from its words once it stands on the page.
     view.requestAnimationFrame(() => grow(field))
@@ -466,23 +496,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       const body = doc.createElement('p')
       body.className = 'aa-comment-body'
       // The people named are set in their colour, as Link's mentions are.
-      const names = (comment.mentions ?? []).filter(person => person.name.trim()).sort((a, b) => b.name.length - a.name.length)
-      let rest = comment.body
-      const pieces: (string | HTMLElement)[] = []
-      const pattern = names.length ? new RegExp(names.map(person => `@${person.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).join('|'), 'g') : null
-      if (pattern) {
-        let last = 0
-        for (const match of rest.matchAll(pattern)) {
-          pieces.push(rest.slice(last, match.index))
-          const mention = doc.createElement('span'); mention.className = 'aa-comment-mention'; mention.textContent = match[0]
-          const person = names.find(each => `@${each.name.trim()}` === match[0])
-          if (person) mention.style.setProperty('--aa-person', personColour(person))
-          pieces.push(mention)
-          last = match.index + match[0].length
-        }
-        pieces.push(rest.slice(last))
-      } else pieces.push(rest)
-      body.append(...pieces)
+      body.append(...mentionPieces(comment.body, comment.mentions ?? []))
       row.append(body)
     }
     // The reactions it has, each a chip with its count (pressed where the person reading gave it), and one more to give.

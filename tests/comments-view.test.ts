@@ -268,6 +268,23 @@ describe('a long thread', () => {
   })
 })
 
+describe('mentions in the field', () => {
+  it('colours a person once named, on a copy of the words behind the field', () => {
+    setup()
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    const field = popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!
+    field.value = '@'; field.setSelectionRange(1, 1); field.dispatchEvent(new Event('input', { bubbles: true }))
+    return tick().then(() => {
+      const option = Array.from(document.querySelectorAll<HTMLButtonElement>('.aa-comments-people button')).find(button => button.textContent?.includes('Bo'))!
+      option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); option.click()
+      const named = popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!
+      expect(named.value).toBe('@Bo ')
+      expect(named.hasAttribute('data-mentions')).toBe(true)
+      expect(popover()!.querySelector('.aa-composer-backdrop .aa-comment-mention')?.textContent).toBe('@Bo')
+    })
+  })
+})
+
 describe('asking AI from the field', () => {
   it('offers AI in the empty field where the product answers, and puts the answer in as the draft', async () => {
     host = document.createElement('div'); document.body.append(host)
@@ -282,7 +299,7 @@ describe('asking AI from the field', () => {
     expect(field.placeholder).toBe('Ask AI about these words')
     field.value = 'Why two?'; enter(field)
     expect(popover()!.querySelector('.aa-composer-thinking[data-aa-glisten]')?.textContent).toBe('Thinking…')
-    expect(field.hidden).toBe(true)
+    expect(field.closest<HTMLElement>('.aa-composer-field')!.hidden).toBe(true)
     await tick()
     expect(popover()!.querySelector('.aa-composer-thinking')).toBeNull()
     expect(asked).toEqual([{ said: 'Why two?', text: 'two', before: 'Bo: Why two?' }])
