@@ -664,6 +664,19 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-comment-time { color: var(--aa-muted); white-space: nowrap; }
 .aa-comment-body { margin: 0 0 0 var(--aa-unit); line-height: var(--aa-unit); white-space: pre-wrap; overflow-wrap: anywhere; }
 .aa-comment-mention { color: var(--aa-person, inherit); }
+/* Reactions under a comment: chips one control high with the emoji and its count, pressed where
+   the person reading gave it; a plus gives one more, from the sixteen in the Context face, eight a row. */
+.aa-comment-reactions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); min-height: var(--aa-unit); margin-left: var(--aa-unit); line-height: calc(16px * var(--aa-sf, 1)); }
+.aa-reaction { display: inline-flex; align-items: center; gap: calc(4px * var(--aa-sf, 1)); height: calc(16px * var(--aa-sf, 1)); margin: 0; padding: 0 calc(4px * var(--aa-sf, 1)); border: 0; border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1))); background: var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)); color: inherit; font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf, 1)); cursor: pointer; }
+.aa-reaction:hover:not(:disabled) { background: var(--ds-fill-hover, light-dark(#d8d8d8, #4a4a4a)); }
+.aa-reaction[aria-pressed="true"] { background: var(--ds-zenith-blue, var(--zenith-blue, #ccccff)); color: var(--ds-sharp-blue, var(--sharp-blue, #594dff)); }
+.aa-reaction:disabled { cursor: default; }
+.aa-reaction-count { font-variant-numeric: tabular-nums; }
+.aa-reaction-add { color: var(--aa-muted); }
+.aa-reaction-add:hover { color: inherit; }
+.aa-reaction:focus-visible { outline: 2px solid var(--ds-focus-ring, #594dff); outline-offset: 1px; }
+.aa-reaction-picker { display: grid; grid-template-columns: repeat(8, var(--aa-square)); width: calc(8 * var(--aa-square)); gap: 1px; }
+.aa-reaction-picker button { width: calc(var(--aa-square) - 1px); min-width: 0; justify-content: center; padding: 0; }
 .aa-thread-resolved { margin: 0 0 0 var(--aa-unit); min-height: var(--aa-unit); color: var(--aa-muted); }
 .aa-comments-error { margin: 0 0 0 var(--aa-unit); min-height: var(--aa-unit); color: var(--ds-tuned-red, var(--tuned-red, #ff5f5f)); }
 /* The avatar is Design system 1's `.ds-avatar` mark, as Ezo draws a person: round, one control

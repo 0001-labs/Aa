@@ -18,6 +18,9 @@ export type CommentPerson = { id: string; name: string; colour?: string }
 /** Where a thread stands: offsets into the Markdown, and the words there. */
 export type CommentRange = { from: number; to: number; quote: string }
 
+/** One emoji on a comment: how many gave it, whether the person reading did, and who else did. */
+export type CommentReaction = { emoji: string; count: number; reacted: boolean; names: readonly string[] }
+
 export type Comment = {
   id: string
   author: CommentPerson
@@ -26,7 +29,11 @@ export type Comment = {
   editedAt?: number
   /** The people named in the body, as `@Name`. */
   mentions?: readonly CommentPerson[]
+  reactions?: readonly CommentReaction[]
 }
+
+/** The reactions on offer, Link's sixteen. */
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '👏', '😊', '🔥', '✅', '👀', '🤔', '💡', '🚀', '✨', '🙌', '💯'] as const
 
 export type CommentThread = CommentRange & {
   id: string
@@ -66,6 +73,8 @@ export type CommentStore = {
   move?(moves: readonly CommentMove[]): Promise<unknown>
   /** The person reading has opened the thread. */
   seen?(threadId: string): Promise<unknown>
+  /** Give a comment an emoji, or take the person's own back. Without it, no reactions. */
+  react?(commentId: string, emoji: string): Promise<unknown>
   /** The people who may be mentioned, for what has been typed after `@`. */
   people?(query: string): readonly CommentPerson[] | Promise<readonly CommentPerson[]>
   /** Where the threads are drawn: an element beside the text for a panel; without it, a popover at the range. */

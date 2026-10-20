@@ -76,9 +76,11 @@ describe('the popover', () => {
     const open = popover()!
     expect(open).not.toBeNull()
     expect(open.getAttribute('role')).toBe('dialog')
-    // The words stand right over the popover, so it does not name them; the controls end the first comment's row.
+    // The words stand right over the popover, so it does not name them; the thread's own row, with Resolve, stands above the comments.
     expect(open.querySelector('.aa-thread-quote')).toBeNull()
-    expect(open.querySelector('.aa-comment-meta .aa-thread-actions [aria-label="Resolve"]')).not.toBeNull()
+    const head = open.querySelector('.aa-thread > .aa-thread-head')!
+    expect(head.querySelector('[aria-label="Resolve"]')).not.toBeNull()
+    expect(head.nextElementSibling?.classList.contains('aa-comment-entry')).toBe(true)
     expect(open.querySelector('.aa-comment-author')?.textContent).toBe('Bo')
     expect(open.querySelector('.aa-comment-body')?.textContent).toBe('Why two?')
     expect(open.querySelector('.aa-avatar')?.textContent).toBe('B')
@@ -210,6 +212,41 @@ describe('the popover', () => {
     await tick()
     expect(store!.threads).toHaveLength(0)
     expect(popover()).toBeNull()
+  })
+})
+
+describe('reactions', () => {
+  it('shows each comment’s reactions with their counts, gives one from the sixteen, and takes it back', async () => {
+    setup({ threads: [{ ...threads()[0], comments: [{ id: 'c1', author: bo, body: 'Why two?', createdAt: 1000, reactions: [{ emoji: '👍', count: 2, reacted: false, names: ['Cy', 'Di'] }] }] }] })
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    const chip = popover()!.querySelector<HTMLButtonElement>('.aa-reaction')!
+    expect(chip.textContent).toBe('👍2')
+    expect(chip.getAttribute('aria-pressed')).toBe('false')
+    expect(chip.title).toBe('Cy, Di')
+    popover()!.querySelector<HTMLButtonElement>('[aria-label="Add reaction"]')!.click()
+    const picker = document.querySelector('.aa-reaction-picker')!
+    expect(picker.querySelectorAll('button')).toHaveLength(16)
+    picker.querySelector<HTMLButtonElement>('[aria-label="React with 🎉"]')!.click()
+    await tick()
+    expect(document.querySelector('.aa-reaction-picker')).toBeNull()
+    const chips = Array.from(popover()!.querySelectorAll<HTMLButtonElement>('.aa-reaction'))
+    expect(chips.map(each => [each.textContent, each.getAttribute('aria-pressed')])).toEqual([['👍2', 'false'], ['🎉1', 'true']])
+    chips[0].click()
+    await tick()
+    expect(popover()!.querySelectorAll('.aa-reaction')[0].textContent).toBe('👍3')
+    expect(popover()!.querySelectorAll('.aa-reaction')[0].getAttribute('aria-pressed')).toBe('true')
+    popover()!.querySelectorAll<HTMLButtonElement>('.aa-reaction')[1].click()
+    await tick()
+    expect(popover()!.querySelectorAll('.aa-reaction')).toHaveLength(1)
+  })
+  it('sends nothing for an empty comment', async () => {
+    setup()
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    const field = popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!
+    field.value = '   '; enter(field)
+    await tick()
+    expect(store!.threads[0].comments).toHaveLength(1)
+    await expect(store!.reply('t1', ' ', [])).rejects.toThrow('Write a comment')
   })
 })
 

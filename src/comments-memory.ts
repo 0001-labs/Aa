@@ -4,7 +4,7 @@
  * times, who may delete, what is unread, the people to mention.
  */
 
-import type { Comment, CommentMove, CommentPerson, CommentRange, CommentStore, CommentThread } from './comments'
+import { REACTION_EMOJIS, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 
 export type MemoryCommentStore = CommentStore & {
   /** The threads as they are kept. */
@@ -31,8 +31,24 @@ export function memoryCommentStore(options: MemoryCommentStoreOptions = {}): Mem
   const id = (prefix: string) => `${prefix}${(++counter).toString(36)}${now().toString(36).slice(-3)}`
   const me = options.me
   const seen = new Map<string, number>()
+  /** Who gave which emoji to which comment, in the order given. */
+  const reactions = new Map<string, { emoji: string; person: CommentPerson }[]>()
+  const withReactions = (comment: Comment): Comment => {
+    const given = reactions.get(comment.id) ?? []
+    if (!given.length && !comment.reactions?.length) return comment
+    const grouped = new Map<string, { emoji: string; count: number; reacted: boolean; names: string[] }>()
+    for (const reaction of comment.reactions ?? []) grouped.set(reaction.emoji, { ...reaction, names: [...reaction.names] })
+    for (const { emoji, person } of given) {
+      const entry = grouped.get(emoji) ?? { emoji, count: 0, reacted: false, names: [] }
+      entry.count++
+      if (me && person.id === me.id) entry.reacted = true; else entry.names.push(person.name)
+      grouped.set(emoji, entry)
+    }
+    return { ...comment, reactions: [...grouped.values()] }
+  }
   const view = (): CommentThread[] => threads.map(thread => ({
     ...thread,
+    comments: thread.comments.map(withReactions),
     canDelete: !!me && thread.comments[0]?.author.id === me.id,
     unread: !!me && thread.comments.some(comment => comment.author.id !== me.id && comment.createdAt > (seen.get(thread.id) ?? 0)),
   }))
@@ -49,6 +65,7 @@ export function memoryCommentStore(options: MemoryCommentStoreOptions = {}): Mem
     subscribe(receive) { listeners.add(receive); receive(view()); return () => { listeners.delete(receive) } },
     async add(range: CommentRange, body: string, mentions: readonly CommentPerson[]) {
       const author = writer(); await wait()
+      if (!body.trim()) throw new Error('Write a comment first')
       const at = now()
       const comment: Comment = { id: id('c'), author, body, createdAt: at, mentions: [...mentions] }
       const thread: CommentThread = { id: id('t'), ...range, comments: [comment], createdAt: at, updatedAt: at }
@@ -57,6 +74,7 @@ export function memoryCommentStore(options: MemoryCommentStoreOptions = {}): Mem
     },
     async reply(threadId, body, mentions) {
       const author = writer(); await wait()
+      if (!body.trim()) throw new Error('Write a comment first')
       const thread = find(threadId)
       if (thread.resolvedAt) throw new Error('Reopen this thread before replying')
       const at = now()
@@ -87,6 +105,15 @@ export function memoryCommentStore(options: MemoryCommentStoreOptions = {}): Mem
       tell()
     },
     async seen(threadId) { seen.set(threadId, now()); tell() },
+    async react(commentId, emoji) {
+      const person = writer(); await wait()
+      if (!(REACTION_EMOJIS as readonly string[]).includes(emoji)) throw new Error('Not one of the reactions')
+      if (!threads.some(thread => thread.comments.some(comment => comment.id === commentId))) throw new Error('This comment is gone')
+      const given = reactions.get(commentId) ?? []
+      const mine = given.findIndex(each => each.emoji === emoji && each.person.id === person.id)
+      reactions.set(commentId, mine >= 0 ? given.filter((_, index) => index !== mine) : [...given, { emoji, person }])
+      tell()
+    },
     people(query) { const needle = query.trim().toLocaleLowerCase(); return (options.people ?? []).filter(person => !needle || person.name.toLocaleLowerCase().includes(needle)) },
   }
   return store

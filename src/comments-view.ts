@@ -11,7 +11,7 @@
  * opacity alone.
  */
 
-import { anchorThreads, applyEdit, commentsLabel, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
+import { anchorThreads, applyEdit, commentsLabel, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 import type { Decoration } from './render'
 import { icons } from './icons'
 
@@ -222,7 +222,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     openId = null
     closeDraft()
     editing = null; confirming = null
-    hideMenu()
+    hideMenu(); hidePicker()
     decorate()
     render()
     if (was && back !== undefined && !host.contains(doc.activeElement)) options.selectRange(back)
@@ -347,7 +347,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
 
   // ----- drawing -----
 
-  const grow = (field: HTMLTextAreaElement) => { field.style.height = '0px'; field.style.height = `${field.scrollHeight}px` }
+  const grow = (field: HTMLTextAreaElement) => { field.style.height = '0px'; const height = field.scrollHeight; field.style.height = height ? `${height}px` : '' }
 
   const composer = (key: string, placeholder: string): HTMLElement => {
     const form = doc.createElement('form')
@@ -391,8 +391,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     row.append(meta)
     if (editing === comment.id) {
       const field = doc.createElement('textarea')
-      field.className = 'aa-comment-body aa-comment-editing'; field.rows = 1; field.setAttribute('aria-label', 'Edit comment'); field.dataset.edit = comment.id
+      field.className = 'aa-comment-body aa-comment-editing'; field.setAttribute('aria-label', 'Edit comment'); field.dataset.edit = comment.id
       field.value = drafts.get(`edit:${comment.id}`) ?? comment.body
+      field.rows = Math.max(1, field.value.split('\n').length)
       const save = () => { const words = field.value.trim(); if (!words) return; void write(`edit:${comment.id}`, () => store.edit!(comment.id, words), () => { editing = null; drafts.delete(`edit:${comment.id}`) }) }
       field.addEventListener('input', () => { drafts.set(`edit:${comment.id}`, field.value); grow(field) })
       field.addEventListener('keydown', event => {
@@ -424,9 +425,58 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       body.append(...pieces)
       row.append(body)
     }
-    const error = errors.get(`edit:${comment.id}`)
+    // The reactions it has, each a chip with its count (pressed where the person reading gave it), and one more to give.
+    const canReact = !!store.react && canWrite() && !thread.resolvedAt
+    if (comment.reactions?.length || canReact) {
+      const line = doc.createElement('div')
+      line.className = 'aa-comment-reactions'
+      for (const reaction of comment.reactions ?? []) {
+        const chip = doc.createElement('button')
+        chip.type = 'button'; chip.className = 'aa-reaction'
+        chip.setAttribute('aria-pressed', String(reaction.reacted))
+        chip.setAttribute('aria-label', `${reaction.emoji} ${reaction.count}${reaction.names.length ? `, from ${reaction.names.join(', ')}` : ''}${reaction.reacted ? ', you too' : ''}`)
+        chip.title = [...reaction.names, ...(reaction.reacted ? ['You'] : [])].join(', ')
+        chip.append(Object.assign(doc.createElement('span'), { className: 'aa-reaction-emoji', textContent: reaction.emoji }), Object.assign(doc.createElement('span'), { className: 'aa-reaction-count', textContent: String(reaction.count) }))
+        chip.disabled = !canReact
+        chip.addEventListener('click', event => { event.preventDefault(); void write(`react:${comment.id}`, () => store.react!(comment.id, reaction.emoji)) })
+        line.append(chip)
+      }
+      if (canReact) {
+        const more = iconButton('Add reaction', 'plus', () => openPicker(more, comment.id))
+        more.classList.add('aa-reaction-add')
+        line.append(more)
+      }
+      row.append(line)
+    }
+    const error = errors.get(`edit:${comment.id}`) ?? errors.get(`react:${comment.id}`)
     if (error) { const line = doc.createElement('p'); line.className = 'aa-comments-error'; line.setAttribute('role', 'alert'); line.textContent = error; row.append(line) }
     return row
+  }
+
+  // ----- the reactions on offer -----
+
+  let picker: HTMLElement | null = null
+  const hidePicker = () => { picker?.remove(); picker = null }
+  /** The sixteen, in the Context face under the button, eight a row; a press gives one and the picker goes. */
+  const openPicker = (button: HTMLElement, commentId: string) => {
+    hidePicker()
+    picker = doc.createElement('div')
+    picker.className = 'aa-controls aa-menu aa-reaction-picker'
+    picker.setAttribute('role', 'menu'); picker.setAttribute('aria-label', 'Reactions')
+    for (const emoji of REACTION_EMOJIS) {
+      const cell = doc.createElement('button')
+      cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = emoji; cell.setAttribute('aria-label', `React with ${emoji}`)
+      cell.addEventListener('pointerdown', event => event.preventDefault())
+      cell.addEventListener('click', event => { event.preventDefault(); hidePicker(); void write(`react:${commentId}`, () => store.react!(commentId, emoji)) })
+      picker.append(cell)
+    }
+    picker.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); hidePicker(); button.focus() } })
+    root.append(picker)
+    const rect = button.getBoundingClientRect(), square = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--aa-sf')) || 1)
+    const width = 8 * square, height = 2 * square
+    picker.style.left = `${Math.max(0, Math.min(rect.left, view.innerWidth - width))}px`
+    picker.style.top = `${rect.bottom + square / 2 + height <= view.innerHeight ? rect.bottom + square / 2 : Math.max(0, rect.top - square / 2 - height)}px`
+    picker.querySelector<HTMLButtonElement>('button')?.focus()
   }
 
   const threadElement = (thread: AnchoredThread, expanded: boolean): HTMLElement => {
@@ -450,7 +500,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       head.append(quote)
     }
     if (!expanded) { const count = doc.createElement('span'); count.className = 'aa-thread-count'; count.textContent = String(thread.comments.length); head.append(count) }
-    if (named) article.append(head)
+    article.append(head)
     if (!expanded) return article
     const actions = doc.createElement('div')
     actions.className = 'aa-thread-actions'
@@ -471,13 +521,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
         actions.append(remove)
       }
     }
-    if (named) head.append(actions)
-    thread.comments.forEach((comment, index) => {
-      const row = commentRow(thread, comment)
-      // Without a head row, the controls stand at the end of the first comment's row.
-      if (!named && index === 0) row.querySelector('.aa-comment-meta')?.append(actions)
-      article.append(row)
-    })
+    // The thread's own row, above its comments: the controls on the sixteen at its end.
+    head.append(actions)
+    for (const comment of thread.comments) article.append(commentRow(thread, comment))
     const error = errors.get(`resolve:${thread.id}`) ?? errors.get(`remove:${thread.id}`) ?? errors.get(thread.id)
     if (error) { const line = doc.createElement('p'); line.className = 'aa-comments-error'; line.setAttribute('role', 'alert'); line.textContent = error; article.append(line) }
     if (thread.resolvedAt) {
@@ -513,7 +559,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     popover.dataset.mode = panel ? 'panel' : 'popover'
     popover.setAttribute('role', panel ? 'region' : 'dialog')
     popover.setAttribute('aria-label', 'Comments')
-    popover.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu && !editing) { event.preventDefault(); close() } })
+    popover.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu && !picker && !editing) { event.preventDefault(); close() } })
     // A press inside is its own: the editor's selection is left alone.
     if (!panel) root.append(popover)
     return popover
@@ -579,7 +625,8 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   /** A press anywhere but the popover, the menu or the commented words puts the popover away. */
   const outside = (event: Event) => {
     if (!popover || panel || !(event.target instanceof Node)) return
-    if (popover.contains(event.target) || menu?.contains(event.target)) return
+    if (picker && !picker.contains(event.target)) hidePicker()
+    if (popover.contains(event.target) || menu?.contains(event.target) || picker?.contains(event.target)) return
     if (host.contains(event.target)) return
     close()
   }
@@ -603,7 +650,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       host.removeEventListener('aa-selectionchange', onSelectionChange)
       host.removeEventListener('aa-change', changed)
       host.removeEventListener('click', onPress)
-      hideMenu()
+      hideMenu(); hidePicker()
       if (panel) { panel.replaceChildren(); panel.classList.remove('aa-comments') } else popover?.remove()
       popover = null
       options.decorate([])
