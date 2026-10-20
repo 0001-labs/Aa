@@ -103,44 +103,60 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   let listening: SpeechRecognitionLike | null = null
   let heard: HTMLElement | null = null
   /**
-   * While listening, the caret is a dot after the words heard, where typing
-   * would go on: a mark in the line itself, so it follows the words as they
-   * come. Waiting, it pulses a very little; heard, it grows and shrinks a
-   * very little with the microphone's level.
+   * While listening, the caret is a dot a space after the words heard, where
+   * typing would go on: a mark in the line itself, so it follows the words as
+   * they come, and it stays still while they do. Resting before any words,
+   * it breathes in hue, a second hue laid over it fading in and out with a
+   * slow breath and the microphone's level, by opacity alone; still where
+   * less motion is asked for.
    */
   let dot: HTMLElement | null = null
-  let level: { stream: MediaStream; context: AudioContext; frame: number } | null = null
+  let level: { stream?: MediaStream; context?: AudioContext; frame: number } | null = null
   /** The caret just before the dot, so what is typed goes on from the words heard. */
   const caretAtDot = () => {
     if (!dot) return
     const range = doc.createRange(); range.setStartBefore(dot); range.collapse(true)
     const selection = view.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
   }
+  /** Whether words have come: then a space stands before the dot and it rests. */
+  const worded = () => { if (dot) dot.toggleAttribute('data-after', !!text()) }
   const stopDot = () => {
     dot?.remove(); dot = null
-    if (level) { cancelAnimationFrame(level.frame); level.stream.getTracks().forEach(track => track.stop()); void level.context.close(); level = null }
+    if (level) { cancelAnimationFrame(level.frame); level.stream?.getTracks().forEach(track => track.stop()); void level.context?.close(); level = null }
   }
-  /** The microphone's level, eased, scaling the dot by transform alone; still where less motion is asked for. */
-  const followLevel = async () => {
-    if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') return
-    let stream: MediaStream
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }) } catch { return }
-    if (!dot) { stream.getTracks().forEach(track => track.stop()); return }
-    const context = new AudioContext()
-    const analyser = context.createAnalyser()
-    analyser.fftSize = 512
-    context.createMediaStreamSource(stream).connect(analyser)
-    const samples = new Float32Array(analyser.fftSize)
+  const breathe = async () => {
+    if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !dot) return
+    const shift = dot.querySelector<HTMLElement>('.aa-prompt-caret-hue')!
+    level = { frame: 0 }
+    let analyser: AnalyserNode | null = null
+    const samples = new Float32Array(512)
     let eased = 0
-    const step = () => {
+    const start = performance.now()
+    const step = (now: number) => {
       if (!dot || !level) return
-      analyser.getFloatTimeDomainData(samples)
-      const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length)
-      eased += (Math.min(1, rms * 8) - eased) * 0.2
-      dot.style.transform = `scale(${(1 + eased * 0.35).toFixed(3)})`
+      let opacity = 0
+      if (!text()) {
+        if (analyser) {
+          analyser.getFloatTimeDomainData(samples)
+          eased += (Math.min(1, Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length) * 8) - eased) * 0.15
+        }
+        // A slow breath, and the voice's level, each shifting the hue a little.
+        opacity = 0.25 * (0.5 - 0.5 * Math.cos((now - start) / 2400 * 2 * Math.PI)) + 0.55 * eased
+      }
+      shift.style.opacity = opacity.toFixed(3)
       level.frame = requestAnimationFrame(step)
     }
-    level = { stream, context, frame: requestAnimationFrame(step) }
+    level.frame = requestAnimationFrame(step)
+    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (!dot || !level) { stream.getTracks().forEach(track => track.stop()); return }
+      const context = new AudioContext()
+      analyser = context.createAnalyser()
+      analyser.fftSize = samples.length
+      context.createMediaStreamSource(stream).connect(analyser)
+      Object.assign(level, { stream, context })
+    } catch { /* the breath alone */ }
   }
 
   const text = () => (field.textContent ?? '').replace(/\s+/g, ' ').trim()
@@ -167,9 +183,11 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     field.dataset.listening = ''
     dot = Object.assign(doc.createElement('span'), { className: 'aa-prompt-caret', contentEditable: 'false' })
     dot.setAttribute('aria-hidden', 'true')
+    dot.append(Object.assign(doc.createElement('span'), { className: 'aa-prompt-caret-hue' }))
     field.append(dot)
+    worded()
     caretAtDot()
-    void followLevel()
+    void breathe()
     field.dataset.placeholder = 'Listening…'
     speech.lang = doc.documentElement.lang || navigator.language
     speech.continuous = true
@@ -181,7 +199,8 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
         // Words still arriving are locked; what has been heard is the person's to change.
         heard ??= Object.assign(doc.createElement('i'), { className: 'aa-prompt-heard', contentEditable: 'false' })
         if (!heard.isConnected) dot ? dot.before(heard) : field.append(heard)
-        heard.textContent = words
+        // Never a space of its own at the end: the dot keeps exactly one after the last word.
+        heard.textContent = `${heard.previousSibling && !/\s$/.test(heard.previousSibling.textContent ?? '') ? ' ' : ''}${words.trim()}`
         if (result.isFinal) {
           heard.removeAttribute('class')
           heard.removeAttribute('contenteditable')
@@ -189,6 +208,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
           heard = null
         }
       }
+      worded()
       // A caret left at the dot stays after the words heard; a selection elsewhere in the prompt is the person's, and stays.
       const selection = view.getSelection()
       const away = !!selection?.rangeCount && field.contains(selection.anchorNode) && !(selection.isCollapsed && dot && selection.anchorNode === field && field.childNodes[selection.anchorOffset] === dot)
