@@ -344,6 +344,9 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   background: transparent;
+  /* Room at the line's end for an italic's lean, and nothing that cuts it. */
+  padding-inline-end: 0.2em;
+  overflow: visible;
 }
 .aa-prompt:empty::before {
   content: attr(data-placeholder);
@@ -373,7 +376,14 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   background: var(--aa-prompt-shift, color-mix(in oklch, var(--aa-prompt, var(--ds-focus-ring, #594dff)), #ff4fd8 55%));
   opacity: 0;
 }
-.aa-prompt i { font-style: italic; }
+.aa-prompt i {
+  font-style: italic;
+  /* An italic's last letters lean past its box: room for them at its end,
+     given back by the margin so the words stand where they did. A run drawn
+     fainter is painted in a layer the size of its box, which cut them off. */
+  padding-inline-end: 0.2em;
+  margin-inline-end: -0.2em;
+}
 .aa-prompt .aa-prompt-heard { opacity: 0.6; }
 .aa-prompt[data-loading] { cursor: progress; }
 .aa-prompt[data-failed] { text-decoration: underline wavy var(--ds-danger-color, #d33); text-underline-offset: 3px; }
