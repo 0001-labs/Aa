@@ -146,10 +146,10 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   /**
    * While listening, the caret is a dot a space after the words heard, where
    * typing would go on: a mark in the line itself, so it follows the words as
-   * they come, and it stays still while they do. Resting before any words,
-   * it breathes in hue, a second hue laid over it fading in and out with a
-   * slow breath and the microphone's level, by opacity alone; still where
-   * less motion is asked for.
+   * they come. For as long as it listens it breathes, very slightly: a slow
+   * pulse in size and hue mixed with the microphone's level, by transform and
+   * opacity alone, so it pulses while it stands still and swells a little as
+   * the voice does; still where less motion is asked for.
    */
   let dot: HTMLElement | null = null
   let level: { stream?: MediaStream; context?: AudioContext; frame: number } | null = null
@@ -176,16 +176,14 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     const start = performance.now()
     const step = (now: number) => {
       if (!dot || !level) return
-      let opacity = 0
-      if (!text()) {
-        if (analyser) {
-          analyser.getFloatTimeDomainData(samples)
-          eased += (Math.min(1, Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length) * 8) - eased) * 0.15
-        }
-        // A slow breath, and the voice's level, each shifting the hue a little.
-        opacity = 0.25 * (0.5 - 0.5 * Math.cos((now - start) / 2400 * 2 * Math.PI)) + 0.55 * eased
+      if (analyser) {
+        analyser.getFloatTimeDomainData(samples)
+        eased += (Math.min(1, Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length) * 8) - eased) * 0.15
       }
-      shift.style.opacity = opacity.toFixed(3)
+      // A slow pulse, and the voice's level over it, each growing the dot and shifting its hue a little.
+      const pulse = 0.5 - 0.5 * Math.cos((now - start) / 2400 * 2 * Math.PI)
+      dot.style.transform = `scale(${(1 + 0.1 * pulse + 0.2 * eased).toFixed(3)})`
+      shift.style.opacity = Math.min(1, 0.3 * pulse + 0.5 * eased).toFixed(3)
       level.frame = requestAnimationFrame(step)
     }
     level.frame = requestAnimationFrame(step)
