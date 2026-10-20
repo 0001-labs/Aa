@@ -2,7 +2,7 @@
   "sources": {
     "Design system 1": {
       "icons": { "to": "src/icons", "icons": ["duplicate", "connect", "slash", "cursor", "box", "right", "column", "undo", "chevron-up", "chevron-down"] },
-      "root": { "to": "public/ds1", "modules": ["scaling", "overlay-swipe"], "scriptsTo": "../../src/ds1" },
+      "root": { "to": "public/ds1", "modules": ["scaling", "overlay-swipe", "tooltips"], "scriptsTo": "../../src/ds1" },
       "sheets": { "to": "src/ds1", "sheets": ["context.css", "overlay.css"] }
     },
     "Drag": {

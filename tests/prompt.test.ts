@@ -349,3 +349,21 @@ describe('asking AI', () => {
     expect(e.value).toBe('Above\n\n```diagram\n[A]\n[B] @ 6 0\nA -> B\n```\n\nBelow')
   })
 })
+
+describe('asking about selected words from the bar', () => {
+  it('puts the answer in the words’ place, one step to undo, and keeps it selected', async () => {
+    const asked: PromptContext[] = []
+    host = document.createElement('div'); document.body.append(host)
+    const e = editor = createEditor(host, { value: 'One two three', toolbar: true, prompt: async (_said, context) => { asked.push(context); return 'TWO' } })
+    e.selectRange(4, 7)
+    expect(document.querySelector('aa-toolbar .aa-toolbar-ask input')).not.toBeNull()
+    expect(await e.askAbout('Shout it')).toBe(true)
+    expect(asked[0]).toMatchObject({ kind: 'writing', text: 'two', before: 'One ', after: ' three' })
+    expect(e.value).toBe('One TWO three')
+    expect(e.selection()).toEqual({ start: 4, end: 7 })
+    e.undo()
+    expect(e.value).toBe('One two three')
+    e.selectRange(2)
+    expect(await e.askAbout('Nothing selected')).toBe(false)
+  })
+})

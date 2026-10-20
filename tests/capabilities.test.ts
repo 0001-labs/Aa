@@ -287,6 +287,8 @@ it('peer carets at empty and final offsets do not change the source', () => {
 })
 
 it('preserves options assigned before the custom element is registered', () => {
+  // On touch the bar carries Image or file; with a pointer it is the slash menu's.
+  vi.stubGlobal('matchMedia', () => ({ matches: true }))
   const node = document.createElement('aa-editor') as AaEditorElement
   node.options = { toolbar: true, onFiles: vi.fn() }
   node.value = 'Before registration'
@@ -295,4 +297,5 @@ it('preserves options assigned before the custom element is registered', () => {
   expect(node.value).toBe('Before registration')
   expect([...document.querySelectorAll('.aa-toolbar button')].some(button => button.getAttribute('aria-label') === 'Image or file')).toBe(true)
   node.remove()
+  vi.unstubAllGlobals()
 })

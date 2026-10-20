@@ -57,7 +57,7 @@ const icon = (name: string): HTMLSpanElement => {
 
 const iconButton = (label: string, name: string, action: () => void): HTMLButtonElement => {
   const node = document.createElement('button')
-  node.type = 'button'; node.className = 'aa-comments-button'; node.title = label; node.setAttribute('aria-label', label)
+  node.type = 'button'; node.className = 'aa-comments-button'; node.dataset.tooltip = label; node.setAttribute('aria-label', label)
   node.append(icon(name))
   node.addEventListener('click', event => { event.preventDefault(); action() })
   return node

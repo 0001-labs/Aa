@@ -1,6 +1,6 @@
 {
   "Design system 1": {
-    "commit": "63de89248703800615181c3380d9be8a976f60b2",
+    "commit": "cfb2e11f3512ee119e6e7e42458536f12e324f49",
     "version": "0.3.0-alpha.28",
     "dirty": true,
     "files": {
@@ -22,6 +22,7 @@
       "public/ds1/text.css": "56701cab5597c237dfee489719c01d53c2eb23d10ffc0f40ec5cee29a340805f",
       "src/ds1/0-face/overlay-swipe.ts": "9fa7dfc91bea0f561eeab3921c97d4e1a2cf4b19fe129ede94995ced6c02d631",
       "src/ds1/0-face/scaling.ts": "c19fb5d94a51cae0c727db701ba6aa00d7459a64164c05a1fa3cbd58d3841d03",
+      "src/ds1/0-face/tooltips.ts": "33cfc41d26ec66991bb35d6cf8975de806646dc0a6e8ee28bbd8f725d2a36945",
       "src/ds1/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
       "src/ds1/component-metrics.css": "1c5c0a1b5e309598e78bd76d95af941688de2d1dcd3e4e14222bd48560ff04c4",
       "src/ds1/context.css": "8792e1bf0b6a5e1a78a8241c5947b3295f0619d463b2cce08d836eb38b31e0b4",

@@ -4,7 +4,9 @@ import { createDragging } from './drag'
 import { openSheet, type SheetGroup } from './sheet'
 
 import { icons } from './icons'
-export type ToolbarAction = { id: string; label: string; icon: string; run(editor: Editor): void }
+import { initTooltips } from './ds1/0-face/tooltips'
+/** A button on the bar over selected words; `shortcut` is named in its tooltip (⌘B). */
+export type ToolbarAction = { id: string; label: string; icon: string; shortcut?: string; run(editor: Editor): void }
 export type Command = ToolbarAction & { keywords?: string; enabled?(editor: Editor): boolean }
 const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'paragraph', label: 'Text', icon: 'text' }, { kind: 'h1', label: 'Heading 1', icon: 'h1' },
@@ -18,9 +20,11 @@ const kinds: { kind: TurnKind; label: string; icon: string }[] = [
 ]
 /** The Markdown that writes a kind, shown at its row's end in a sheet. */
 const keys: Partial<Record<TurnKind, string>> = { h1: '#', h2: '##', h3: '###', todo: '[ ]', bullet: '-', numbered: '1.', quote: '>', code: '```', divider: '---', callout: '> [!', table: '|', equation: '$$' }
-function button(label: string, icon: string, action: () => void, text = false): HTMLButtonElement {
+function button(label: string, icon: string, action: () => void, text = false, shortcut?: string): HTMLButtonElement {
   const node = document.createElement('button')
-  node.type = 'button'; node.title = label; node.setAttribute('aria-label', label)
+  node.type = 'button'; node.setAttribute('aria-label', label)
+  // An icon alone is named by Design system 1's tooltip, with its shortcut; a row with words needs none.
+  if (!text) node.dataset.tooltip = shortcut ? `${label} ${shortcut}` : label
   const picture = document.createElement('span')
   picture.className = 'aa-icon'
   const svg = icons[`./icons/${icon}.svg`]
@@ -34,16 +38,19 @@ function button(label: string, icon: string, action: () => void, text = false): 
 export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? class {} as typeof HTMLElement : HTMLElement) {
   editor: Editor | null = null
   actions: readonly ToolbarAction[] = []
+  /** A second row under the cells: the field that asks AI about the selected words. */
+  below: HTMLElement | null = null
   // Drawn as Design system 1's context bar (ds1/context.css), each cell an icon
   // one square. A formatting bar that leaves the caret in the writing is a
   // toolbar, not a menu: it opens without the focus, and Tab reaches its buttons.
   connectedCallback() { this.classList.add('ds-context', 'ds-context--bar'); this.setAttribute('role', 'toolbar'); this.setAttribute('aria-label', 'Text formatting'); this.refresh() }
   refresh() {
     this.replaceChildren(...this.actions.map(action => {
-      const node = button(action.label, action.icon, () => { if (this.editor && !this.editor.readOnly) action.run(this.editor) })
+      const node = button(action.label, action.icon, () => { if (this.editor && !this.editor.readOnly) action.run(this.editor) }, false, action.shortcut)
       node.classList.add('note-menu-row', 'ds-context__item--icon'); node.dataset.action = action.id
       return node
     }))
+    if (this.below) this.append(this.below)
   }
 }
 export function defineAaToolbar() { if (!customElements.get('aa-toolbar')) customElements.define('aa-toolbar', AaToolbarElement) }
@@ -95,6 +102,7 @@ function dock(bar: HTMLElement) {
 
 export function createControls(editor: Editor, options: EditorOptions): () => void {
   defineAaToolbar()
+  initTooltips()
   const inserts = (options.atoms ?? []).map(inserting).filter((command): command is Command => !!command)
   const host = editor.element
   const toolbar = document.createElement('aa-toolbar') as AaToolbarElement
@@ -116,21 +124,46 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     editor.selectRange(block.end)
     host.children[block.index]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
   }
-  toolbar.actions = [...marks.map(mark => ({ id: mark, icon: mark, label: { bold: 'Bold', italic: 'Italic', strike: 'Strikethrough', code: 'Code', link: 'Link', equation: 'Equation' }[mark], run: () => { restore(); editor.format(mark) } })),
+  const shortcuts = { bold: '⌘B', italic: '⌘I', strike: '⌘⇧S', code: '⌘E', link: '⌘K', equation: undefined }
+  // Over selected words, with a pointer, the bar is as simple as it can be: the marks and Comment.
+  // The kinds, what the product inserts and a picture are the slash menu's; touch, with no keys for
+  // them, keeps them on its bar with the rest.
+  toolbar.actions = [...marks.map(mark => ({ id: mark, icon: mark, label: { bold: 'Bold', italic: 'Italic', strike: 'Strikethrough', code: 'Code', link: 'Link', equation: 'Equation' }[mark], shortcut: shortcuts[mark], run: () => { restore(); editor.format(mark) } })),
+    // Comment on the selected words, where the product keeps comments.
+    ...(options.comments ? [{ id: 'comment', icon: 'comment', label: 'Comment', shortcut: '⌘⇧M', run: () => { restore(); editor.comments?.start() } }] : []),
+    ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
+  ]
+  const blocks: ToolbarAction[] = [
     { id: 'turn', icon: 'text', label: 'Turn into', run: () => {
       restore(); const active = editor.activeBlock(); if (!active) return
       if (coarse()) sheet('Turn into', [{ rows: kindRows(kind => editor.turnInto(kind)) }])
       else open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), (toolbar.querySelector('[data-action="turn"]') ?? toolbar).getBoundingClientRect())
     } },
     ...inserts.map(command => ({ ...command, run: () => { restore(); command.run(editor) } })),
-    // Comment on the selected words, where the product keeps comments.
-    ...(options.comments ? [{ id: 'comment', icon: 'comment', label: 'Comment', run: () => { restore(); editor.comments?.start() } }] : []),
-    ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
+    ...(options.onFiles ? [{ id: 'image', label: 'Image or file', icon: 'image', run: () => {
+      const input = document.createElement('input'); input.type = 'file'; input.multiple = true
+      input.addEventListener('change', () => { restore(); options.onFiles?.(Array.from(input.files ?? [])) }, { once: true }); input.click()
+    } }] : []),
   ]
-  if (options.onFiles) toolbar.actions = [...toolbar.actions, { id: 'image', label: 'Image or file', icon: 'image', run: () => {
-    const input = document.createElement('input'); input.type = 'file'; input.multiple = true
-    input.addEventListener('change', () => { restore(); options.onFiles?.(Array.from(input.files ?? [])) }, { once: true }); input.click()
-  } }]
+  if (coarse()) toolbar.actions = [...toolbar.actions, ...blocks]
+  // Under the cells, where the product answers prompts, a row asks AI about the selected words, as Notion's bar does.
+  if (options.prompt) {
+    const ask = document.createElement('form')
+    ask.className = 'aa-toolbar-ask'
+    const field = document.createElement('input')
+    field.type = 'text'; field.placeholder = 'Ask AI'; field.setAttribute('aria-label', 'Ask AI about the selected words'); field.autocomplete = 'off'
+    ask.append(field)
+    ask.addEventListener('submit', event => {
+      event.preventDefault()
+      const said = field.value.trim(), range = saved
+      if (!said || !range || field.disabled) return
+      field.disabled = true
+      editor.selectRange(range.start, range.end)
+      void editor.askAbout(said).then(done => { field.value = done ? '' : field.value; if (!done) field.placeholder = 'Not answered' }).catch(() => { field.placeholder = 'Not answered' }).finally(() => { field.disabled = false; setTimeout(() => { field.placeholder = 'Ask AI' }, 2000) })
+    })
+    field.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); field.value = ''; restore() } })
+    toolbar.below = ask
+  }
   // Touch has no ⌘/ and keeps its long press for selecting words: the block
   // commands, moving a block among them, are a button above the keyboard.
   // A plus first on the bar opens Insert block: the kinds, then what the product inserts (a diagram, a picture, its own commands).
@@ -289,6 +322,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   const selectionChanged = () => {
     clearTimeout(timer)
+    // The keys in the bar's own field: the words stay selected for it, the bar stays.
+    if (toolbar.contains(document.activeElement)) return
     const selection = editor.selection()
     const mobile = coarse() && host.contains(document.activeElement)
     if (!selection || (!mobile && selection.start === selection.end) || editor.readOnly) { toolbar.hidden = true; return }

@@ -17,7 +17,7 @@ import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
 import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from './marks'
-import { openPrompt, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
+import { openPrompt, glisten, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 import { createCommentsView, type CommentsView } from './comments-view'
 import type { AnchoredThread, CommentStore } from './comments'
 
@@ -138,6 +138,12 @@ export type Editor = {
   setHistoryProvider(provider: { undo(): boolean; redo(): boolean } | null): void
   /** Whether the words are corrected as they are written; always false without `correct`. */
   correcting: boolean
+  /**
+   * Ask AI about the selected words, from the bar over them: the answer takes
+   * their place as one step to undo, and stays selected. False with nothing
+   * selected, no `prompt`, or no answer.
+   */
+  askAbout(said: string): Promise<boolean>
   /** The comments, where the editor has a `comments` store. */
   readonly comments?: EditorComments
   destroy(): void
@@ -1415,6 +1421,24 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       }
     },
     setHistoryProvider(provider) { historyProvider = provider },
+    async askAbout(said) {
+      const asked = said.trim()
+      const selection = readSelection()
+      if (!asked || !options.prompt || readOnly || destroyed || !selection || comparePos(selection.anchor, selection.focus) === 0) return false
+      const [a, b] = order(selection.anchor, selection.focus)
+      const start = offsetOf(a), end = offsetOf(b), value = toMarkdown(blocks)
+      // The words glisten while the answer is awaited, as a prompt's section does.
+      const stop = glisten(elements().slice(a.block, b.block + 1))
+      try {
+        const answer = await options.prompt(asked, { kind: 'writing', signal: new AbortController().signal, text: value.slice(start, end), before: value.slice(0, start), after: value.slice(end) })
+        if (destroyed || readOnly || toMarkdown(blocks) !== value) return false
+        const words = (typeof answer === 'string' ? answer : answer.insert ?? '').trim()
+        if (!words) return false
+        editor.replace(start, end, words)
+        editor.selectRange(start, start + words.length)
+        return true
+      } finally { stop() }
+    },
     get comments() { return comments ?? undefined },
     get correcting() { return !!correction?.enabled },
     set correcting(value: boolean) { if (!correction || correction.enabled === value) return; correction.enabled = value; markSpelling(value) },

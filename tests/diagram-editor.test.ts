@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createEditor, imageAtom, type Editor } from '../src/editor'
 import { readBlock } from '../src/render'
 import { diagramAtom, DIAGRAM_START, type AaDiagramElement, type AaDiagramBoardElement } from '../src/diagram'
@@ -67,6 +67,9 @@ describe('a diagram in the editor', () => {
 })
 
 describe('starting a diagram', () => {
+  // Diagram stands on the touch bar; with a pointer it is the slash menu's.
+  beforeEach(() => vi.stubGlobal('matchMedia', () => ({ matches: true })))
+  afterEach(() => vi.unstubAllGlobals())
   const press = (label: string) => (document.querySelector(`aa-toolbar button[aria-label="${label}"]`) as HTMLButtonElement).click()
   it('takes an empty block from the toolbar, its board taking the keys at once', () => {
     const e = setup('', { toolbar: true })
@@ -286,8 +289,10 @@ describe('drawing on a diagram\'s board', () => {
 
 describe('a diagram just started', () => {
   it('shows its board\'s tools', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
     const e = setup('', { toolbar: true })
     e.selectRange(0)
+    vi.unstubAllGlobals()
     ;(document.querySelector('aa-toolbar button[aria-label="Diagram"]') as HTMLButtonElement).click()
     const board = host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
     expect(board.hasAttribute('data-active')).toBe(true)
