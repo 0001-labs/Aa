@@ -447,14 +447,6 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 }
 /* After words, exactly one space stands between the last of them and the dot. */
 .aa-prompt-caret[data-after] { margin-inline-start: 0.25em; }
-/* The second hue the dot breathes into while it listens, by opacity alone (prompt.ts also scales the dot). */
-.aa-prompt-caret-hue {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: var(--aa-prompt-shift, color-mix(in oklch, var(--aa-prompt, var(--ds-focus-ring, #594dff)), #ff4fd8 55%));
-  opacity: 0;
-}
 .aa-prompt i {
   font-style: italic;
   /* An italic's last letters lean past its box: room for them at its end,

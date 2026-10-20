@@ -174,9 +174,9 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
    * While listening, the caret is a dot a space after the words heard, where
    * typing would go on: a mark in the line itself, so it follows the words as
    * they come. For as long as it listens it breathes, very slightly: a slow
-   * pulse in size and hue mixed with the microphone's level, by transform and
-   * opacity alone, so it pulses while it stands still and swells a little as
-   * the voice does; still where less motion is asked for.
+   * pulse of its opacity mixed with the microphone's level, never its size,
+   * so it pulses while it stands still and brightens a little as the voice
+   * does; still where less motion is asked for.
    */
   let dot: HTMLElement | null = null
   let level: { stream?: MediaStream; context?: AudioContext; frame: number } | null = null
@@ -195,7 +195,6 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   /** The resting dot's breath at once, and the voice's level once listening has the microphone. */
   const breathe = () => {
     if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !dot) return null
-    const shift = dot.querySelector<HTMLElement>('.aa-prompt-caret-hue')!
     level = { frame: 0 }
     let analyser: AnalyserNode | null = null
     const samples = new Float32Array(512)
@@ -207,10 +206,9 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
         analyser.getFloatTimeDomainData(samples)
         eased += (Math.min(1, Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length) * 8) - eased) * 0.15
       }
-      // A slow pulse, and the voice's level over it, each growing the dot and shifting its hue a little.
+      // A slow pulse, and the voice's level over it, in the dot's opacity alone: it never changes size.
       const pulse = 0.5 - 0.5 * Math.cos((now - start) / 2400 * 2 * Math.PI)
-      dot.style.transform = `scale(${(1 + 0.1 * pulse + 0.2 * eased).toFixed(3)})`
-      shift.style.opacity = Math.min(1, 0.3 * pulse + 0.5 * eased).toFixed(3)
+      dot.style.opacity = Math.min(1, 0.55 + 0.3 * pulse + 0.3 * eased).toFixed(3)
       level.frame = requestAnimationFrame(step)
     }
     level.frame = requestAnimationFrame(step)
@@ -253,7 +251,6 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     field.dataset.listening = ''
     dot = Object.assign(doc.createElement('span'), { className: 'aa-prompt-caret', contentEditable: 'false' })
     dot.setAttribute('aria-hidden', 'true')
-    dot.append(Object.assign(doc.createElement('span'), { className: 'aa-prompt-caret-hue' }))
     field.append(dot)
     worded()
     caretAtDot()
