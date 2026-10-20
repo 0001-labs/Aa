@@ -672,6 +672,8 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-reaction:hover:not(:disabled) { color: inherit; }
 .aa-reaction[aria-pressed="true"] { color: var(--ds-sharp-blue, var(--sharp-blue, #594dff)); }
 .aa-reaction:disabled { cursor: default; }
+/* No face on a reaction, pressed or hovered, whatever the page gives its buttons: the emoji and its count alone. */
+.aa-reaction:is(:hover, :active, [aria-pressed]) { background: none; }
 .aa-reaction-count { font-variant-numeric: tabular-nums; }
 .aa-reaction-add { color: var(--aa-muted); }
 .aa-reaction-add:hover { color: inherit; }
