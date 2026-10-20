@@ -1,10 +1,25 @@
 import './src/aa.css'
-import { createEditor, defineAaEditor, imageAtom, type AaEditorElement } from './src/index'
+import { createEditor, defineAaEditor, imageAtom, type AaEditorElement, type Corrector } from './src/index'
 import { diagramAtom } from './src/diagram'
+
+/**
+ * The playground has no sign-in, so its words are corrected by Ezo's server
+ * within one small allowance everyone here shares (`aiCorrection:playground`).
+ */
+const correct: Corrector = async (text, { before, after, signal }) => {
+  const response = await fetch('https://first-impala-987.convex.cloud/api/action', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
+    body: JSON.stringify({ path: 'aiCorrection:playground', args: { text, before, after }, format: 'json' }),
+  })
+  const result = await response.json() as { status?: string; value?: unknown }
+  if (result.status !== 'success' || typeof result.value !== 'string') throw new Error('Not corrected')
+  return result.value
+}
 
 const editor = document.getElementById('editor') as AaEditorElement
 editor.options = {
   atoms: [imageAtom, diagramAtom],
+  correct,
   drawEquation: (element, tex, displayMode) => {
     let active = true
     element.textContent = tex
@@ -38,6 +53,8 @@ defineAaEditor()
 const SAMPLE = `# Aa
 
 Aa is the text editor of 0001's products. Write formatted text using the toolbar or Markdown shortcuts. Aa stores it as **Markdown** while keeping its syntax out of your way. Press ⌘B, ⌘I, ⌘E or ⌘K.
+
+Your spelling and grammar are corrected as you write, a moment after you pause or as you leave a block, never in the word you are still typing. ⌘Z takes a correction back.
 
 ## Blocks
 
