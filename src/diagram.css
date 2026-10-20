@@ -4,6 +4,9 @@
    A product hands in its own measures through the --aa-diagram-* properties;
    otherwise they are Design system 1's. */
 :host {
+  /* Ezo's corners by default: a little rounded boxes, and lines that bend round their turns.
+     A product's own --aa-diagram-radius on the element outweighs it (0px for square). */
+  --aa-diagram-radius: 4px;
   --diagram-unit: var(--aa-diagram-unit, var(--ds-grid-unit, calc(20px * var(--sf, 1))));
   --diagram-ink: var(--aa-diagram-ink, var(--ds-text-color, var(--text-color, light-dark(#1e1e1e, #fff))));
   --diagram-stroke: var(--aa-diagram-stroke, 1px);
