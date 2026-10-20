@@ -172,7 +172,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let stopControls = () => {}
   let transactionDepth = 0
   let historyProvider: { undo(): boolean; redo(): boolean } | null = null
-  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source) }]
+  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }]
   /**
    * Columns (`<columns>` around a `<column>` each) side by side, each column
    * an editor of its own on the same atoms, so it is written where it stands
@@ -195,7 +195,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         readOnly,
         atoms: options.atoms,
         drawEquation: options.drawEquation,
-        onFiles: options.onFiles,
+        // Files are the page's: they land on its line beside the columns, from where they are carried in.
         blockPlaceholder: '',
         onChange(next) {
           values[index] = next

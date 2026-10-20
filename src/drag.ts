@@ -17,9 +17,15 @@
  * Touch keeps its long press for the system's own selection: there the block
  * menu moves blocks, as ⌘⇧↑ and ⌘⇧↓ do from the keyboard. Files dropped from
  * outside land between blocks, on a line.
+ *
+ * As Notion places pictures, a block carried to another block's side (its
+ * first or last fifth, four squares at most) shows a line down that side,
+ * and let go there it stands beside it: the two become columns, or it is one
+ * more column of columns already there.
  */
 import type { Editor, EditorOptions } from './editor'
 import { createSortable } from './vendor/drag/sortable'
+import { besideChange, parseBlocks } from './markdown'
 
 /** How long a still press waits before it lifts its block, in milliseconds. */
 export const HOLD = 400
@@ -37,6 +43,10 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   const host = editor.element
   const line = document.createElement('div'); line.className = 'aa-drop-line'; line.hidden = true
   root.append(line)
+  const sideLine = document.createElement('div'); sideLine.className = 'aa-drop-line aa-drop-side'; sideLine.hidden = true
+  root.append(sideLine)
+  /** The block's side the carried block would stand at, while it is over one. */
+  let side: { index: number; at: 'start' | 'end' } | null = null
   const children = () => Array.from(host.children) as HTMLElement[]
   const movable = () => !editor.readOnly && options.menus !== false
   host.toggleAttribute('data-movable', options.menus !== false)
@@ -44,7 +54,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   /** The press as the editor saw it, before the engine decides: what it may lift, and what it leaves to the page. */
   let press: { block: HTMLElement; mouse: boolean; plain: boolean; own: boolean; inSelection: boolean; selected: HTMLElement[]; grabbed: boolean; x: number; y: number } | null = null
   /** What a drag carries: the caret to give back, and the selected blocks that go with the one lifted. */
-  let carried: { caret: { start: number; end: number } | null; group: HTMLElement[] } | null = null
+  let carried: { caret: { start: number; end: number } | null; group: HTMLElement[]; from: number } | null = null
 
   const insideSelection = (x: number, y: number) => {
     const selection = window.getSelection()
@@ -83,19 +93,24 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       const block = children()[start.source.index]
       const selected = press?.selected ?? []
       const group = block && selected.includes(block) ? selected : []
-      carried = { caret: group.length ? null : editor.selection(), group }
+      carried = { caret: group.length ? null : editor.selection(), group, from: start.source.index }
+      document.addEventListener('pointermove', besides, true)
       for (const element of group) if (element !== block) element.setAttribute('data-ghost', '')
       host.setAttribute('data-dragging', '')
       document.addEventListener('selectionchange', keepClear)
       keepClear()
     },
     onDragEnd: result => {
-      const { caret, group } = carried ?? { caret: null, group: [] }
+      const { caret, group } = carried ?? { caret: null, group: [] as HTMLElement[] }
       carried = null
+      document.removeEventListener('pointermove', besides, true)
+      const beside = side
+      side = null; sideLine.hidden = true
       for (const element of host.querySelectorAll(':scope > [data-ghost]')) element.removeAttribute('data-ghost')
       host.removeAttribute('data-dragging')
       document.removeEventListener('selectionchange', keepClear)
       const all = children(), from = result.source.index, to = result.destination?.index
+      if (result.reason === 'DROP' && beside && group.length <= 1 && movable() && placeBeside(from, beside.index, beside.at)) return
       if (result.reason === 'DROP' && to !== undefined && movable()) {
         if (group.length > 1) {
           // The others go where the one carried went: after as many unchosen blocks as stood before it.
@@ -113,6 +128,39 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     },
   })
   sortable.container({ element: host, id: 'aa', type: 'aa-block', isDropDisabled: () => !movable() })
+
+  /** Follows the carried block over the others: near one's side, the line down that side shows where it would stand. */
+  function besides(event: PointerEvent) {
+    if (!carried || carried.group.length > 1) return
+    const all = children()
+    const target = document.elementsFromPoint(event.clientX, event.clientY)
+      .map(element => element.closest?.('.aa-block') as HTMLElement | null)
+      .find(block => !!block && block.parentElement === host)
+    const index = target ? all.indexOf(target) : -1
+    const unit = parseFloat(getComputedStyle(host).getPropertyValue('--aa-unit')) || 20
+    const rect = target?.getBoundingClientRect()
+    const zone = rect ? Math.min(rect.width / 5, 4 * unit) : 0
+    const at = !rect || index < 0 || index === carried.from ? null
+      : event.clientX < rect.left + zone ? 'start'
+      : event.clientX > rect.right - zone ? 'end'
+      : null
+    if (!at || !rect) { side = null; sideLine.hidden = true; return }
+    side = { index, at }
+    sideLine.style.left = `${at === 'start' ? rect.left : rect.right}px`
+    sideLine.style.top = `${rect.top}px`
+    sideLine.style.height = `${rect.height}px`
+    sideLine.style.width = ''
+    sideLine.hidden = false
+  }
+
+  /** The block at `from` stands at a side of the one at `to`, in columns, as one step to undo. False where it cannot. */
+  function placeBeside(from: number, to: number, at: 'start' | 'end'): boolean {
+    if (parseBlocks(editor.value).length !== children().length) return false
+    const change = besideChange(editor.value, from, to, at)
+    if (!change) return false
+    editor.replace(change.start, change.end, change.text)
+    return true
+  }
 
   // Seen before the engine's own listener, which asks canDrag about the press
   // it has just been given: so it is added before the first block is an item.
@@ -245,7 +293,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     registered.clear()
     carried = null; press = null
     document.removeEventListener('selectionchange', keepClear)
-    line.remove()
+    line.remove(); sideLine.remove()
+    document.removeEventListener('pointermove', besides, true)
     host.removeAttribute('data-movable'); host.removeAttribute('data-dragging')
     window.removeEventListener('pointerdown', down, true)
     host.removeEventListener('mousedown', many, true)

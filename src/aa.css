@@ -733,3 +733,11 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 @media (max-width: 480px) {
   .aa-atom.aa-columns { grid-template-columns: minmax(0, 1fr); gap: var(--aa-unit); }
 }
+
+/* A carried block let go at another's side stands beside it: a line down that side shows where. */
+.aa-drop-line.aa-drop-side { width: calc(2px * var(--aa-sf)); }
+
+/* Pictures in columns fill their column, a square apart down it, as Notion lays out a set of pictures. */
+.aa-column .aa-atom:has(> img),
+.aa-column .aa-atom[data-atom="image"] { display: block; width: 100%; }
+.aa-column .aa-atom > img { width: 100%; }

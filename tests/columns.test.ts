@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createEditor } from '../src/editor'
-import { blockRuns, parseBlocks, readColumns, serialize, writeColumns } from '../src/markdown'
+import { besideChange, blockRuns, parseBlocks, readColumns, serialize, writeColumns } from '../src/markdown'
 
 const source = ['<columns>', '<column>', '## Left', 'First words.', '</column>', '<column>', '- one', '- two', '</column>', '</columns>'].join('\n')
 
@@ -35,5 +35,23 @@ describe('columns', () => {
     expect(onChange).toHaveBeenCalled()
     editor.destroy()
     host.remove()
+  })
+})
+
+describe('placing a block beside another', () => {
+  const apply = (text: string, change: { start: number; end: number; text: string } | null) =>
+    change ? text.slice(0, change.start) + change.text + text.slice(change.end) : text
+
+  it('puts two pictures side by side in columns, in the order they stand', () => {
+    const text = 'Intro\n\n![a](a.png)\n\n![b](b.png)\n\nOutro'
+    expect(apply(text, besideChange(text, 2, 1, 'end'))).toBe(`Intro\n\n${writeColumns(['![a](a.png)', '![b](b.png)'])}\n\nOutro`)
+    expect(apply(text, besideChange(text, 1, 2, 'start'))).toBe(`Intro\n\n${writeColumns(['![a](a.png)', '![b](b.png)'])}\n\nOutro`)
+  })
+
+  it('adds a column to columns already there, and never puts columns in columns', () => {
+    const text = `${writeColumns(['![a](a.png)', '![b](b.png)'])}\n\n![c](c.png)`
+    expect(readColumns(parseBlocks(apply(text, besideChange(text, 1, 0, 'end')))[0].source)).toEqual(['![a](a.png)', '![b](b.png)', '![c](c.png)'])
+    expect(besideChange(text, 0, 1, 'start')).toBeNull()
+    expect(besideChange(text, 1, 1, 'start')).toBeNull()
   })
 })

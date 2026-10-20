@@ -61,6 +61,26 @@ export function writeColumns(columns: readonly string[]): string {
   return ['<columns>', ...columns.flatMap(column => ['<column>', ...(column ? [column] : []), '</column>']), '</columns>'].join('\n')
 }
 
+/**
+ * The block at `from` put at a side of the one at `to`, as Notion places a
+ * picture beside another: the two become columns, or it is one more column of
+ * columns already there. The change is the text from `start` to `end`
+ * rewritten; null where it cannot (the same block, or columns carried).
+ */
+export function besideChange(text: string, from: number, to: number, at: 'start' | 'end'): { start: number; end: number; text: string } | null {
+  const placed = parseBlocks(text)
+  const carried = placed[from], target = placed[to]
+  if (from === to || !carried || !target || carried.kind === 'columns') return null
+  const columns = target.kind === 'columns' ? readColumns(target.source) : [target.source]
+  if (at === 'start') columns.unshift(carried.source)
+  else columns.push(carried.source)
+  const next: Block[] = placed
+    .filter((_, index) => index !== from)
+    .map(block => (block === target ? { ...block, kind: 'columns' as const, prefix: '<columns>'.length, source: writeColumns(columns) } : block))
+  const first = Math.min(from, to), last = Math.max(from, to)
+  return { start: placed[first].start, end: placed[last].start + placed[last].source.length, text: serialize(next.slice(first, last)) }
+}
+
 function closesFence(line: string, fence: string): boolean {
   const close = FENCE.exec(line)
   return !!close && close[1][0] === fence[0] && close[1].length >= fence.length && !line.slice(close[0].length).trim()
