@@ -251,6 +251,23 @@ describe('reactions', () => {
   })
 })
 
+describe('a long thread', () => {
+  it('carries its count as a title in a popover once it is long, and a small one none', () => {
+    const body = 'A reply long enough to take a few lines of the popover, as a real discussion does when it goes on.'
+    const comments = [1, 2, 3, 4, 5].map(n => ({ id: `c${n}`, author: n % 2 ? bo : ann, body, createdAt: n }))
+    setup({ threads: [{ ...threads()[0], comments }] })
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(popover()!.querySelector('.aa-thread-title')?.textContent).toBe('5 comments')
+    expect(popover()!.querySelector('.aa-thread')!.hasAttribute('data-titled')).toBe(true)
+  })
+  it('leaves a small thread untitled, even with three short comments', () => {
+    const comments = [1, 2, 3].map(n => ({ id: `c${n}`, author: bo, body: 'Yes', createdAt: n }))
+    setup({ threads: [{ ...threads()[0], comments }] })
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(popover()!.querySelector('.aa-thread-title')).toBeNull()
+  })
+})
+
 describe('asking AI from the field', () => {
   it('offers AI in the empty field where the product answers, and puts the answer in as the draft', async () => {
     host = document.createElement('div'); document.body.append(host)

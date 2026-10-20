@@ -542,6 +542,8 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     picker.querySelector<HTMLButtonElement>('button')?.focus()
   }
 
+  /** A popover's thread carries a title once it is long: three comments or more, about ten lines of them (a line about forty letters, a popover's width), so a small one stays as it is. */
+  const long = (thread: AnchoredThread) => thread.comments.length >= 3 && thread.comments.reduce((lines, comment) => lines + 1 + Math.ceil(comment.body.length / 40), 0) >= 10
   const threadElement = (thread: AnchoredThread, expanded: boolean): HTMLElement => {
     const article = doc.createElement('article')
     article.className = 'aa-thread'
@@ -583,6 +585,11 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
           : iconButton('Delete thread', 'delete', () => { confirming = thread.id; render() })
         actions.append(remove)
       }
+    }
+    // A popover's long thread is named by its count, for an overview, a gap under it before the first comment.
+    if (!named && long(thread)) {
+      head.append(Object.assign(doc.createElement('span'), { className: 'aa-thread-title', textContent: `${thread.comments.length} comments` }))
+      article.toggleAttribute('data-titled', true)
     }
     // The thread's own row, above its comments: the controls on the sixteen at its end.
     head.append(actions)
