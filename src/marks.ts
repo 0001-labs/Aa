@@ -14,7 +14,6 @@
  */
 
 import type { Block } from './markdown'
-import undoIcon from './icons/undo.svg?raw'
 
 /**
  * One change an answer made: the blocks it put in, the blocks they took the
@@ -64,10 +63,6 @@ export type Marks = {
   set(changes: AiChange[]): void
   /** Put the marks away, the blue fading back into the ink. */
   clear(): void
-  /** Show what the answer did, in a line, near the foot of the editor, with Hide changes and an undo. */
-  summary(text: string): void
-  /** Put the summary away, the marks kept. */
-  hideSummary(): boolean
   /** Whether anything is marked. */
   readonly size: number
   /** Draw the marks where their blocks stand now; a mark whose blocks are gone goes. */
@@ -83,8 +78,6 @@ export type MarksOptions = {
   revert: (change: AiChange) => boolean
   /** The changes still marked, each time they are drawn, so their words can be coloured. */
   shown?: (changes: readonly AiChange[]) => void
-  /** Take the whole answer back, as ⌘Z does. */
-  undo?: () => void
   root?: Element
 }
 
@@ -93,7 +86,6 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
   let changes: AiChange[] = []
   let layer: HTMLElement | null = null
   let frame = 0
-  let panel: HTMLElement | null = null
 
   const showing = () => changes.filter(change => change.blocks.every(block => options.blocks().includes(block)))
 
@@ -104,8 +96,7 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
     const elements = options.elements(), blocks = options.blocks()
     // A ticked or unticked box wears the blue too.
     for (const element of elements) element.toggleAttribute('data-ai-box', changes.some(change => change.box && change.blocks.some(block => elements[blocks.indexOf(block)] === element)))
-    placePanel()
-    if (!changes.length) { layer?.remove(); layer = null; hideSummary(); return }
+    if (!changes.length) { layer?.remove(); layer = null; return }
     if (!layer) {
       const made = doc.createElement('div')
       made.className = 'aa-ai-marks'
@@ -154,48 +145,6 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
 
   const schedule = () => { if (!frame) frame = view.requestAnimationFrame(draw) }
 
-  /** The panel in the middle of the editor, a square above its visible foot. */
-  const placePanel = () => {
-    if (!panel) return
-    const box = host.getBoundingClientRect()
-    // The foot of what is in view: the visual viewport, above a phone's keyboard.
-    const port = view.visualViewport, seen = (port?.offsetTop ?? 0) + (port?.height ?? view.innerHeight)
-    const style = view.getComputedStyle(host), scale = parseFloat(style.getPropertyValue('--ds-sf')) || parseFloat(style.getPropertyValue('--sf')) || 1
-    const foot = Math.min(box.bottom, seen) - 20 * scale
-    panel.style.left = `${box.left + box.width / 2}px`
-    panel.style.top = `${Math.max(box.top, foot)}px`
-  }
-  const hideSummary = () => {
-    if (!panel) return false
-    panel.remove(); panel = null
-    doc.removeEventListener('pointerdown', outside, true)
-    return true
-  }
-  /** A press anywhere but the panel puts the panel away. */
-  const outside = (event: Event) => { if (panel && !(event.target instanceof Node && panel.contains(event.target))) hideSummary() }
-  const summary = (text: string) => {
-    hideSummary()
-    if (!showing().length) return
-    panel = doc.createElement('div')
-    panel.className = 'aa-ai-summary'
-    panel.setAttribute('role', 'status')
-    const line = Object.assign(doc.createElement('p'), { className: 'aa-ai-summary-text', textContent: text })
-    const hide = Object.assign(doc.createElement('button'), { type: 'button', className: 'aa-ai-hide', textContent: 'Hide changes' })
-    const undo = doc.createElement('button')
-    undo.type = 'button'; undo.className = 'aa-ai-undo'; undo.title = 'Undo'; undo.setAttribute('aria-label', 'Undo what AI changed')
-    undo.append(Object.assign(doc.createElement('span'), { className: 'aa-ai-undo-icon' }))
-    ;(undo.firstChild as HTMLElement).style.setProperty('--icon', `url("data:image/svg+xml,${encodeURIComponent(undoIcon)}")`)
-    for (const button of [hide, undo]) button.addEventListener('pointerdown', event => { event.preventDefault(); event.stopPropagation() })
-    hide.addEventListener('click', () => { hideSummary(); clear() })
-    undo.addEventListener('click', () => { hideSummary(); options.undo?.(); schedule() })
-    const actions = Object.assign(doc.createElement('div'), { className: 'aa-ai-summary-actions' })
-    actions.append(hide, undo)
-    panel.append(line, actions)
-    ;(options.root ?? host.closest('dialog') ?? doc.body).append(panel)
-    placePanel()
-    // The press that sent the prompt is long done; from now a press elsewhere puts the panel away.
-    setTimeout(() => { if (panel) doc.addEventListener('pointerdown', outside, true) })
-  }
   /** The blue fades back into the ink, then the marks go. */
   const clear = () => {
     if (!changes.length) return
@@ -213,8 +162,6 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
   return {
     set(next) { changes = next.filter(change => change.blocks.length); draw() },
     clear,
-    summary,
-    hideSummary,
     get size() { return showing().length },
     draw: schedule,
     destroy() {
@@ -224,7 +171,6 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
       view.removeEventListener('resize', schedule)
       view.visualViewport?.removeEventListener('resize', schedule)
       layer?.remove()
-      hideSummary()
     },
   }
 }

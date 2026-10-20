@@ -570,45 +570,7 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa[data-ai-fading] .aa-block[data-ai-box]::before { box-shadow: none; }
 .aa-ai-marks[data-fading] { opacity: 0; transition: opacity 400ms cubic-bezier(0.2, 0, 0, 1); }
 
-/* What an answer did, in a line, near the editor's foot: a card on the
-   paper, its corners and line Design system 1's, Hide changes as its light
-   blue button and undo as an icon button, one control high, on the squares. */
-.aa-ai-summary {
-  position: fixed;
-  z-index: 1000;
-  box-sizing: border-box;
-  max-width: min(calc(20 * var(--aa-unit, 20px)), calc(100vw - 2 * var(--aa-unit, 20px)));
-  padding: calc(var(--aa-unit, 20px) / 2);
-  border: 1px solid var(--aa-rule-color, light-dark(rgb(30 30 30 / 0.12), rgb(255 255 255 / 0.12)));
-  border-radius: var(--ds-radius-card, calc(8px * var(--aa-sf, 1)));
-  background: var(--ds-background-color, light-dark(#fff, #1e1e1e));
-  color: var(--ds-text-color, light-dark(#1e1e1e, #fff));
-  box-shadow: var(--ds-shadow, 0 calc(4px * var(--aa-sf, 1)) calc(20px * var(--aa-sf, 1)) rgb(0 0 0 / 0.08));
-  font-family: var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))), system-ui, sans-serif;
-  font-size: var(--ds-type-size-default, calc(14px * var(--aa-sf, 1)));
-  transform: translate(-50%, -100%);
-  animation: aa-ai-summary-in 220ms cubic-bezier(0.2, 0, 0, 1) both;
-}
-.aa-ai-summary-text { margin: 0; padding-top: calc(4px * var(--aa-sf, 1)); line-height: calc(16px * var(--aa-sf, 1)); }
-.aa-ai-summary-actions { display: flex; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); height: var(--aa-unit, 20px); margin-top: calc(var(--aa-unit, 20px) / 2 - 4px * var(--aa-sf, 1)); }
-.aa-ai-hide,
-.aa-ai-undo {
-  height: calc(16px * var(--aa-sf, 1));
-  margin: 0;
-  border: 0;
-  border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1)));
-  font: inherit;
-  line-height: calc(16px * var(--aa-sf, 1));
-  cursor: pointer;
-}
-.aa-ai-hide { padding: 0 calc(4px * var(--aa-sf, 1)); background: var(--ds-zenith-blue, var(--zenith-blue, #ccccff)); color: var(--ds-sharp-blue, var(--sharp-blue, #594dff)); }
-.aa-ai-undo { display: inline-flex; width: calc(16px * var(--aa-sf, 1)); padding: 0; background: none; color: inherit; }
-.aa-ai-undo:hover { background: var(--ds-input-background, light-dark(#e8e8e8, #303030)); }
-.aa-ai-undo-icon { width: 100%; height: 100%; background: currentColor; mask: var(--icon) center / contain no-repeat; }
-.aa-ai-hide:focus-visible, .aa-ai-undo:focus-visible { outline: 2px solid var(--ds-focus-ring, #594dff); outline-offset: 1px; }
-@keyframes aa-ai-summary-in { from { opacity: 0; transform: translate(-50%, calc(-100% + 4px)); } }
 @media (prefers-reduced-motion: reduce) {
-  .aa-ai-summary { animation: none; }
   .aa-ai-changed, .aa-ai-marks[data-fading] { transition: none; }
 }
 
@@ -623,8 +585,8 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-comment--draft { background: var(--aa-comment-fill-open, color-mix(in srgb, var(--ds-orange, var(--orange, #fec20d)) 55%, transparent)); }
 @media (forced-colors: active) { .aa-comment { background: none; outline: 1px solid Highlight; } }
 
-/* The threads: a popover at the words, a card on the paper as the AI's
-   summary is (its line, its corners, its shadow), 16 squares wide, padded
+/* The threads: a popover at the words, a card on the paper (Design system
+   1's line, corners and shadow), 16 squares wide, padded
    half a square; or a panel the product gives, which keeps the product's
    frame and takes only the rows. Every row is one square, its words and
    controls on the sixteen. */

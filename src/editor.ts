@@ -775,7 +775,6 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (mod && event.shiftKey && !event.altKey && key === 'm' && comments) { event.preventDefault(); comments.start(); return }
     if (event.key === 'Escape' && comments?.close()) { event.preventDefault(); return }
     // Escape puts the marks of what AI changed away first, then selects the block.
-    if (event.key === 'Escape' && marks?.hideSummary()) { event.preventDefault(); return }
     if (event.key === 'Escape' && marks?.size) { event.preventDefault(); marks.clear(); return }
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
     if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
@@ -1089,9 +1088,6 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         element.style.minHeight = ''
         const done = applyAnswer(now, answer, inline)
         if (!done) throw new Error('Not answered')
-        // What it did, in a line near the editor's foot: the answer's own words where it gave them.
-        const said = typeof answer === 'object' && typeof answer.summary === 'string' && answer.summary.trim() ? answer.summary.trim() : pendingSummary
-        if (said) marks?.summary(said)
         elements()[Math.min(done.caret, blocks.length - 1)]?.focus({ preventScroll: true })
       },
       close: sent => {
@@ -1141,17 +1137,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     })
     const changes = changesBetween(old, blocks)
     marks?.set(changes)
-    pendingSummary = changes.length ? summaryOf(changes) : null
     return { caret: target }
-  }
-
-  let pendingSummary: string | null = null
-  /** What the changes come to, in a line, where the answer gave none of its own. */
-  const summaryOf = (changes: readonly AiChange[]): string => {
-    const boxes = changes.filter(change => change.box).length, others = changes.length - boxes
-    const parts = [boxes ? `${boxes === 1 ? 'a box' : `${boxes} boxes`} ticked or unticked` : '', others ? `${others === 1 ? 'one place' : `${others} places`} rewritten` : ''].filter(Boolean)
-    const line = parts.join(' and ')
-    return line.charAt(0).toUpperCase() + line.slice(1)
   }
 
   /** The words the marked changes put in, coloured as a decoration layer of their own; nothing is drawn again unless they moved. */
@@ -1319,7 +1305,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
 
-  marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange, shown: colourChanges, undo: () => { undo() } })
+  marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange, shown: colourChanges })
   renderAll()
   const stopSelection = paintSelection(host)
   const stopSpanning = selectAcrossBlocks(host, () => readOnly || destroyed)

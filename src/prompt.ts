@@ -29,7 +29,7 @@ export type Prompter = (prompt: string, context: PromptContext) => Promise<strin
  * afterwards (`PROMPT_HERE` left where new writing would go, or taken out);
  * or `edits` in place and `insert` where the prompt stood.
  */
-export type PromptAnswer = { document?: string; edits?: { find: string; replace: string }[]; insert?: string; summary?: string }
+export type PromptAnswer = { document?: string; edits?: { find: string; replace: string }[]; insert?: string }
 
 /** Where the prompt stands in the document sent with it. */
 export const PROMPT_HERE = '⟦here⟧'
