@@ -321,7 +321,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const rect = menuField.getBoundingClientRect(), square = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--aa-sf')) || 1)
     const height = Math.max(1, Math.min(menuChoices.length, 8)) * square
     const under = rect.bottom + square / 2
-    menu.style.left = `${Math.max(0, Math.min(rect.left, view.innerWidth - 8 * square))}px`
+    menu.style.left = `${Math.max(0, Math.min(rect.left, view.innerWidth - 4 * square))}px`
     menu.style.top = `${under + height <= view.innerHeight ? under : Math.max(0, rect.top - square / 2 - height)}px`
   }
   const askPeople = (field: HTMLTextAreaElement) => {

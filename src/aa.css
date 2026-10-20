@@ -707,9 +707,9 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-composer-thinking { flex: 1 1 auto; min-width: 0; line-height: var(--aa-unit); }
 .aa-composer-send:hover { color: inherit; }
 /* The people menu under the composer: the Context face, a person a row. */
-.aa-comments-people { width: calc(8 * var(--aa-square)); }
+/* The people to mention: four squares wide, as every menu is, a long name fading over its last square. */
 .aa-comments-people button { justify-content: flex-start; }
-.aa-comments-people button span:last-child { flex: 1; }
+.aa-comments-people button span:last-child { flex: 1; white-space: nowrap; mask-image: linear-gradient(to right, black calc(100% - var(--aa-square)), transparent 100%); }
 @media (prefers-reduced-motion: reduce) {
   .aa-comments[data-mode="popover"] { animation: none; }
   .aa-comment { transition: none; }
