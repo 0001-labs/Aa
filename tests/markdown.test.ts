@@ -55,6 +55,14 @@ describe('blockRuns', () => {
     expect(show('[d](e)')).toEqual(['syntax:[', 'text:d/e', 'syntax:](e)'])
     expect(show('***both***')).toEqual(['syntax:**', 'syntax:*', 'text:both/b/i', 'syntax:*', 'syntax:**'])
   })
+  it('marks underline and text colour, written as Notion writes them', () => {
+    const marked = (source: string) => runs(source).map(run => `${run.kind}:${source.slice(run.from, run.to)}${run.underline ? '/u' : ''}${run.color ? `/${run.color}` : ''}${run.bold ? '/b' : ''}`)
+    expect(marked('a <u>b</u>')).toEqual(['text:a ', 'syntax:<u>', 'text:b/u', 'syntax:</u>'])
+    expect(marked('<span color="red">**r**</span>')).toEqual(['syntax:<span color="red">', 'syntax:**', 'text:r/red/b', 'syntax:**', 'syntax:</span>'])
+    // An unknown colour, or a tag never closed, is only words.
+    expect(marked('<span color="teal">t</span>')).toEqual(['text:<span color="teal">t</span>'])
+    expect(marked('<u>open')).toEqual(['text:<u>open'])
+  })
   it('leaves snake_case and lone stars alone', () => {
     expect(show('snake_case_name')).toEqual(['text:snake_case_name'])
     expect(show('a * b')).toEqual(['text:a * b'])

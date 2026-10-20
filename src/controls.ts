@@ -4,10 +4,12 @@ import { createDragging } from './drag'
 import { openSheet, type SheetGroup } from './sheet'
 
 import { icons } from './icons'
+import { TEXT_COLORS } from './markdown'
 import { initTooltips } from './ds1/0-face/tooltips'
 /** A button on the bar over selected words; `shortcut` is named in its tooltip (⌘B). */
 export type ToolbarAction = { id: string; label: string; icon: string; shortcut?: string; run(editor: Editor): void }
-export type Command = ToolbarAction & { keywords?: string; enabled?(editor: Editor): boolean }
+/** `ink`: one of the text colours its row's mark is drawn in. */
+export type Command = ToolbarAction & { keywords?: string; ink?: string; enabled?(editor: Editor): boolean }
 const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'paragraph', label: 'Text', icon: 'text' }, { kind: 'h1', label: 'Heading 1', icon: 'h1' },
   { kind: 'h2', label: 'Heading 2', icon: 'h2' }, { kind: 'h3', label: 'Heading 3', icon: 'h3' },
@@ -109,7 +111,6 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   toolbar.className = 'aa-controls aa-toolbar'; toolbar.hidden = true; toolbar.editor = editor
   let saved: { start: number; end: number } | null = null
   const restore = () => { if (saved) editor.selectRange(saved.start, saved.end) }
-  const marks = ['bold', 'italic', 'strike', 'code', 'link', 'equation'] as const
   // On touch the kinds are a sheet from the foot of the screen (sheet.ts), a row each with the Markdown that writes it.
   const kindRows = (run: (kind: TurnKind) => void) => kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, key: keys[kind.kind], run: () => { restore(); run(kind.kind) } }))
   const sheet = (title: string, groups: SheetGroup[]) => { toolbar.hidden = true; openSheet({ title, groups, root: overlayRoot }) }
@@ -124,11 +125,17 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     editor.selectRange(block.end)
     host.children[block.index]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
   }
-  const shortcuts = { bold: '⌘B', italic: '⌘I', strike: '⌘⇧S', code: '⌘E', link: '⌘K', equation: undefined }
-  // Over selected words, with a pointer, the bar is as simple as it can be: the marks and Comment.
-  // The kinds, what the product inserts and a picture are the slash menu's; touch, with no keys for
-  // them, keeps them on its bar with the rest.
-  toolbar.actions = [...marks.map(mark => ({ id: mark, icon: mark, label: { bold: 'Bold', italic: 'Italic', strike: 'Strikethrough', code: 'Code', link: 'Link', equation: 'Equation' }[mark], shortcut: shortcuts[mark], run: () => { restore(); editor.format(mark) } })),
+  // Over selected words, with a pointer, the bar is as simple as it can be, a grid five squares wide as Notion's:
+  // the colour and the marks, then Comment. The kinds, what the product inserts and a picture are the slash
+  // menu's; touch, with no keys for them, keeps them on its bar with the rest.
+  const mark = (id: 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'equation', label: string, shortcut?: string): ToolbarAction =>
+    ({ id, icon: id, label, shortcut, run: () => { restore(); editor.format(id) } })
+  const colors: Command[] = [{ id: 'color-default', label: 'Default', icon: 'color', run: () => editor.color(null) },
+    ...TEXT_COLORS.map(color => ({ id: `color-${color}`, label: color === 'gray' ? 'Grey' : color[0].toUpperCase() + color.slice(1), icon: 'color', ink: color, run: () => editor.color(color) }))]
+  toolbar.actions = [
+    { id: 'color', icon: 'color', label: 'Text colour', run: () => { restore(); open(colors, (toolbar.querySelector('[data-action="color"]') ?? toolbar).getBoundingClientRect()) } },
+    mark('bold', 'Bold', '⌘B'), mark('italic', 'Italic', '⌘I'), mark('underline', 'Underline', '⌘U'), mark('strike', 'Strikethrough', '⌘⇧S'),
+    mark('link', 'Link', '⌘K'), mark('code', 'Code', '⌘E'), mark('equation', 'Equation'),
     // Comment on the selected words, where the product keeps comments.
     ...(options.comments ? [{ id: 'comment', icon: 'comment', label: 'Comment', shortcut: '⌘⇧M', run: () => { restore(); editor.comments?.start() } }] : []),
     ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
@@ -185,6 +192,12 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
 
   const menu = document.createElement('div')
   menu.className = 'aa-controls aa-menu'; menu.hidden = true; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Block commands')
+  // The commands scroll within the menu; Close stands under them, as Notion's menu has it.
+  const list = document.createElement('div'); list.className = 'aa-menu-list'; list.setAttribute('role', 'none')
+  const closeRow = button('Close', 'close', () => close(), true)
+  closeRow.classList.add('note-menu-row'); closeRow.dataset.command = 'close'; closeRow.setAttribute('role', 'menuitem'); closeRow.tabIndex = -1
+  closeRow.querySelector('.aa-icon')?.remove()
+  const esc = document.createElement('kbd'); esc.textContent = 'esc'; closeRow.append(esc)
   const findBar = document.createElement('div'); findBar.className = 'aa-controls aa-find'; findBar.hidden = true; findBar.setAttribute('role', 'search')
   overlayRoot.append(menu, findBar)
   const linkBar = document.createElement('form')
@@ -227,19 +240,17 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const moveMenu = (rect: DOMRect) => {
     // The menu is drawn before it is placed, so its height is its own: its rows up to its sixteen squares.
     const size = 20 * scaleOf(host), view = visible()
-    // As wide as its words need, rounded up to whole squares (four at least, aa.css); then placed by its own size.
-    menu.style.width = ''
-    menu.style.width = `${Math.ceil(menu.getBoundingClientRect().width / size - 0.001) * size}px`
-    const box = menu.getBoundingClientRect(), height = box.height || Math.min(choices.length, 16) * size
+    // Four squares wide (aa.css), placed by its own size: its commands up to eight squares, and Close.
+    const box = menu.getBoundingClientRect(), height = box.height || (Math.min(choices.length, 8) + 1) * size
     // Words fade over the last square only where they are cut (aa.css).
-    for (const row of Array.from(menu.children)) { const words = row.lastElementChild; if (words instanceof HTMLElement) words.toggleAttribute('data-cut', words.scrollWidth > words.clientWidth + 1) }
+    for (const words of Array.from(list.querySelectorAll<HTMLElement>('button > span:not(.aa-icon)'))) words.toggleAttribute('data-cut', words.scrollWidth > words.clientWidth + 1)
     menu.style.left = `${Math.max(view.left, Math.min(rect.left, view.left + view.width - box.width))}px`
     // Under the block, or over it when the keyboard or the foot of the window leaves no room under it.
     const under = rect.bottom, over = rect.top - height
     const room = under + height <= view.top + view.height
     menu.style.top = `${room || over < view.top ? Math.max(view.top, Math.min(under, view.top + view.height - height)) : over}px`
   }
-  const close = () => { menu.hidden = true; slash = null; menu.replaceChildren(); host.removeAttribute('aria-controls') }
+  const close = () => { menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
   const run = (command: Command) => {
     if (editor.readOnly) return
     const query = slash
@@ -250,8 +261,9 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     toolbar.hidden = true
   }
   const paint = () => {
-    menu.replaceChildren(...choices.map((command, index) => {
+    list.replaceChildren(...choices.map((command, index) => {
       const node = button(command.label, command.icon, () => run(command), true)
+      if (command.ink) (node.querySelector('.aa-icon') as HTMLElement | null)?.setAttribute('data-color', command.ink)
       node.classList.add('note-menu-row'); node.dataset.command = command.id; node.setAttribute('role', 'menuitem');
       if (command.id === 'count') {
         node.lastElementChild!.textContent = command.label.split(',')[0]
@@ -261,7 +273,11 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       node.toggleAttribute('data-current', index === active)
       return node
     }))
-    if (!choices.length) { const empty = document.createElement('span'); empty.className = 'aa-menu-empty'; empty.textContent = 'No matching commands'; menu.append(empty) }
+    if (!choices.length) { const empty = document.createElement('span'); empty.className = 'aa-menu-empty'; empty.textContent = 'No matching commands'; list.append(empty) }
+    menu.replaceChildren(list, closeRow)
+    // The row the arrows reach is scrolled into the list's view.
+    const current = list.children[active] as HTMLElement | undefined
+    if (current && typeof current.scrollIntoView === 'function') current.scrollIntoView({ block: 'nearest' })
   }
   function open(commands: readonly Command[], rect: DOMRect) {
     choices = commands.filter(command => command.enabled?.(editor) !== false)

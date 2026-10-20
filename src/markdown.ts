@@ -149,8 +149,12 @@ export type Run = {
   bold?: true
   italic?: true
   strike?: true
+  /** `<u>words</u>`: Markdown has no underline, so it is written as HTML, as GitHub and Notion read it. */
+  underline?: true
   code?: true
   highlight?: true
+  /** `<span color="red">words</span>`, Notion's way of writing a text colour: one of `TEXT_COLORS`. */
+  color?: string
   href?: string
   /**
    * Syntax belongs to a mark: the range of the whole mark, delimiters
@@ -204,7 +208,13 @@ export const EQUATION = atomPattern('equation', /\$(?!\$)(?:\\.|[^$\n])+\$/)
 /** The atoms an editor reads unless it is given others. */
 export const DEFAULT_ATOMS: readonly AtomSyntax[] = [IMAGE, EQUATION]
 
-type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'code' | 'href' | 'highlight'>
+type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'href' | 'highlight' | 'color'>
+
+/** The colours words can be written in, by Notion's names for them. */
+export const TEXT_COLORS = ['gray', 'red', 'orange', 'green', 'blue', 'purple'] as const
+export type TextColor = (typeof TEXT_COLORS)[number]
+/** The tags that open an underline or a colour, at a place in a line. */
+const TAG = /<u>|<span color="(gray|red|orange|green|blue|purple)">/y
 
 const DELIMITERS = ['**', '__', '~~', '==', '*', '_'] as const
 const MARK_OF: Record<(typeof DELIMITERS)[number], 'bold' | 'strike' | 'italic' | 'highlight'> = { '**': 'bold', '__': 'bold', '~~': 'strike', '==': 'highlight', '*': 'italic', '_': 'italic' }
@@ -308,6 +318,22 @@ function inline(text: string, start: number, end: number, base: number, marks: M
         inline(text, i + 1, i + 1 + link[1].length, base, { ...marks, href: link[2] }, out, atoms)
         out.push({ kind: 'syntax', from: base + i + 1 + link[1].length, to: base + i + link[0].length, group })
         i += link[0].length
+        from = i
+        continue
+      }
+    }
+    if (char === '<' && !marks.code) {
+      TAG.lastIndex = i
+      const tag = TAG.exec(text)
+      const color = tag?.[1], closing = color ? '</span>' : '</u>'
+      const close = tag && !(color ? marks.color : marks.underline) ? text.indexOf(closing, i + tag[0].length) : -1
+      if (tag && close >= 0 && close + closing.length <= end) {
+        flush(i)
+        const group: [number, number] = [base + i, base + close + closing.length]
+        out.push({ kind: 'syntax', from: base + i, to: base + i + tag[0].length, group })
+        inline(text, i + tag[0].length, close, base, color ? { ...marks, color } : { ...marks, underline: true }, out, atoms)
+        out.push({ kind: 'syntax', from: base + close, to: base + close + closing.length, group })
+        i = close + closing.length
         from = i
         continue
       }

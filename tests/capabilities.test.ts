@@ -299,3 +299,42 @@ it('preserves options assigned before the custom element is registered', () => {
   node.remove()
   vi.unstubAllGlobals()
 })
+
+describe('the bar over selected words', () => {
+  it('underlines with ⌘U and the bar, as one mark to take off again', () => {
+    const e = setup('Hello world', { toolbar: true })
+    e.selectRange(0, 5); key('u', mod)
+    expect(e.value).toBe('<u>Hello</u> world')
+    expect(host!.querySelector('.aa-u')?.textContent).toBe('Hello')
+    e.format('underline'); expect(e.value).toBe('Hello world')
+  })
+  it('colours words, changes the colour and takes it off, never nesting it', () => {
+    const e = setup('Hello world', { toolbar: true })
+    e.selectRange(0, 5); e.color('red')
+    expect(e.value).toBe('<span color="red">Hello</span> world')
+    expect((host!.querySelector('[data-color="red"]') as HTMLElement).textContent).toBe('Hello')
+    e.color('blue'); expect(e.value).toBe('<span color="blue">Hello</span> world')
+    e.color(null); expect(e.value).toBe('Hello world')
+    e.undo(); expect(e.value).toBe('<span color="blue">Hello</span> world')
+  })
+  it('lays the colour, the marks and Comment out in that order, and opens the colours from the bar', () => {
+    setup('Words', { toolbar: true, comments: { subscribe: () => () => {}, me: () => null } })
+    const toolbar = document.querySelector('.aa-toolbar') as HTMLElement
+    expect([...toolbar.querySelectorAll('button')].map(button => button.dataset.action))
+      .toEqual(['color', 'bold', 'italic', 'underline', 'strike', 'link', 'code', 'equation', 'comment'])
+    ;(toolbar.querySelector('[data-action="color"]') as HTMLButtonElement).click()
+    const menu = document.querySelector('.aa-menu') as HTMLElement
+    expect(menu.hidden).toBe(false)
+    expect([...menu.querySelectorAll('.aa-menu-list button')].map(row => row.textContent)).toEqual(['Default', 'Grey', 'Red', 'Orange', 'Green', 'Blue', 'Purple'])
+    expect(menu.querySelector('[data-command="color-red"] .aa-icon')?.getAttribute('data-color')).toBe('red')
+  })
+  it('scrolls the slash menu\'s commands and keeps Close under them', () => {
+    setup('Alpha', { toolbar: true })
+    key('/', mod)
+    const menu = document.querySelector('.aa-menu') as HTMLElement
+    expect(menu.lastElementChild?.getAttribute('data-command')).toBe('close')
+    expect(menu.lastElementChild?.textContent).toBe('Closeesc')
+    ;(menu.lastElementChild as HTMLButtonElement).click()
+    expect(menu.hidden).toBe(true)
+  })
+})

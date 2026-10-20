@@ -129,6 +129,8 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     if (run.bold) node.classList.add('aa-b')
     if (run.italic) node.classList.add('aa-i')
     if (run.strike) node.classList.add('aa-s')
+    if (run.underline) node.classList.add('aa-u')
+    if (run.color) node.dataset.color = run.color
     if (run.code) { node.classList.add('aa-c'); node.spellcheck = false }
     if (run.highlight) node.classList.add('aa-highlight')
     node.textContent = text

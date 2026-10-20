@@ -175,6 +175,41 @@ export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, deli
   return { blocks: change.blocks, anchor: at(a.offset + d), focus: at(a.offset + d + inner.length) }
 }
 
+const COLOR_OPEN = /<span color="[a-z]+">$/
+const COLOR_PAIRS = /<span color="[a-z]+">([\s\S]*?)<\/span>/g
+/**
+ * Write the selected words in a colour (`<span color="red">`), or back in the
+ * text's own with `null`: a colour already round exactly these words is
+ * changed or taken off rather than nested, and colours wholly inside them go.
+ * Across blocks each block's part is coloured on its own, as a mark is.
+ */
+export function colorSelection(blocks: readonly Block[], from: Pos, to: Pos, color: string | null): Wrapped | null {
+  const [a, b] = order(from, to)
+  let next = [...blocks], anchor = a, focus = b, changed = false
+  for (let index = b.block; index >= a.block; index--) {
+    const block = next[index]
+    if (block.kind === 'code' || block.kind === 'divider') continue
+    const start = index === a.block ? Math.max(a.offset, block.prefix) : block.prefix
+    const end = index === b.block ? b.offset : block.source.length
+    if (end <= start) continue
+    const source = block.source, inner = source.slice(start, end)
+    const open = COLOR_OPEN.exec(source.slice(0, start))
+    let from = start, to = end, words: string
+    if (open && source.startsWith('</span>', end)) { from = start - open[0].length; to = end + 7; words = inner.replace(COLOR_PAIRS, '$1') }
+    else {
+      const whole = /^<span color="[a-z]+">([\s\S]*)<\/span>$/.exec(inner)
+      words = (whole && !whole[1].includes('</span>') ? whole[1] : inner).replace(COLOR_PAIRS, '$1')
+      if (!color && words === inner) continue
+    }
+    const tag = color ? `<span color="${color}">` : ''
+    next = replaceRange(next, { block: index, offset: from }, { block: index, offset: to }, color ? `${tag}${words}</span>` : words).blocks
+    changed = true
+    if (index === a.block) anchor = { block: index, offset: from + tag.length }
+    if (index === b.block) focus = { block: index, offset: from + tag.length + words.length }
+  }
+  return changed ? { blocks: next, anchor, focus } : null
+}
+
 /** Tick or untick a bullet's box. */
 export function toggleBox(blocks: readonly Block[], index: number): Change | null {
   const block = blocks[index]

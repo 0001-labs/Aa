@@ -1,6 +1,6 @@
 {
   "Design system 1": {
-    "commit": "cfb2e11f3512ee119e6e7e42458536f12e324f49",
+    "commit": "957372677026eee9b737c2b469f68571dd388cd4",
     "version": "0.3.0-alpha.28",
     "dirty": true,
     "files": {
@@ -30,12 +30,14 @@
       "src/icons/box.svg": "915679ba8bc7ef80a7355336ff0521177b7752878166af00c17f589e34e6aa14",
       "src/icons/chevron-down.svg": "7afc5673be7ca066cc20363c135067d6d4839e0a26d9ff6e472a45319b0ec3b2",
       "src/icons/chevron-up.svg": "47a0faea62a63cff393150e5ac3c5023aa239fe8dbf5dcd9125e870be2856634",
+      "src/icons/color.svg": "55842ed5b80bf48a5aed18b96828f5854c0e96e619c5a999942a013f9c4f70ad",
       "src/icons/column.svg": "3f007b8e73ed6d80b5070db6ea5d95e515733d67c02574dd46dd4d9c5f8cd9a1",
       "src/icons/connect.svg": "5ec3b25d77d13a88d50abba9c6b15d9856798511c0bc4d6736237736598f2d95",
       "src/icons/cursor.svg": "7a204a31698b0454b366e569daff662c88f85983d3c526dfe084951436ddc2a3",
       "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab",
       "src/icons/right.svg": "8bb9dafaff1156d3f03e04c7d7a9f89913094453eaa51ceea20a58ed7de57c0e",
       "src/icons/slash.svg": "f861cf1387dcc4989fcd253a8b793af1288bf37fab6098dd737fb4c1690b0112",
+      "src/icons/underline.svg": "e13664939de5650e6c5bb3bd615f0b2938c36542a359fc8448c2ae9041e02297",
       "src/icons/undo.svg": "477ddd814369e432cbe4ff42649eb84e12400891656e98d1a2ca95d5712dc2f7"
     }
   },

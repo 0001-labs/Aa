@@ -5,8 +5,8 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, fencedAtom, type AtomSyntax, type Block } from './markdown'
-import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
+import { IMAGE, EQUATION, fencedAtom, type AtomSyntax, type Block, type TextColor } from './markdown'
+import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout } from './document'
@@ -121,7 +121,9 @@ export type Editor = {
   redo(): boolean
   activeBlock(): { index: number; start: number; end: number; block: Block } | null
   selectBlocks(anchor: number, focus?: number): void
-  format(mark: 'bold' | 'italic' | 'strike' | 'code' | 'link' | 'equation' | 'highlight'): void
+  format(mark: 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'link' | 'equation' | 'highlight'): void
+  /** Write the selected words in one of `TEXT_COLORS` (`<span color="red">`), or in the text's own colour with `null`. */
+  color(color: TextColor | null): void
   turnInto(kind: TurnKind): void
   blockAction(action: 'delete' | 'duplicate' | 'up' | 'down'): void
   /** Move `count` blocks from `from` so the first stands at `to` once they have left; they stay selected, the editor focused. */
@@ -879,6 +881,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       if (key === 'b' && !event.shiftKey) { event.preventDefault(); wrap(selection, '**'); return }
       if (key === 'i' && !event.shiftKey) { event.preventDefault(); wrap(selection, '*'); return }
       if (key === 'e' && !event.shiftKey) { event.preventDefault(); wrap(selection, '`'); return }
+      if (key === 'u' && !event.shiftKey) { event.preventDefault(); wrap(selection, '<u>', '</u>'); return }
       if ((key === 'x' || key === 's') && event.shiftKey) { event.preventDefault(); wrap(selection, '~~'); return }
       if (key === 'k' && !event.shiftKey) {
         event.preventDefault()
@@ -1380,7 +1383,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     redo,
     activeBlock() { const selection = readSelection(); if (!selection) return null; const index = selection.focus.block; return { index, block: blocks[index], start: offsetOf({ block: index, offset: 0 }), end: offsetOf({ block: index, offset: blocks[index].source.length }) } },
     selectBlocks,
-    format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; if (mark === 'link') { insertLink(selection); return }; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark]) },
+    format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; if (mark === 'link') { insertLink(selection); return }; if (mark === 'underline') { wrap(selection, '<u>', '</u>'); return }; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark]) },
+    color(color) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const colored = colorSelection(blocks, selection.anchor, selection.focus, color); if (colored) commit(colored.blocks, colored.anchor, colored.focus, 'edit') },
     turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
     blockAction(action) { if (readOnly) return; const selection = readSelection(); if (selection) changeBlocks(action, selected ?? select(blocks, selection.anchor.block, selection.focus.block)) },
     moveBlock(from, to, count = 1) {
