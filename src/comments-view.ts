@@ -439,13 +439,17 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const head = doc.createElement(panel ? 'button' : 'div')
     head.className = 'aa-thread-head'
     if (head instanceof HTMLButtonElement) { head.type = 'button'; head.setAttribute('aria-expanded', String(expanded)); head.addEventListener('click', () => { if (expanded) { openId = null; decorate(); render() } else { open(thread.id); options.selectRange(thread.from, thread.to) } }) }
-    const quote = doc.createElement('span')
-    quote.className = 'aa-thread-quote'
-    quote.textContent = thread.orphaned ? `“${thread.quote}” is no longer in the text` : thread.quote.replace(/\s+/g, ' ')
-    quote.title = thread.quote
-    head.append(quote)
+    // The words themselves are right over a popover, so it names them only in a panel, or when they are gone.
+    const named = !!panel || thread.orphaned
+    if (named) {
+      const quote = doc.createElement('span')
+      quote.className = 'aa-thread-quote'
+      quote.textContent = thread.orphaned ? `“${thread.quote}” is no longer in the text` : thread.quote.replace(/\s+/g, ' ')
+      quote.title = thread.quote
+      head.append(quote)
+    }
     if (!expanded) { const count = doc.createElement('span'); count.className = 'aa-thread-count'; count.textContent = String(thread.comments.length); head.append(count) }
-    article.append(head)
+    if (named) article.append(head)
     if (!expanded) return article
     const actions = doc.createElement('div')
     actions.className = 'aa-thread-actions'
@@ -460,8 +464,13 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       }
     }
     if (!panel) actions.append(iconButton('Close', 'close', () => close()))
-    head.append(actions)
-    for (const comment of thread.comments) article.append(commentRow(thread, comment))
+    if (named) head.append(actions)
+    thread.comments.forEach((comment, index) => {
+      const row = commentRow(thread, comment)
+      // Without a head row, the controls stand at the end of the first comment's row.
+      if (!named && index === 0) row.querySelector('.aa-comment-meta')?.append(actions)
+      article.append(row)
+    })
     const error = errors.get(`resolve:${thread.id}`) ?? errors.get(`remove:${thread.id}`) ?? errors.get(thread.id)
     if (error) { const line = doc.createElement('p'); line.className = 'aa-comments-error'; line.setAttribute('role', 'alert'); line.textContent = error; article.append(line) }
     if (thread.resolvedAt) {
@@ -478,13 +487,19 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     article.className = 'aa-thread'
     article.dataset.thread = 'draft'
     article.setAttribute('data-open', '')
-    const head = doc.createElement('div'); head.className = 'aa-thread-head'
-    const quote = doc.createElement('span'); quote.className = 'aa-thread-quote'; quote.textContent = draft!.quote.replace(/\s+/g, ' ')
-    head.append(quote)
-    const actions = doc.createElement('div'); actions.className = 'aa-thread-actions'
-    actions.append(iconButton('Close', 'close', () => close()))
-    head.append(actions)
-    article.append(head, composer('draft', 'Add a comment'))
+    const field = composer('draft', 'Add a comment')
+    if (panel) {
+      const head = doc.createElement('div'); head.className = 'aa-thread-head'
+      const quote = doc.createElement('span'); quote.className = 'aa-thread-quote'; quote.textContent = draft!.quote.replace(/\s+/g, ' ')
+      const actions = doc.createElement('div'); actions.className = 'aa-thread-actions'
+      actions.append(iconButton('Close', 'close', () => close()))
+      head.append(quote, actions)
+      article.append(head, field)
+    } else {
+      // The selected words stand right over it: one row, the close after the send.
+      field.append(iconButton('Close', 'close', () => close()))
+      article.append(field)
+    }
     const error = errors.get('draft')
     if (error) { const line = doc.createElement('p'); line.className = 'aa-comments-error'; line.setAttribute('role', 'alert'); line.textContent = error; article.append(line) }
     return article

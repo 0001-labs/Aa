@@ -76,7 +76,9 @@ describe('the popover', () => {
     const open = popover()!
     expect(open).not.toBeNull()
     expect(open.getAttribute('role')).toBe('dialog')
-    expect(open.querySelector('.aa-thread-quote')?.textContent).toBe('two')
+    // The words stand right over the popover, so it does not name them; the controls end the first comment's row.
+    expect(open.querySelector('.aa-thread-quote')).toBeNull()
+    expect(open.querySelector('.aa-comment-meta .aa-thread-actions [aria-label="Resolve"]')).not.toBeNull()
     expect(open.querySelector('.aa-comment-author')?.textContent).toBe('Bo')
     expect(open.querySelector('.aa-comment-body')?.textContent).toBe('Why two?')
     expect(open.querySelector('.aa-avatar')?.textContent).toBe('B')
@@ -122,6 +124,8 @@ describe('the popover', () => {
     expect(document.querySelector('aa-toolbar [aria-label="Comment"]')).not.toBeNull()
     expect(e.comments!.start()).toBe(true)
     expect(marks().some(span => span.getAttribute('data-comment') === 'draft')).toBe(true)
+    expect(popover()!.querySelector('.aa-thread-quote')).toBeNull()
+    expect(popover()!.querySelector('.aa-composer [aria-label="Close"]')).not.toBeNull()
     const field = popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!
     expect(field.placeholder).toBe('Add a comment')
     field.value = 'Five what?'; field.dispatchEvent(new Event('input', { bubbles: true }))

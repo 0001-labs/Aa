@@ -652,6 +652,8 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-thread-reopen { background: var(--ds-zenith-blue, var(--zenith-blue, #ccccff)); color: var(--ds-sharp-blue, var(--sharp-blue, #594dff)); }
 .aa-thread-delete { background: var(--ds-tuned-red, var(--tuned-red, #ff5f5f)); color: var(--ds-white, #fff); }
 .aa-comment-edit { margin-left: auto; background: none; color: var(--aa-muted); }
+.aa-comment-meta .aa-thread-actions { margin-left: auto; }
+.aa-comment-meta .aa-comment-edit + .aa-thread-actions { margin-left: 0; }
 .aa-comment-edit:hover { color: inherit; }
 .aa-comments-button:focus-visible, .aa-comments-word:focus-visible { outline: 2px solid var(--ds-focus-ring, #594dff); outline-offset: 1px; }
 /* Who, when: the avatar on the first sixteen of its square, the words from the next square. */
@@ -668,7 +670,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: calc(16px * var(--aa-sf, 1)); height: calc(16px * var(--aa-sf, 1)); border-radius: 50%; background: var(--aa-person, var(--ds-slate-light, #e6e6e6)); color: var(--ds-white, #fff); font-family: "Inter Arrows", var(--aa-typeface-bold, var(--ds-typeface-medium, var(--typeface-medium, inherit))), system-ui, sans-serif; font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf, 1))); font-weight: var(--ds-type-weight-bold, 500); letter-spacing: 0; line-height: 1; user-select: none; }
 /* The composer: one square high, growing a square a line; Enter sends. */
 .aa-composer { display: flex; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); margin: calc(var(--aa-unit) / 2) 0 0; min-height: var(--aa-unit); }
-.aa-thread-head + .aa-composer { margin-top: 0; }
+.aa-thread-head + .aa-composer, .aa-thread > .aa-composer:first-child { margin-top: 0; }
 .aa-composer textarea, .aa-comment-editing { box-sizing: border-box; flex: 1 1 auto; width: 100%; min-width: 0; min-height: var(--aa-unit); max-height: calc(8 * var(--aa-unit)); margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; line-height: var(--aa-unit); resize: none; overflow: hidden; outline: none; }
 .aa-comment-editing { display: block; width: calc(100% - var(--aa-unit)); margin-left: var(--aa-unit); background: var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)); border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1))); padding: 0 calc(4px * var(--aa-sf, 1)); }
 .aa-composer textarea::placeholder, .aa-comment-editing::placeholder { color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
