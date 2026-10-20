@@ -1,5 +1,5 @@
 import './src/aa.css'
-import { createEditor, defineAaEditor, imageAtom, type AaEditorElement, type Corrector } from './src/index'
+import { createEditor, defineAaEditor, imageAtom, type AaEditorElement, type Corrector, type Prompter } from './src/index'
 import { diagramAtom } from './src/diagram'
 
 /**
@@ -16,10 +16,27 @@ const correct: Corrector = async (text, { before, after, signal }) => {
   return result.value
 }
 
+/**
+ * Asking AI, as a concept: until the playground has a server to ask, a
+ * stand-in answers after a moment, so the prompt, the glisten and the answer
+ * coming in can be tried. A product hands Aa its own `prompt`.
+ */
+const prompt: Prompter = (said, { kind, text, signal }) => new Promise((resolve, reject) => {
+  const timer = setTimeout(() => {
+    if (kind === 'diagram') {
+      const name = said.replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).slice(0, 3).join(' ') || 'Idea'
+      const last = [...text.matchAll(/^\[([^\]]+)\]/gm)].pop()?.[1]
+      resolve(`${text}\n[${name}]${last ? `\n${last} -> ${name}` : ''}`)
+    } else resolve(`A stand-in answer to “${said}”: a product's own AI writes here, in Markdown, from the writing around it.`)
+  }, 1600)
+  signal.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('Stopped')) })
+})
+
 const editor = document.getElementById('editor') as AaEditorElement
 editor.options = {
   atoms: [imageAtom, diagramAtom],
   correct,
+  prompt,
   drawEquation: (element, tex, displayMode) => {
     let active = true
     element.textContent = tex
@@ -54,7 +71,7 @@ const SAMPLE = `# Aa
 
 Aa is the text editor of 0001's products. Write formatted text using the toolbar or Markdown shortcuts. Aa stores it as **Markdown** while keeping its syntax out of your way. Press ⌘B, ⌘I, ⌘E or ⌘K.
 
-Your spelling and grammar are corrected as you write, a moment after you pause or as you leave a block, never in the word you are still typing. ⌘Z takes a correction back.
+Press Space in an empty line to ask AI: the prompt is written in a live colour, Enter sends it, and what it is about glistens until the answer comes in. Press Space twice to say it instead: what you say appears in italics. On a diagram, Space asks AI to draw. (Here a stand-in answers.)\n\nYour spelling and grammar are corrected as you write, a moment after you pause or as you leave a block, never in the word you are still typing. ⌘Z takes a correction back.
 
 ## Blocks
 

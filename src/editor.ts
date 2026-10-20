@@ -15,6 +15,7 @@ import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
+import { openPrompt, type OpenPrompt, type Prompter } from './prompt'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -74,6 +75,14 @@ export type EditorOptions = {
    * The product makes the call; without it, nothing is corrected.
    */
   correct?: Corrector
+  /**
+   * Asks AI where the words are: Space in an empty block opens a prompt in a
+   * live colour (Space twice listens instead), Enter sends it, and the
+   * answer, Markdown, takes the empty block's place as one step to undo. A
+   * diagram's board asks it too, for its words written again. The product
+   * makes the call; without it, Space is a space.
+   */
+  prompt?: Prompter
   /** Whether `correct` starts on; `editor.correcting` turns it on and off. */
   correcting?: boolean
 }
@@ -710,6 +719,10 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
+    if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
+      const block = blocks[selection.focus.block]
+      if (block.kind === 'paragraph' && !block.source) { event.preventDefault(); ask(selection.focus.block); return }
+    }
     // Safari sends no beforeinput for Backspace or Delete with nothing to
     // delete inside the block (at the start of an empty block, say), so the
     // keys that cross a block's edge are taken here too.
@@ -953,6 +966,57 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     elements()[index].focus({ preventScroll: true })
     setSelection(pos); applyReveal({ anchor: pos, focus: pos }); keepCaretInView()
   }
+  // ----- asking AI -----
+
+  let asking: OpenPrompt | null = null
+  /** The blocks a prompt is about: its section, from the heading over it to the next, itself left out. */
+  const sectionOf = (index: number): number[] => {
+    let first = index, last = index
+    while (first > 0 && blocks[first].kind !== 'heading') first--
+    while (last + 1 < blocks.length && blocks[last + 1].kind !== 'heading') last++
+    return Array.from({ length: last - first + 1 }, (_, at) => first + at).filter(at => at !== index && blocks[at].source.trim())
+  }
+  /** A prompt over an empty block; its answer takes the block's place. */
+  const ask = (index: number) => {
+    const element = elements()[index], block = blocks[index]
+    asking?.close()
+    asking = openPrompt({
+      place: () => element.getBoundingClientRect(),
+      type: element,
+      about: () => sectionOf(blocks.indexOf(block)).map(at => elements()[at]),
+      send: async (prompt, signal) => {
+        const at = blocks.indexOf(block)
+        const answer = await options.prompt!(prompt, {
+          kind: 'writing', signal,
+          text: toMarkdown(sectionOf(at).map(each => blocks[each])),
+          before: toMarkdown(blocks.slice(0, at)), after: toMarkdown(blocks.slice(at + 1)),
+        })
+        const now = blocks.indexOf(block)
+        if (destroyed || readOnly || now < 0 || block.source || !answer.trim()) throw new Error('Not answered')
+        const { blocks: next, caret } = replaceRange(blocks, { block: now, offset: 0 }, { block: now, offset: 0 }, answer.trim())
+        elements()[now].focus({ preventScroll: true })
+        commit(next, caret, caret, 'edit')
+        // What came in shimmers once, as a correction does.
+        const end = caret.block
+        for (let each = now; each <= end; each++) { const stop = shimmer(elements()[each], [[0, blocks[each].source.length]]); shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000) }
+      },
+      close: sent => {
+        asking = null
+        const now = blocks.indexOf(block)
+        if (sent || now < 0 || destroyed) return
+        elements()[now].focus({ preventScroll: true })
+        setSelection({ block: now, offset: 0 })
+      },
+    })
+  }
+  /** A diagram's board asking with its words: whether the editor can, and the answer. */
+  const onAtomPrompt = (event: Event) => {
+    const detail = (event as CustomEvent<{ prompt?: string; text?: string; signal?: AbortSignal; available?: boolean; answer?: Promise<string> }>).detail
+    if (!detail || destroyed || readOnly) return
+    event.stopPropagation()
+    detail.available = !!options.prompt
+    if (options.prompt && detail.prompt && detail.signal) detail.answer = options.prompt(detail.prompt, { kind: 'diagram', text: detail.text ?? '', signal: detail.signal })
+  }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
@@ -1013,6 +1077,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('paste', onPaste)
   host.addEventListener('aa-atom-change', onAtomChange)
   host.addEventListener('aa-atom-leave', onAtomLeave)
+  host.addEventListener('aa-atom-prompt', onAtomPrompt)
   host.addEventListener('compositionstart', onCompositionStart)
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
@@ -1147,6 +1212,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('paste', onPaste)
       host.removeEventListener('aa-atom-change', onAtomChange)
       host.removeEventListener('aa-atom-leave', onAtomLeave)
+      host.removeEventListener('aa-atom-prompt', onAtomPrompt)
+      asking?.close()
       host.removeEventListener('compositionstart', onCompositionStart)
       host.removeEventListener('compositionend', onCompositionEnd)
       document.removeEventListener('selectionchange', onSelectionChange)

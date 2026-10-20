@@ -32,6 +32,7 @@
 
 import { DIAGRAM_COLORS, diagramFenceWrapped, diagramWraps, layoutDiagram, type Diagram, type DiagramColor, type DiagramGroup } from './diagram-language'
 import { addGroup, addJoin, colorTarget, deleteTarget, freeName, joinKind, moveGroup, referenceOf, renameTarget, resizeGroup, type DiagramTarget } from './diagram-edit'
+import { openPrompt, type OpenPrompt } from './prompt'
 import { createGrid, type GridController, type GridGesture, type GridPoint, type GridPress } from './vendor/drag/grid'
 import styles from './diagram-board.css?inline'
 import boxIcon from './icons/box.svg?raw'
@@ -108,6 +109,7 @@ export class AaDiagramBoardElement extends Base {
   #buttons!: { box: HTMLButtonElement; postIt: HTMLButtonElement; line: HTMLButtonElement; arrow: HTMLButtonElement; color: HTMLButtonElement; colors: HTMLButtonElement[]; wrap: HTMLButtonElement; delete: HTMLButtonElement }
   #state: State = { block: -1, mode: 'choose', target: null, renaming: null, active: false, keep: false, said: '' }
   #grid: GridController | null = null
+  #asking: OpenPrompt | null = null
   /** A gesture drawing on the board's own layer: what is chosen is not drawn over it. */
   #carrying = false
   #stop: (() => void)[] = []
@@ -256,6 +258,7 @@ export class AaDiagramBoardElement extends Base {
     this.#stop = []
     this.#grid = null
     this.#carrying = false
+    if (!this.#state.keep) this.#asking?.close()
     this.#closeColours()
   }
 
@@ -797,6 +800,28 @@ export class AaDiagramBoardElement extends Base {
     this.#commit(this.#source, {}, wraps ? 'Fits the width' : 'Keeps its layout', diagramFenceWrapped(this.#open, wraps))
   }
 
+  /** A prompt under the board; its answer is the diagram written again, while the drawing glistens. */
+  #ask() {
+    const available = { available: false } as { available: boolean }
+    this.dispatchEvent(new CustomEvent('aa-atom-prompt', { bubbles: true, composed: true, detail: available }))
+    if (!available.available) { say('Asking AI is not set up here'); return }
+    this.#asking?.close()
+    this.#asking = openPrompt({
+      place: () => { const board = this.getBoundingClientRect(), unit = this.#unit(); return new DOMRect(board.left, board.bottom, board.width, unit) },
+      type: this,
+      placeholder: 'Ask AI to draw, or press Space again to speak',
+      about: () => this.#drawing ? [this.#drawing] : [],
+      send: async (prompt, signal) => {
+        const detail: { prompt: string; text: string; signal: AbortSignal; answer?: Promise<string> } = { prompt, text: this.#source, signal }
+        this.dispatchEvent(new CustomEvent('aa-atom-prompt', { bubbles: true, composed: true, detail }))
+        const answer = (await detail.answer)?.replace(/^\s*```[^\n]*\n|\n```\s*$/g, '').trim()
+        if (!answer || !this.isConnected) throw new Error('Not answered')
+        this.#commit(answer, { target: null }, 'Drawn')
+      },
+      close: sent => { this.#asking = null; if (!sent && this.isConnected) this.focus({ preventScroll: true }) },
+    })
+  }
+
   #delete() {
     const target = this.#state.target
     if (target) this.#commit(deleteTarget(this.#source, this.#layout, target), { target: null }, `Deleted ${this.#describe(target)}`)
@@ -855,6 +880,8 @@ export class AaDiagramBoardElement extends Base {
       return
     }
     if (mod || event.altKey) return
+    // Space asks AI to draw on it, where the editor can ask (Space twice listens).
+    if (event.key === ' ' && !this.#state.renaming) { event.preventDefault(); this.#ask(); return }
     if (key === 'b' || key === 'p') { event.preventDefault(); this.#add(key === 'b' ? 'box' : 'post-it'); return }
     if (key === 'l' || key === 'a') {
       event.preventDefault()

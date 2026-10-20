@@ -320,3 +320,71 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 @media (forced-colors: active) {
   .aa-shimmer { display: none; }
 }
+
+/* Asking AI: a prompt stands over the empty block (or the board) in a live
+   colour, so it reads as said to the AI, not written into the page; words
+   heard are in italics, the ones still being heard fainter. Sent, it
+   glistens until the answer takes its place, and so does what it is about. */
+.aa-prompt {
+  --aa-prompt-color: var(--aa-prompt, var(--ds-focus-ring, #594dff));
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  color: var(--aa-prompt-color);
+  caret-color: var(--aa-prompt-color);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: transparent;
+}
+.aa-prompt:empty::before {
+  content: attr(data-placeholder);
+  color: var(--aa-prompt-color);
+  opacity: 0.55;
+  pointer-events: none;
+}
+/* Listening, the colour breathes. */
+.aa-prompt[data-listening]::after {
+  content: '';
+  display: inline-block;
+  width: calc(6px * var(--aa-sf, 1));
+  height: calc(6px * var(--aa-sf, 1));
+  margin-inline-start: calc(4px * var(--aa-sf, 1));
+  border-radius: 50%;
+  background: var(--aa-prompt-color);
+  vertical-align: middle;
+  animation: aa-prompt-breathe 1.2s ease-in-out infinite;
+}
+.aa-prompt i { font-style: italic; }
+.aa-prompt .aa-prompt-heard { opacity: 0.6; }
+.aa-prompt[data-loading] { cursor: progress; }
+.aa-prompt[data-failed] { text-decoration: underline wavy var(--ds-danger-color, #d33); text-underline-offset: 3px; }
+@keyframes aa-prompt-breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+.aa-glisten {
+  position: fixed;
+  z-index: 1000;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.aa-glisten[data-dark] { mix-blend-mode: multiply; }
+.aa-glisten::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, var(--aa-shimmer-color, var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight)))) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: aa-glisten-pass 1.8s ease-in-out infinite;
+  animation-delay: inherit;
+}
+@keyframes aa-glisten-pass { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .aa-glisten::after { transform: none; animation: aa-prompt-breathe 1.8s ease-in-out infinite; opacity: 0.4; }
+  .aa-prompt[data-listening]::after { animation: none; }
+}
+@media (forced-colors: active) {
+  .aa-glisten { display: none; }
+}
