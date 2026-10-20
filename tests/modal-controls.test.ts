@@ -8,7 +8,8 @@ test('editor controls stay inside their native dialog and are removed with the e
   const editor = createEditor(host, { value: 'A link', toolbar: true })
   try {
     const controls = [...dialog.querySelectorAll('.aa-controls, .aa-drop-line')]
-    expect(controls).toHaveLength(5)
+    // The toolbar, menus, the drop line between blocks and the one down a block's side.
+    expect(controls).toHaveLength(6)
     expect(document.body.querySelector(':scope > .aa-controls')).toBeNull()
     host.dispatchEvent(new CustomEvent('aa-link-request', { detail: { start: 0, end: 6, text: 'A link', url: 'https://example.com' } }))
     const form = dialog.querySelector<HTMLFormElement>('.aa-link-editor')!
