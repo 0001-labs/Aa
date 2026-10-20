@@ -60,7 +60,7 @@ Your spelling and grammar are corrected as you write, a moment after you pause o
 
 Each paragraph is a block of its own, edited on its own, as Notion's are. Enter starts a new one and Shift-Enter breaks a line within it. Type / in a block to change its style.
 
-Hold a block still for a moment, then drag it to move it; a selected block drags at once. Escape selects a block. ⌘A selects a block’s words, then all of them. Shift-Up and Shift-Down extend a block selection. ⌘D duplicates it; ⌘Shift-Up and ⌘Shift-Down move it. Backspace removes it. ⌘Enter ticks a box; ⌘Option-0 through 8 change its kind. Paste a URL over selected words to make a link; ⌘Shift-V keeps it plain. ⌘Shift-S strikes selected words, including words across blocks.
+Drag a block up or down to move it; dragging along a line selects words. Rest the pointer on a block until it turns into a hand, and the block moves whichever way you drag; a selected block drags at once. Escape selects a block. ⌘A selects a block’s words, then all of them. Shift-Up and Shift-Down extend a block selection. ⌘D duplicates it; ⌘Shift-Up and ⌘Shift-Down move it. Backspace removes it. ⌘Enter ticks a box; ⌘Option-0 through 8 change its kind. Paste a URL over selected words to make a link; ⌘Shift-V keeps it plain. ⌘Shift-S strikes selected words, including words across blocks.
 
 - A bullet
 - Another, with a [link](https://ezo.gs) and some \`code\`

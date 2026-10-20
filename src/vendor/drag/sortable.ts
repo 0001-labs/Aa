@@ -83,8 +83,12 @@ export type SortableItemArgs = {
    * a press that moves sooner is the page's, and selects words. A hold of 0
    * lifts it as soon as the press moves, as any item. The keyboard never
    * lifts it, and it gets no tab stop or instructions of its own.
+   *
+   * With `axis`, a press that first moves along it, at least twice as far as
+   * across, lifts at once without the hold: words are selected along a line,
+   * so a block moved down a page is told apart from words being selected.
    */
-  text?: { hold: () => number };
+  text?: { hold: () => number; axis?: 'x' | 'y' };
 };
 
 /** What an announcement is about. Positions count from one. */
@@ -450,9 +454,15 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       const distance = Math.hypot(point.x - pending.startX, point.y - pending.startY);
       if (distance < settings.dragDistance) return;
       if (pending.pointerType === 'touch' || pending.held) {
-        // It moved before the hold finished: a finger scrolls, a press on writing selects words.
-        clearPending();
-        return;
+        // Writing moved along its axis is lifted at once; moved any other way, it selects words.
+        const axis = pending.pointerType !== 'touch' ? pending.item.text?.axis : undefined;
+        const along = Math.abs(axis === 'x' ? point.x - pending.startX : point.y - pending.startY);
+        const across = Math.abs(axis === 'x' ? point.y - pending.startY : point.x - pending.startX);
+        if (!axis || along < 2 * across) {
+          // It moved before the hold finished: a finger scrolls, a press on writing selects words.
+          clearPending();
+          return;
+        }
       }
       lift(pending.item, pending.pointerId, pending.startX, pending.startY);
     }

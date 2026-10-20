@@ -64,7 +64,7 @@
 .aa-block[data-selected], .aa-block[data-lifted] { border-radius: calc(2px * var(--aa-sf)); }
 /* No handle beside a block: a selected block is taken by the hand, any other
    after a still press (drag.ts), and the hand holds while it is carried. */
-.aa[data-movable] > .aa-block[data-selected] { cursor: grab; }
+.aa[data-movable] > .aa-block[data-selected], .aa[data-movable] > .aa-block[data-grab] { cursor: grab; }
 .aa[data-dragging], .aa[data-dragging] *, .aa[data-dragging] *::before { cursor: grabbing; -webkit-user-select: none; user-select: none; }
 /* Selected blocks carried with the one lifted wait dimmed in their places, as a multi-drag in Pangea does. */
 .aa-block[data-ghost] { opacity: 0.4; }

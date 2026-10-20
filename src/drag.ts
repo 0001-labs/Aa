@@ -6,9 +6,12 @@
  * sheet rows and Ezo's lists move.
  *
  * A mouse pressed on a block and held still for a moment lifts it, and it
- * goes where the press is let go; a press that moves sooner selects words,
- * as it always has, and a lifted block let go where it began leaves the
- * caret where the press put it. Blocks already selected (Escape,
+ * goes where the press is let go. Words are selected along a line, so a
+ * press that first moves up or down lifts its block at once, and one that
+ * first moves along the line selects words, as it always has. A pointer that
+ * rests on a block for a moment takes it in hand (the cursor turns to a
+ * grab), and a press then lifts it at once, whichever way it moves. A lifted
+ * block let go where it began leaves the caret where the press put it. Blocks already selected (Escape,
  * Shift-arrows, a block just moved) are dragged at once, the one pressed
  * carried and the others dimmed in their places, and they land together.
  * Touch keeps its long press for the system's own selection: there the block
@@ -20,6 +23,10 @@ import { createSortable } from './vendor/drag/sortable'
 
 /** How long a still press waits before it lifts its block, in milliseconds. */
 export const HOLD = 400
+/** How long a pointer rests on a block before it takes the block in hand, in milliseconds. */
+export const REST = 400
+/** How far a resting pointer may drift and still be resting, in pixels. */
+const DRIFT = 8
 
 /** What a press inside a block is for itself: a field, a caption, a player, a diagram's board. */
 const OWN = 'button, input, textarea, select, video, audio, .aa-caption, [data-aa-interactive]'
@@ -35,7 +42,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   host.toggleAttribute('data-movable', options.menus !== false)
 
   /** The press as the editor saw it, before the engine decides: what it may lift, and what it leaves to the page. */
-  let press: { block: HTMLElement; mouse: boolean; plain: boolean; own: boolean; inSelection: boolean; selected: HTMLElement[]; x: number; y: number } | null = null
+  let press: { block: HTMLElement; mouse: boolean; plain: boolean; own: boolean; inSelection: boolean; selected: HTMLElement[]; grabbed: boolean; x: number; y: number } | null = null
   /** What a drag carries: the caret to give back, and the selected blocks that go with the one lifted. */
   let carried: { caret: { start: number; end: number } | null; group: HTMLElement[] } | null = null
 
@@ -112,6 +119,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   const down = (event: PointerEvent) => {
     const target = event.target instanceof Element ? event.target : null
     const block = target?.closest?.('.aa-block') as HTMLElement | null
+    const grabbed = !!block && ready === block
+    stopResting()
     if (!block || block.parentElement !== host) { press = null; return }
     register()
     const chosen = children().filter(element => element.hasAttribute('data-selected'))
@@ -124,10 +133,11 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       // Words already selected are dragged the browser's way.
       inSelection: insideSelection(event.clientX, event.clientY),
       selected,
+      grabbed,
       x: event.clientX, y: event.clientY,
     }
-    // A press on selected blocks does not put the caret in them unless it is let go where it began.
-    if (selected.length && press.mouse && press.plain && !press.own && movable()) event.preventDefault()
+    // A press on selected blocks, or a block in hand, does not put the caret in it unless it is let go where it began.
+    if ((selected.length || grabbed) && press.mouse && press.plain && !press.own && !press.inSelection && movable()) event.preventDefault()
   }
   window.addEventListener('pointerdown', down, true)
 
@@ -142,8 +152,9 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
         element: block,
         id: `aa-block-${++count}`,
         type: 'aa-block',
-        // Selected blocks go as soon as the press moves; any other after a still press, so a moving press selects words.
-        text: { hold: () => press?.block === block && press.selected.length ? 0 : HOLD },
+        // Selected blocks and a block in hand go as soon as the press moves; any other when the press moves up
+        // or down, or after a still press, so a press moving along a line selects words.
+        text: { hold: () => press?.block === block && (press.selected.length || press.grabbed) ? 0 : HOLD, axis: 'y' },
         canDrag: ({ input }) => input === 'mouse' && movable() && !!press && press.block === block && press.mouse && press.plain && !press.own && !press.inSelection,
       }))
     }
@@ -157,12 +168,39 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   const up = (event: PointerEvent) => {
     const pressed = press
     press = null
-    if (!pressed?.selected.length || sortable.isDragging() || carried || !movable() || event.type !== 'pointerup') return
+    if (!(pressed?.selected.length || pressed?.grabbed) || pressed.inSelection || sortable.isDragging() || carried || !movable() || event.type !== 'pointerup') return
     if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) < 5) placeCaret(event.clientX, event.clientY)
   }
   host.addEventListener('mousedown', many, true)
   window.addEventListener('pointerup', up, true)
   window.addEventListener('pointercancel', up, true)
+
+  // A pointer resting on a block takes it in hand; moving on, typing or leaving lets it go.
+  let resting: { block: HTMLElement; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null = null
+  let ready: HTMLElement | null = null
+  function stopResting() {
+    if (resting) clearTimeout(resting.timer)
+    resting = null
+    ready?.removeAttribute('data-grab')
+    ready = null
+  }
+  const hover = (event: PointerEvent) => {
+    if (event.pointerType !== 'mouse' || event.buttons || sortable.isDragging() || !movable()) { stopResting(); return }
+    const target = event.target instanceof Element ? event.target : null
+    const block = target?.closest?.('.aa-block') as HTMLElement | null
+    if (!block || block.parentElement !== host || target?.closest(OWN)) { stopResting(); return }
+    if (resting?.block === block && Math.hypot(event.clientX - resting.x, event.clientY - resting.y) < DRIFT) return
+    stopResting()
+    const timer = setTimeout(() => {
+      if (resting?.block !== block || !movable()) return
+      ready = block
+      block.setAttribute('data-grab', '')
+    }, REST)
+    resting = { block, x: event.clientX, y: event.clientY, timer }
+  }
+  host.addEventListener('pointermove', hover)
+  host.addEventListener('pointerleave', stopResting)
+  host.addEventListener('keydown', stopResting)
 
   // Files from outside land between blocks: the caret goes to the start of
   // the block they land before, or the end of the last, for the product.
@@ -212,6 +250,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     window.removeEventListener('pointerdown', down, true)
     host.removeEventListener('mousedown', many, true)
     window.removeEventListener('pointerup', up, true); window.removeEventListener('pointercancel', up, true)
+    stopResting()
+    host.removeEventListener('pointermove', hover); host.removeEventListener('pointerleave', stopResting); host.removeEventListener('keydown', stopResting)
     host.removeEventListener('dragover', dragOver); host.removeEventListener('dragleave', dragLeave); host.removeEventListener('drop', drop, true)
   }
 }

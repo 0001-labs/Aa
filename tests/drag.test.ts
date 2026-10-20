@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createEditor, type Editor, type EditorOptions } from '../src/editor'
-import { HOLD } from '../src/drag'
+import { HOLD, REST } from '../src/drag'
 
 let editor: Editor | undefined, host: HTMLElement | undefined
 afterEach(() => { editor?.destroy(); host?.remove(); editor = undefined; host = undefined; window.getSelection()?.removeAllRanges(); vi.useRealTimers() })
@@ -61,14 +61,59 @@ describe('moving blocks without a handle, on the Drag library', () => {
     e.undo(); expect(e.value).toBe('One\n\nTwo\n\nThree')
   })
 
-  it('leaves a press that moves before the hold to select words', () => {
+  it('leaves a press that first moves along the line to select words', () => {
     const e = setup('One\n\nTwo')
     pointer('pointerdown', block(0), 10)
-    pointer('pointermove', window, 16)
+    pointer('pointermove', window, 12, { clientX: 30 })
     vi.advanceTimersByTime(HOLD * 2)
     expect(lifted()).toEqual([])
-    pointer('pointerup', window, 70)
+    pointer('pointermove', window, 70, { clientX: 30 })
+    pointer('pointerup', window, 70, { clientX: 30 })
     expect(e.value).toBe('One\n\nTwo')
+  })
+
+  it('lifts a block at once when the press first moves up or down, without waiting for the hold', () => {
+    const e = setup('One\n\nTwo\n\nThree')
+    pointer('pointerdown', block(0), 10)
+    pointer('pointermove', window, 17, { clientX: 11 })
+    expect(lifted()).toEqual([0])
+    pointer('pointermove', window, 115)
+    pointer('pointerup', window, 115)
+    settle()
+    expect(e.value).toBe('Two\n\nThree\n\nOne')
+  })
+
+  it('takes a block in hand when the pointer rests on it, and a press then lifts it whichever way it moves', () => {
+    const e = setup('One\n\nTwo\n\nThree')
+    pointer('pointermove', block(0), 10, { buttons: 0 })
+    vi.advanceTimersByTime(REST - 1)
+    expect(block(0).hasAttribute('data-grab')).toBe(false)
+    pointer('pointermove', block(0), 12, { clientX: 13, buttons: 0 })
+    vi.advanceTimersByTime(1)
+    expect(block(0).hasAttribute('data-grab')).toBe(true)
+    const press = pointer('pointerdown', block(0), 12, { clientX: 13 })
+    expect(press.defaultPrevented).toBe(true)
+    expect(block(0).hasAttribute('data-grab')).toBe(false)
+    pointer('pointermove', window, 13, { clientX: 40 })
+    expect(lifted()).toEqual([0])
+    pointer('pointermove', window, 115, { clientX: 40 })
+    pointer('pointerup', window, 115, { clientX: 40 })
+    settle()
+    expect(e.value).toBe('Two\n\nThree\n\nOne')
+  })
+
+  it('lets a block in hand go when the pointer moves on, leaves, or the person types', () => {
+    setup('One\n\nTwo')
+    const rest = (index: number, y: number) => { pointer('pointermove', block(index), y, { buttons: 0 }); vi.advanceTimersByTime(REST) }
+    rest(0, 10)
+    pointer('pointermove', block(0), 10, { clientX: 30, buttons: 0 })
+    expect(block(0).hasAttribute('data-grab')).toBe(false)
+    rest(0, 10)
+    host!.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' }))
+    expect(block(0).hasAttribute('data-grab')).toBe(false)
+    rest(1, 50)
+    block(1).dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }))
+    expect(block(1).hasAttribute('data-grab')).toBe(false)
   })
 
   it('puts the caret back where the press put it when a lifted block is let go where it began', () => {
