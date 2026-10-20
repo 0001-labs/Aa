@@ -807,8 +807,10 @@ export class AaDiagramBoardElement extends Base {
     if (!available.available) { say('Asking AI is not set up here'); return }
     this.#asking?.close()
     this.#asking = openPrompt({
-      place: () => { const board = this.getBoundingClientRect(), unit = this.#unit(); return new DOMRect(board.left, board.bottom, board.width, unit) },
+      place: () => { const board = this.getBoundingClientRect(), tools = this.#tools.getBoundingClientRect(), unit = this.#unit(); return new DOMRect(board.left, (tools.height ? tools.bottom : this.#paper.getBoundingClientRect().bottom) + 1, board.width, unit) },
       type: this,
+      // The board makes room under its tools for the prompt, so the writing under it moves down as it grows.
+      grow: height => { this.style.paddingBottom = height ? `${height + 1}px` : '' },
       placeholder: 'Ask AI to draw, or press Space again to speak',
       about: () => this.#drawing ? [this.#drawing] : [],
       send: async (prompt, signal) => {

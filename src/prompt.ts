@@ -59,6 +59,8 @@ export type PromptOptions = {
   about: () => Element[]
   /** Sends it, and puts the answer in. */
   send: (prompt: string, signal: AbortSignal) => Promise<void>
+  /** The prompt's height as it grows, to keep room for it in the page so what is under it moves down; 0 once it is put away. */
+  grow?: (height: number) => void
   /** Put away, sent or not; `sent` once the answer is in. */
   close: (sent: boolean) => void
   root?: Element
@@ -84,6 +86,9 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   if (light !== null && light > 0.5) field.dataset.dark = ''
   const root = options.root ?? doc.body
   root.append(field)
+  // The page makes room for the prompt as it grows, so nothing under it is covered.
+  const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => options.grow?.(field.offsetHeight))
+  resize?.observe(field)
   const place = () => {
     const rect = options.place()
     Object.assign(field.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${Math.max(rect.width, 80)}px`, minHeight: `${rect.height}px` })
@@ -146,7 +151,9 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     listening?.abort()
     stopDot()
     stopGlisten()
+    resize?.disconnect()
     field.remove()
+    options.grow?.(0)
     view.removeEventListener('scroll', place, true)
     view.removeEventListener('resize', place)
     options.close(sent)
@@ -171,17 +178,21 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
       for (let index = event.resultIndex; index < event.results.length; index++) {
         const result = event.results[index]
         const words = result[0]?.transcript ?? ''
-        heard ??= Object.assign(doc.createElement('i'), { className: 'aa-prompt-heard' })
+        // Words still arriving are locked; what has been heard is the person's to change.
+        heard ??= Object.assign(doc.createElement('i'), { className: 'aa-prompt-heard', contentEditable: 'false' })
         if (!heard.isConnected) dot ? dot.before(heard) : field.append(heard)
         heard.textContent = words
         if (result.isFinal) {
           heard.removeAttribute('class')
+          heard.removeAttribute('contenteditable')
           heard.textContent = `${text() && !/\s$/.test(field.textContent ?? '') && heard.previousSibling ? ' ' : ''}${words.trim()}`
           heard = null
         }
       }
-      // The caret stays after what was heard, at the dot, so typing goes on from there.
-      caretAtDot()
+      // A caret left at the dot stays after the words heard; a selection elsewhere in the prompt is the person's, and stays.
+      const selection = view.getSelection()
+      const away = !!selection?.rangeCount && field.contains(selection.anchorNode) && !(selection.isCollapsed && dot && selection.anchorNode === field && field.childNodes[selection.anchorOffset] === dot)
+      if (!away) caretAtDot()
     }
     speech.onend = () => { listening = null; stopDot(); delete field.dataset.listening; field.dataset.placeholder = options.placeholder ?? 'Ask AI to write' }
     speech.onerror = () => speech.onend?.()

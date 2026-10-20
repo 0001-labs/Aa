@@ -984,6 +984,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     asking = openPrompt({
       place: () => element.getBoundingClientRect(),
       type: element,
+      // The empty block is as tall as the prompt over it, so the blocks under it move down as it grows.
+      grow: height => { element.style.minHeight = height ? `${height}px` : '' },
       about: () => sectionOf(blocks.indexOf(block)).map(at => elements()[at]),
       send: async (prompt, signal) => {
         const at = blocks.indexOf(block)

@@ -78,9 +78,19 @@ describe('asking AI', () => {
     Speech.last.onresult!({ resultIndex: 0, results: [result('write a plan for Friday', true)] })
     expect(field()!.querySelector('i')!.textContent).toBe('write a plan for Friday')
     expect(field()!.querySelector('.aa-prompt-heard')).toBeNull()
+    // Words still arriving are locked; a selection in what was heard before stays where the person put it.
+    const before = field()!.querySelector('i')!.firstChild!
+    const selection = window.getSelection()!
+    selection.setBaseAndExtent(before, 6, before, 10)
+    Speech.last.onresult!({ resultIndex: 1, results: [result('write a plan for Friday', true), result('and', false)] })
+    expect(field()!.querySelector<HTMLElement>('.aa-prompt-heard')!.contentEditable).toBe('false')
+    expect([selection.anchorNode, selection.anchorOffset, selection.focusOffset]).toEqual([before, 6, 10])
+    Speech.last.onresult!({ resultIndex: 1, results: [result('write a plan for Friday', true), result('and Monday', true)] })
+    expect(field()!.querySelector('.aa-prompt-heard')).toBeNull()
+    expect(field()!.textContent).toBe('write a plan for Friday and Monday')
     // Listening, the caret is a dot after the words heard; once it stops, the caret again.
     expect(field()!.lastElementChild!.className).toBe('aa-prompt-caret')
-    expect(field()!.lastElementChild!.previousElementSibling!.textContent).toBe('write a plan for Friday')
+    expect(field()!.lastElementChild!.previousElementSibling!.textContent).toBe(' and Monday')
     Speech.last.stop()
     expect(document.querySelector('.aa-prompt-caret')).toBeNull()
     expect(field()!.hasAttribute('data-listening')).toBe(false)
