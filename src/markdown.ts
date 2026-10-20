@@ -4,7 +4,7 @@
  * so what is drawn on the screen reads straight back into the text.
  */
 
-export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation'
+export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation' | 'columns'
 
 export type Block = {
   kind: BlockKind
@@ -33,6 +33,34 @@ export const QUOTE = /^ {0,3}>[ \t]?/
 export const FENCE = /^ {0,3}(`{3,}|~{3,})/
 export const DIVIDER = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/
 
+export const COLUMNS_OPEN = /^\s*<columns>\s*$/
+const COLUMNS_CLOSE = /^\s*<\/columns>\s*$/
+const COLUMN_OPEN = /^\s*<column>\s*$/
+const COLUMN_CLOSE = /^\s*<\/column>\s*$/
+
+/**
+ * Columns, written as Notion writes them in Markdown: `<columns>` around a
+ * `<column>` for each, every column Markdown of its own. A column's lines may
+ * be indented by tabs, as Notion indents them; they are read without.
+ */
+export function readColumns(source: string): string[] {
+  const columns: string[][] = []
+  let current: string[] | null = null
+  for (const line of source.replace(/\r\n?/g, '\n').split('\n')) {
+    if (COLUMNS_OPEN.test(line) || COLUMNS_CLOSE.test(line)) continue
+    if (COLUMN_OPEN.test(line)) { current = []; columns.push(current); continue }
+    if (COLUMN_CLOSE.test(line)) { current = null; continue }
+    if (current) current.push(line.replace(/^\t{1,2}/, ''))
+  }
+  const trimmed = columns.map(lines => lines.join('\n').replace(/^\n+|\n+$/g, ''))
+  return trimmed.length ? trimmed : ['', '']
+}
+
+/** Columns written back as one block. */
+export function writeColumns(columns: readonly string[]): string {
+  return ['<columns>', ...columns.flatMap(column => ['<column>', ...(column ? [column] : []), '</column>']), '</columns>'].join('\n')
+}
+
 function closesFence(line: string, fence: string): boolean {
   const close = FENCE.exec(line)
   return !!close && close[1][0] === fence[0] && close[1].length >= fence.length && !line.slice(close[0].length).trim()
@@ -40,7 +68,7 @@ function closesFence(line: string, fence: string): boolean {
 
 /** A line that goes on with the paragraph before it rather than starting something of its own. */
 function continues(line: string): boolean {
-  return !!line.trim() && !FENCE.test(line) && !DIVIDER.test(line) && !HEADING.test(line) && !BULLET.test(line) && !QUOTE.test(line)
+  return !!line.trim() && !FENCE.test(line) && !DIVIDER.test(line) && !HEADING.test(line) && !BULLET.test(line) && !QUOTE.test(line) && !COLUMNS_OPEN.test(line)
 }
 
 /** Read a text into its blocks. A text with nothing in it is one empty paragraph. */
@@ -67,6 +95,13 @@ export function parseBlocks(text: string): Placed[] {
       let j = i + 1
       while (j + 1 < lines.length && lines[j + 1].trim() && lines[j + 1].includes('|')) j++
       push('table', i, j)
+      i = j + 1
+      continue
+    }
+    if (COLUMNS_OPEN.test(line)) {
+      let j = i + 1
+      while (j < lines.length && !COLUMNS_CLOSE.test(lines[j])) j++
+      push('columns', i, Math.min(j, lines.length - 1), { prefix: line.length })
       i = j + 1
       continue
     }
@@ -366,6 +401,8 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   const lines = block.source.split('\n')
   const closed = block.kind === 'code' && codeClosed(block)
   if (block.kind === 'equation') return [{ kind: 'atom', atom: 'equation-block', from: 0, to: block.source.length, group: [0, block.source.length] }]
+  // Columns are drawn whole, each column written where it stands; their tags are never shown.
+  if (block.kind === 'columns') return [{ kind: 'atom', atom: 'columns', from: 0, to: block.source.length }]
   const fenced = fencedAtom(block, atoms)
   if (fenced) return [{ kind: 'atom', atom: fenced.name, from: 0, to: block.source.length, group: [0, block.source.length] }]
   let at = 0

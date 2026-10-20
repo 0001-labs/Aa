@@ -5,7 +5,7 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, fencedAtom, type AtomSyntax, type Block, type TextColor } from './markdown'
+import { IMAGE, EQUATION, fencedAtom, readColumns, writeColumns, type AtomSyntax, type Block, type TextColor } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
@@ -172,7 +172,43 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let stopControls = () => {}
   let transactionDepth = 0
   let historyProvider: { undo(): boolean; redo(): boolean } | null = null
-  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }]
+  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source) }]
+  /**
+   * Columns (`<columns>` around a `<column>` each) side by side, each column
+   * an editor of its own on the same atoms, so it is written where it stands
+   * as any block is. A change in a column hands the whole block back in
+   * `aa-atom-change`, one step of undo; the drawing keeps the new source, so
+   * the columns and the caret in them stay as they are.
+   */
+  const columnEditors = new Set<Editor>()
+  function drawColumns(element: HTMLElement, source: string) {
+    element.classList.add('aa-columns')
+    element.setAttribute('data-aa-interactive', '')
+    const values = readColumns(source)
+    element.style.setProperty('--aa-columns', String(values.length))
+    const editors = values.map((value, index) => {
+      const column = document.createElement('div')
+      column.className = 'aa-column'
+      element.append(column)
+      const editor = createEditor(column, {
+        value,
+        readOnly,
+        atoms: options.atoms,
+        drawEquation: options.drawEquation,
+        onFiles: options.onFiles,
+        blockPlaceholder: '',
+        onChange(next) {
+          values[index] = next
+          const written = writeColumns(values)
+          element.dataset.source = written
+          element.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, detail: { source: written } }))
+        },
+      })
+      columnEditors.add(editor)
+      return editor
+    })
+    return () => editors.forEach(editor => { columnEditors.delete(editor); editor.destroy() })
+  }
   const drawn = new Map<HTMLElement, (() => void) | void>()
   const drawAtom = (name: string, source: string) => {
     const element = atomElement(name, source)
@@ -1314,6 +1350,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const stopSpanning = selectAcrossBlocks(host, () => readOnly || destroyed)
 
   const setReadOnly = (value: boolean) => {
+    for (const editor of columnEditors) editor.readOnly = value
     if (value === readOnly) return
     readOnly = value
     describe()

@@ -718,3 +718,18 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
   .aa-comments[data-mode="popover"] { animation: none; }
   .aa-comment { transition: none; }
 }
+
+/* Columns, as Notion lays them out: side by side, sharing the measure, two
+   squares apart, each written where it stands as a page of its own; one under
+   another where the measure is too narrow for them. */
+.aa-atom.aa-columns {
+  display: grid;
+  grid-template-columns: repeat(var(--aa-columns, 2), minmax(0, 1fr));
+  gap: calc(2 * var(--aa-unit));
+  width: 100%;
+  vertical-align: top;
+}
+.aa-column { min-width: 0; }
+@media (max-width: 480px) {
+  .aa-atom.aa-columns { grid-template-columns: minmax(0, 1fr); gap: var(--aa-unit); }
+}

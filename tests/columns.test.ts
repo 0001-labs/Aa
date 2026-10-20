@@ -1,0 +1,39 @@
+import { describe, expect, it, vi } from 'vitest'
+import { createEditor } from '../src/editor'
+import { blockRuns, parseBlocks, readColumns, serialize, writeColumns } from '../src/markdown'
+
+const source = ['<columns>', '<column>', '## Left', 'First words.', '</column>', '<column>', '- one', '- two', '</column>', '</columns>'].join('\n')
+
+describe('columns', () => {
+  it('are one block, read as Notion writes them, and written back the same', () => {
+    const blocks = parseBlocks(`Before\n\n${source}\n\nAfter`)
+    expect(blocks.map(block => block.kind)).toEqual(['paragraph', 'columns', 'paragraph'])
+    expect(readColumns(blocks[1].source)).toEqual(['## Left\nFirst words.', '- one\n- two'])
+    expect(writeColumns(readColumns(source))).toBe(source)
+    expect(serialize(blocks)).toBe(`Before\n\n${source}\n\nAfter`)
+    // A column indented by tabs, as Notion indents them, reads without them.
+    expect(readColumns('<columns>\n\t<column>\n\t\tTabbed\n\t</column>\n</columns>')).toEqual(['Tabbed'])
+  })
+
+  it('are drawn whole, never letter by letter, with no tags shown', () => {
+    expect(blockRuns(parseBlocks(source)[0]).map(run => [run.kind, run.atom])).toEqual([['atom', 'columns']])
+  })
+
+  it('stand side by side, each written in an editor of its own, and an edit hands back the whole block', () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const onChange = vi.fn()
+    const editor = createEditor(host, { value: source, onChange })
+    const drawn = host.querySelector<HTMLElement>('.aa-atom.aa-columns')!
+    expect(drawn.hasAttribute('data-aa-interactive')).toBe(true)
+    const columns = [...drawn.querySelectorAll<HTMLElement>(':scope > .aa-column')]
+    expect(columns).toHaveLength(2)
+    expect(columns[0].textContent).toContain('First words.')
+    // A column's own editor changes; the document takes the columns again as one block.
+    drawn.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, detail: { source: writeColumns(['## Left\nFirst words, edited.', '- one\n- two']) } }))
+    expect(editor.value).toContain('First words, edited.')
+    expect(onChange).toHaveBeenCalled()
+    editor.destroy()
+    host.remove()
+  })
+})
