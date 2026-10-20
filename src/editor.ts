@@ -13,6 +13,7 @@ import { indentBlocks, renumber, toggleCallout } from './document'
 import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableAction } from './table'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
+import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
 import { openPrompt, type OpenPrompt, type Prompter } from './prompt'
@@ -1087,6 +1088,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   renderAll()
   const stopSelection = paintSelection(host)
+  const stopSpanning = selectAcrossBlocks(host, () => readOnly || destroyed)
 
   const setReadOnly = (value: boolean) => {
     if (value === readOnly) return
@@ -1203,6 +1205,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       for (const stop of shimmers) stop()
       shimmers.clear()
       stopSelection()
+      stopSpanning()
       stopControls()
       host.removeEventListener('beforeinput', onBeforeInput)
       host.removeEventListener('input', onInput)
