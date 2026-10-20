@@ -427,6 +427,35 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   // ----- events -----
 
+  /**
+   * Backspace or Delete with the caret on a block's edge: a heading's, bullet's
+   * or quote's prefix comes off first, then the block joins its neighbour. A
+   * table cell's edge holds. True when the key is taken here.
+   */
+  const deleteAtEdge = (selection: Selection2, direction: 'backward' | 'forward'): boolean => {
+    const [a, b] = order(selection.anchor, selection.focus)
+    if (a.block !== b.block || a.offset !== b.offset) return false
+    const block = blocks[a.block]
+    if (block.kind === 'table') {
+      const cell = tableRows(block.source).flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
+      return !!cell && (direction === 'backward' ? a.offset === cell.from : a.offset === cell.to)
+    }
+    if (direction === 'backward') {
+      if (a.offset <= block.prefix) {
+        const change = liftPrefix(blocks, a.block)
+        if (change) { commit(change.blocks, change.caret, change.caret, 'edit'); return true }
+      }
+      if (a.offset !== 0) return false
+      const change = joinWithPrevious(blocks, a.block)
+      if (change) commit(change.blocks, change.caret, change.caret, 'edit')
+      return true
+    }
+    if (a.offset !== block.source.length) return false
+    const change = joinWithNext(blocks, a.block)
+    if (change) commit(change.blocks, change.caret, change.caret, 'edit')
+    return true
+  }
+
   const onBeforeInput = (event: InputEvent) => {
     if (destroyed) return
     if (readOnly) { event.preventDefault(); return }
@@ -467,27 +496,12 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         return
       case 'deleteContentBackward': {
         if (!collapsed) { event.preventDefault(); insert(selection, ''); return }
-        // At the start of a heading, bullet or quote the prefix comes off
-        // first; at the very start of anything else the block before takes
-        // this one in.
-        if (a.offset <= block.prefix) {
-          const change = liftPrefix(blocks, a.block)
-          if (change) { event.preventDefault(); commit(change.blocks, change.caret, change.caret, 'edit'); return }
-        }
-        if (a.offset === 0) {
-          event.preventDefault()
-          const change = joinWithPrevious(blocks, a.block)
-          if (change) commit(change.blocks, change.caret, change.caret, 'edit')
-        }
+        if (deleteAtEdge(selection, 'backward')) event.preventDefault()
         return
       }
       case 'deleteContentForward': {
         if (!collapsed) { event.preventDefault(); insert(selection, ''); return }
-        if (a.offset === block.source.length) {
-          event.preventDefault()
-          const change = joinWithNext(blocks, a.block)
-          if (change) commit(change.blocks, change.caret, change.caret, 'edit')
-        }
+        if (deleteAtEdge(selection, 'forward')) event.preventDefault()
         return
       }
       case 'deleteByCut':
@@ -682,6 +696,12 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
+    // Safari sends no beforeinput for Backspace or Delete with nothing to
+    // delete inside the block (at the start of an empty block, say), so the
+    // keys that cross a block's edge are taken here too.
+    if ((event.key === 'Backspace' || event.key === 'Delete') && !selected && !mod && !event.altKey && !event.shiftKey) {
+      if (deleteAtEdge(selection, event.key === 'Backspace' ? 'backward' : 'forward')) { event.preventDefault(); return }
+    }
     // ⌘A selects words, as a word processor does: the block's (a table cell's), then all of the writing. Never the blocks themselves.
     if (mod && key === 'a' && !event.altKey) {
       event.preventDefault()
