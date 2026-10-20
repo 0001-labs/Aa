@@ -38,7 +38,7 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
   refresh() {
     this.replaceChildren(...this.actions.map(action => {
       const node = button(action.label, action.icon, () => { if (this.editor && !this.editor.readOnly) action.run(this.editor) })
-      node.classList.add('note-menu-row', 'ds-context__item--icon')
+      node.classList.add('note-menu-row', 'ds-context__item--icon'); node.dataset.action = action.id
       return node
     }))
   }
@@ -64,6 +64,32 @@ function inserting(atom: NonNullable<EditorOptions['atoms']>[number]): Command |
   } }
 }
 
+/** The part of the page in view: the visual viewport, which a phone's keyboard shortens and a pinch moves, or the window. */
+function visible() {
+  const view = window.visualViewport
+  return { top: view?.offsetTop ?? 0, left: view?.offsetLeft ?? 0, width: view?.width ?? window.innerWidth, height: view?.height ?? window.innerHeight }
+}
+/** Whether the page is worked by touch: a phone or a tablet, with no fine pointer. */
+const coarse = () => !!window.matchMedia?.('(pointer: coarse)').matches
+/** The editor's scale, read as its stylesheet reads it: Design system 1's --ds-sf, or the page's --sf. */
+function scaleOf(host: HTMLElement): number {
+  const style = getComputedStyle(host)
+  return parseFloat(style.getPropertyValue('--ds-sf')) || parseFloat(style.getPropertyValue('--sf')) || 1
+}
+/**
+ * Stands a bar across the foot of what is in view: above a phone's keyboard,
+ * and clear of the home indicator (aa.css gives a docked bar --aa-safe-bottom)
+ * when no keyboard is up. As wide as the view, so it is whole under a pinch.
+ */
+function dock(bar: HTMLElement) {
+  const view = visible()
+  bar.dataset.docked = ''
+  bar.style.left = `${view.left}px`
+  bar.style.width = `${view.width}px`
+  const inset = view.height >= window.innerHeight - 1 ? parseFloat(getComputedStyle(bar).getPropertyValue('--aa-safe-bottom')) || 0 : 0
+  bar.style.top = `${view.top + view.height - bar.getBoundingClientRect().height - inset}px`
+}
+
 export function createControls(editor: Editor, options: EditorOptions): () => void {
   defineAaToolbar()
   const inserts = (options.atoms ?? []).map(inserting).filter((command): command is Command => !!command)
@@ -74,7 +100,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const restore = () => { if (saved) editor.selectRange(saved.start, saved.end) }
   const marks = ['bold', 'italic', 'strike', 'code', 'link', 'equation'] as const
   toolbar.actions = [...marks.map(mark => ({ id: mark, icon: mark, label: { bold: 'Bold', italic: 'Italic', strike: 'Strikethrough', code: 'Code', link: 'Link', equation: 'Equation' }[mark], run: () => { restore(); editor.format(mark) } })),
-    { id: 'turn', icon: 'text', label: 'Turn into', run: () => { restore(); const active = editor.activeBlock(); if (active) open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), toolbar.getBoundingClientRect()) } },
+    { id: 'turn', icon: 'text', label: 'Turn into', run: () => { restore(); const active = editor.activeBlock(); if (active) open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), (toolbar.querySelector('[data-action="turn"]') ?? toolbar).getBoundingClientRect()) } },
     ...inserts.map(command => ({ ...command, run: () => { restore(); command.run(editor) } })),
     ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
   ]
@@ -84,8 +110,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   } }]
   // Touch has no ⌘/ and keeps its long press for selecting words: the block
   // commands, moving a block among them, are a button above the keyboard.
-  if (window.matchMedia?.('(pointer: coarse)').matches) toolbar.actions = [...toolbar.actions,
-    { id: 'block', label: 'Block commands', icon: 'slash', run: () => { restore(); target = editor.activeBlock()?.index ?? -1; blockMenu() } },
+  if (coarse()) toolbar.actions = [...toolbar.actions,
+    { id: 'block', label: 'Block commands', icon: 'slash', run: () => { restore(); target = editor.activeBlock()?.index ?? -1; blockMenu(toolbar.querySelector('[data-action="block"]')?.getBoundingClientRect()) } },
     { id: 'indent', label: 'Indent', icon: 'indent', run: () => { restore(); editor.indent(1) } },
     { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => { restore(); editor.indent(-1) } },
   ]
@@ -111,12 +137,16 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const requestLink = (event: Event) => {
     linkTarget = (event as CustomEvent).detail
     if (!linkTarget || editor.readOnly) return
-    linkUrl.value = linkTarget.url; linkBar.hidden = false
-    const rect = host.getBoundingClientRect()
-    const square = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--sf')) || 1)
-    linkBar.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - 16 * square))}px`
-    linkBar.style.top = `${Math.max(0, Math.min(rect.top, window.innerHeight - 3 * square))}px`
-    toolbar.hidden = true; linkUrl.focus(); linkUrl.select()
+    linkUrl.value = linkTarget.url; linkBar.hidden = false; toolbar.hidden = true
+    // On touch the field takes the toolbar's place above the keyboard; with a pointer it stands at the editor's top.
+    if (coarse()) dock(linkBar)
+    else {
+      delete linkBar.dataset.docked; linkBar.style.width = ''
+      const rect = host.getBoundingClientRect(), square = 20 * scaleOf(host), view = visible()
+      linkBar.style.left = `${Math.max(view.left, Math.min(rect.left, view.left + view.width - 16 * square))}px`
+      linkBar.style.top = `${Math.max(view.top, Math.min(rect.top, view.top + view.height - 3 * square))}px`
+    }
+    linkUrl.focus(); linkUrl.select()
   }
   linkBar.addEventListener('submit', event => {
     event.preventDefault()
@@ -133,9 +163,19 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   let timer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
   const moveMenu = (rect: DOMRect) => {
-    const size = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--sf')) || 1)
-    menu.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - 4 * size))}px`
-    menu.style.top = `${Math.max(0, Math.min(rect.bottom, window.innerHeight - Math.min(choices.length, 12) * size))}px`
+    // The menu is drawn before it is placed, so its height is its own: its rows up to its sixteen squares.
+    const size = 20 * scaleOf(host), view = visible()
+    // As wide as its words need, rounded up to whole squares (four at least, aa.css); then placed by its own size.
+    menu.style.width = ''
+    menu.style.width = `${Math.ceil(menu.getBoundingClientRect().width / size - 0.001) * size}px`
+    const box = menu.getBoundingClientRect(), height = box.height || Math.min(choices.length, 16) * size
+    // Words fade over the last square only where they are cut (aa.css).
+    for (const row of Array.from(menu.children)) { const words = row.lastElementChild; if (words instanceof HTMLElement) words.toggleAttribute('data-cut', words.scrollWidth > words.clientWidth + 1) }
+    menu.style.left = `${Math.max(view.left, Math.min(rect.left, view.left + view.width - box.width))}px`
+    // Under the block, or over it when the keyboard or the foot of the window leaves no room under it.
+    const under = rect.bottom, over = rect.top - height
+    const room = under + height <= view.top + view.height
+    menu.style.top = `${room || over < view.top ? Math.max(view.top, Math.min(under, view.top + view.height - height)) : over}px`
   }
   const close = () => { menu.hidden = true; slash = null; menu.replaceChildren(); host.removeAttribute('aria-controls') }
   const run = (command: Command) => {
@@ -143,6 +183,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const query = slash
     close()
     editor.transaction(() => { if (query) editor.replace(query.from, query.to, ''); command.run(editor) })
+    // On touch a block left selected would wear the system's handles: the caret goes to the end of what the command made.
+    if (coarse()) { const range = editor.selection(); if (range && range.start !== range.end) editor.selectRange(range.end) }
     toolbar.hidden = true
   }
   const paint = () => {
@@ -168,9 +210,12 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const input = document.createElement('input'); input.type = 'file'; input.multiple = true
     input.addEventListener('change', () => Array.from(input.files ?? []).forEach(file => editor.insertFile(file)), { once: true }); input.click()
   } })
-  const blockMenu = () => {
+  /** The block's commands, over the block, or at `at` (the toolbar's cell on touch, where the finger is). */
+  const blockMenu = (at?: DOMRect) => {
     if (target < 0) return
-    if (editor.activeBlock()?.index !== target || editor.activeBlock()?.block.kind !== 'table') editor.selectBlocks(target)
+    // The caret's block is the commands' block as it is; selecting it would draw the system's handles on touch. A table is never selected whole.
+    const active = editor.activeBlock()
+    if (active?.index !== target || (active.block.kind !== 'table' && !coarse())) editor.selectBlocks(target)
     const commands: Command[] = [
       ...builtin, { id: 'duplicate', label: 'Duplicate', icon: 'duplicate', run: () => editor.blockAction('duplicate') },
       { id: 'delete', label: 'Delete', icon: 'delete', run: () => editor.blockAction('delete') },
@@ -184,7 +229,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const count = editor.stats()
     commands.push({ id: 'count', label: `${count.words} words, ${count.characters} characters`, icon: 'text', run: () => {} })
     slash = null
-    open(commands, (host.children[target] ?? host).getBoundingClientRect())
+    open(commands, at ?? (host.children[target] ?? host).getBoundingClientRect())
   }
   const updateCommands = () => {
     if (disposed || editor.readOnly || options.menus === false) { close(); return }
@@ -201,13 +246,9 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   const positionToolbar = () => {
     if (toolbar.hidden) return
-    if (window.matchMedia?.('(pointer: coarse)').matches) {
-      const viewport = window.visualViewport
-      toolbar.dataset.docked = ''
-      toolbar.style.top = `${(viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - toolbar.getBoundingClientRect().height}px`
-      toolbar.style.left = '0px'
-    } else {
-      delete toolbar.dataset.docked
+    if (coarse()) dock(toolbar)
+    else {
+      delete toolbar.dataset.docked; toolbar.style.width = ''
       const range = window.getSelection()?.rangeCount ? window.getSelection()!.getRangeAt(0) : null
       const rect = range?.getBoundingClientRect?.() ?? host.getBoundingClientRect()
       // As Design system 1's context bar: half a square above the selection, below it when there is no room.
@@ -220,7 +261,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const selectionChanged = () => {
     clearTimeout(timer)
     const selection = editor.selection()
-    const mobile = window.matchMedia?.('(pointer: coarse)').matches && host.contains(document.activeElement)
+    const mobile = coarse() && host.contains(document.activeElement)
     if (!selection || (!mobile && selection.start === selection.end) || editor.readOnly) { toolbar.hidden = true; return }
     saved = selection
     timer = setTimeout(() => { if (!disposed && options.toolbar && !editor.readOnly) { toolbar.hidden = false; positionToolbar() } }, 140)
@@ -270,6 +311,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const viewport = (event: Event) => {
     if (event.target instanceof Node && menu.contains(event.target)) return
     positionToolbar()
+    if (!linkBar.hidden && 'docked' in linkBar.dataset) dock(linkBar)
     if (!menu.hidden) {
       const block = editor.activeBlock()
       const rect = block ? host.children[block.index]?.getBoundingClientRect() : null
@@ -284,6 +326,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   window.addEventListener('resize', viewport)
   window.addEventListener('scroll', viewport, true)
   window.visualViewport?.addEventListener('resize', viewport)
+  window.visualViewport?.addEventListener('scroll', viewport)
   const stopDragging = createDragging(editor, options, overlayRoot)
   return () => {
     disposed = true; clearTimeout(timer); stopDragging()
@@ -292,6 +335,6 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     host.removeEventListener('keydown', keyboard, true)
     host.removeEventListener('contextmenu', contextMenu)
     document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', viewport); window.removeEventListener('scroll', viewport, true)
-    window.visualViewport?.removeEventListener('resize', viewport)
+    window.visualViewport?.removeEventListener('resize', viewport); window.visualViewport?.removeEventListener('scroll', viewport)
   }
 }

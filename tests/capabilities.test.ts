@@ -140,7 +140,8 @@ describe('controls, decorations and media', () => {
     const menu = document.querySelector('.aa-menu') as HTMLElement
     expect(menu.hidden).toBe(false)
     expect(menu.querySelector('[data-command="up"]')).not.toBeNull()
-    expect(host!.children[0].hasAttribute('data-selected')).toBe(true)
+    // The caret stays in its block, which the commands act on: a block selected on touch would wear the system's handles.
+    expect(host!.children[0].hasAttribute('data-selected')).toBe(false)
   })
 
   it("draws the toolbar as Design system 1's context bar, a toolbar that leaves the focus in the writing", () => {

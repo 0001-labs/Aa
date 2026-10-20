@@ -1,6 +1,10 @@
 import './src/aa.css'
+import { startScaling } from './src/ds1/0-face/scaling'
 import { createEditor, defineAaEditor, imageAtom, type AaEditorElement, type Corrector, type PromptAnswer, type Prompter } from './src/index'
 import { diagramAtom } from './src/diagram'
+
+// Design system 1's scale goes on before anything is drawn, so a phone's first paint is already to scale.
+startScaling({ snap: 'layout' })
 
 /**
  * The playground has no sign-in, so its words are corrected by Ezo's server

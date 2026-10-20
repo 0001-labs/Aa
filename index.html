@@ -2,16 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Aa</title>
 <!-- Design system 1's root stylesheet, its tokens and its faces, copied with Sync 1 (sync.json). -->
 <link rel="stylesheet" href="/ds1/one.css">
 <style>
-  :root { color-scheme: light dark; }
+  /* Design system 1's scale: --sf is put on by startScaling() (playground.ts) before the first paint, and the
+     components' own --ds-sf follows it, so on a phone every square, line and face is drawn a third larger. */
+  :root { color-scheme: light dark; --ds-sf: var(--sf, 1); }
   html, body { background: var(--background); color: var(--ds-text-color); }
   body { font-family: var(--ds-typeface-regular); font-feature-settings: var(--ds-font-features); font-size: var(--ds-type-size-default); line-height: var(--ds-unit); letter-spacing: var(--ds-type-letterspacing-default); }
-  main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2 * var(--ds-unit)); max-width: calc(66 * var(--ds-unit)); margin: 0 auto; padding: calc(3 * var(--ds-unit)) var(--ds-unit); }
-  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2 * var(--ds-unit)); max-width: calc(66 * var(--ds-unit)); margin: 0 auto; padding: calc(3 * var(--ds-unit)) max(var(--ds-unit), env(safe-area-inset-right)) calc(3 * var(--ds-unit)) max(var(--ds-unit), env(safe-area-inset-left)); }
+  /* One column on a narrow screen; minmax(0, 1fr), so a diagram wider than the screen scrolls within itself rather than widening the column. */
+  @media (max-width: 760px) { main { grid-template-columns: minmax(0, 1fr); } }
   h1 { margin: 0; font: inherit; font-family: var(--ds-typeface-medium); font-weight: var(--ds-type-weight-bold); }
   .side { color: var(--ds-text-color-muted); }
   aa-editor { min-height: calc(20 * var(--ds-unit)); }

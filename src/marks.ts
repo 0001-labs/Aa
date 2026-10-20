@@ -158,7 +158,10 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
   const placePanel = () => {
     if (!panel) return
     const box = host.getBoundingClientRect()
-    const foot = Math.min(box.bottom, view.innerHeight) - 20
+    // The foot of what is in view: the visual viewport, above a phone's keyboard.
+    const port = view.visualViewport, seen = (port?.offsetTop ?? 0) + (port?.height ?? view.innerHeight)
+    const style = view.getComputedStyle(host), scale = parseFloat(style.getPropertyValue('--ds-sf')) || parseFloat(style.getPropertyValue('--sf')) || 1
+    const foot = Math.min(box.bottom, seen) - 20 * scale
     panel.style.left = `${box.left + box.width / 2}px`
     panel.style.top = `${Math.max(box.top, foot)}px`
   }
@@ -205,6 +208,7 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
   resize?.observe(host)
   view.addEventListener('scroll', schedule, true)
   view.addEventListener('resize', schedule)
+  view.visualViewport?.addEventListener('resize', schedule)
 
   return {
     set(next) { changes = next.filter(change => change.blocks.length); draw() },
@@ -218,6 +222,7 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
       resize?.disconnect()
       view.removeEventListener('scroll', schedule, true)
       view.removeEventListener('resize', schedule)
+      view.visualViewport?.removeEventListener('resize', schedule)
       layer?.remove()
       hideSummary()
     },

@@ -44,6 +44,9 @@
   letter-spacing: var(--aa-letterspacing, var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf))));
   color: var(--aa-color, var(--ds-text-color, currentColor));
   -webkit-font-smoothing: antialiased;
+  /* On touch a double tap selects a word rather than zooming the page, and a tap is not flashed. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .aa-block {
   position: relative;
@@ -207,6 +210,7 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   --aa-menu-hover: color-mix(in srgb, var(--aa-menu-fill) 78%, var(--aa-menu-ink));
   position: fixed;
   z-index: var(--aa-controls-layer, 1000);
+  -webkit-tap-highlight-color: transparent;
   font: var(--ds-type-weight-default, 400) var(--ds-type-size-default, calc(14px * var(--aa-sf)))/var(--aa-square) "Inter Arrows", var(--ds-typeface-regular, var(--typeface-regular, system-ui)), system-ui, sans-serif;
   font-feature-settings: var(--ds-font-features, normal);
   letter-spacing: var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf)));
@@ -218,20 +222,27 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   color: inherit; font: inherit; cursor: pointer; display: inline-flex;
   align-items: center; justify-content: center; flex-shrink: 0;
 }
-.aa-controls button:hover, .aa-controls button[data-current] { background: var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); }
+.aa-controls button[data-current] { background: var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); }
+/* The pointer's row, only where there is a pointer: a finger's tap leaves nothing lit behind it. */
+@media (hover: hover) { .aa-controls button:hover { background: var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); } }
 .aa-controls button:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: -2px; }
 .aa-icon { display: inline-block; width: calc(16px * var(--aa-sf, var(--sf, 1))); height: calc(16px * var(--aa-sf, var(--sf, 1))); background: currentColor; mask-size: contain; mask-repeat: no-repeat; mask-position: center; flex-shrink: 0; }
 /* The toolbar is Design system 1's context bar itself (.ds-context--bar in
    ds1/context.css): its cells one square, 19px with the pixel beside them.
    Aa keeps it within the window, and on touch docks it above the keyboard. */
 .aa-toolbar { max-width: 100vw; }
-.aa-toolbar[data-docked] { width: 100%; }
+/* Docked (controls.ts), a bar stands across the foot of the view, above the
+   keyboard, as wide as the view: its cells scroll sideways when more than
+   fit, and with no keyboard up it stands over the home indicator's inset. */
+.aa-controls[data-docked] { --aa-safe-bottom: env(safe-area-inset-bottom, 0px); max-width: none; }
+.aa-find[data-docked] { border-width: 1px 0 0; }
 /* The block menu is a Context menu: rows 19px with the pixel under them (a
    square's pitch), words 4px in on the lower sixteen, the icon at the row's
-   end, the outer corners rounded as one silhouette. */
+   end, the outer corners rounded as one silhouette; four squares wide, or
+   the next whole square its words need (controls.ts rounds it). */
 .aa-menu {
   display: flex; flex-direction: column; gap: 1px;
-  width: calc(4 * var(--aa-square)); max-height: calc(16 * var(--aa-square));
+  width: max-content; min-width: calc(4 * var(--aa-square)); max-width: min(calc(12 * var(--aa-square)), 100vw); max-height: calc(16 * var(--aa-square));
   overflow-y: auto; border: 0; border-radius: var(--aa-menu-radius, var(--ds-radius, calc(4px * var(--aa-sf))));
   clip-path: inset(0 round var(--aa-menu-radius, var(--ds-radius, calc(4px * var(--aa-sf)))));
   background: transparent; color: var(--aa-menu-ink);
@@ -242,14 +253,13 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   gap: calc(4px * var(--aa-sf)); padding: 0 calc(4px * var(--aa-sf));
   white-space: nowrap; background: var(--aa-menu-fill); color: var(--aa-menu-ink);
 }
-.aa-menu button:hover, .aa-menu button[data-current], .aa-menu button:focus-visible { background: var(--aa-menu-hover); color: var(--aa-menu-ink); }
+.aa-menu button[data-current], .aa-menu button:focus-visible { background: var(--aa-menu-hover); color: var(--aa-menu-ink); }
+@media (hover: hover) { .aa-menu button:hover { background: var(--aa-menu-hover); color: var(--aa-menu-ink); } }
 .aa-menu button:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px var(--ds-focus-ring, currentColor); }
 .aa-menu button[data-command="count"] { font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf))); }
 .aa-menu button .aa-icon { order: 2; }
-.aa-menu button span:last-child {
-  order: 1; flex: 1; min-width: 0; overflow: hidden;
-  mask-image: linear-gradient(to right, black calc(100% - var(--aa-square)), transparent 100%);
-}
+.aa-menu button span:last-child { order: 1; flex: 1; min-width: 0; overflow: hidden; }
+.aa-menu button span:last-child[data-cut] { mask-image: linear-gradient(to right, black calc(100% - var(--aa-square)), transparent 100%); }
 .aa-menu-empty { display: block; height: calc(var(--aa-square) - 1px); padding: calc(3px * var(--aa-sf)) calc(4px * var(--aa-sf)) 0; box-sizing: border-box; background: var(--aa-menu-fill); }
 .aa-drop-line { position: fixed; z-index: 1000; height: 1px; background: var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); pointer-events: none; }
 .aa-find { display: flex; flex-wrap: wrap; width: calc(16 * var(--aa-square)); max-width: calc(100vw - 2 * var(--aa-square) - 2px); border: 1px solid var(--aa-rule, var(--ds-border-color, currentColor)); color: var(--ds-text-color, var(--text-color, CanvasText)); background: var(--ds-paper, var(--background, Canvas)); }
