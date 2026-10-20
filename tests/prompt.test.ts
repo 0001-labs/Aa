@@ -191,6 +191,27 @@ describe('asking AI', () => {
     expect(field()!.hasAttribute('data-listening')).toBe(false)
   })
 
+  it('says in plain words why it cannot listen, never failing silently', () => {
+    class Speech extends EventTarget {
+      static last: Speech
+      started = false
+      lang = ''; continuous = false; interimResults = false
+      onresult: ((event: unknown) => void) | null = null; onend: (() => void) | null = null; onerror: ((event: { error?: string }) => void) | null = null
+      constructor() { super(); Speech.last = this }
+      start() { this.started = true } stop() { this.onend?.() } abort() {}
+    }
+    ;(globalThis as Record<string, unknown>).SpeechRecognition = Speech
+    const e = setup('', async () => 'x')
+    e.selectRange(0)
+    key(host!.children[0], ' ')
+    key(field()!, ' ')
+    // Started at once, within the key's press.
+    expect(Speech.last.started).toBe(true)
+    Speech.last.onerror!({ error: 'not-allowed' })
+    expect(field()!.dataset.placeholder).toMatch(/microphone is blocked/)
+    expect(field()!.hasAttribute('data-listening')).toBe(false)
+  })
+
   it('draws on a diagram from its board, the answer the diagram written again', async () => {
     const source = 'Above\n\n```diagram\n[A]\n```\n\nBelow'
     const asked = vi.fn(async (_said: string, context: PromptContext) => `${context.text}\n[B] @ 6 0\nA -> B`)

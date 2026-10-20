@@ -54,7 +54,21 @@ type SpeechRecognitionLike = EventTarget & {
   start(): void; stop(): void; abort(): void
   onresult: ((event: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null
   onend: (() => void) | null
-  onerror: (() => void) | null
+  onerror: ((event: { error?: string }) => void) | null
+  onaudiostart?: (() => void) | null
+}
+
+/** Safari asks again, or not at all, for a second use of the microphone beside its dictation: there the dot only breathes. */
+const safari = typeof navigator !== 'undefined' && /^((?!chrome|chromium|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent)
+
+/** What went wrong with listening, in plain words, where the person can do something about it. */
+function listeningFailure(error: string | undefined): string | null {
+  if (error === 'not-allowed') return safari ? 'The microphone is blocked: allow it for this site in Safari › Settings › Websites › Microphone' : 'The microphone is blocked: allow it for this site in the browser’s settings'
+  if (error === 'service-not-allowed') return safari ? 'Turn on Dictation in System Settings › Keyboard to speak here' : 'Speaking is turned off in this browser'
+  if (error === 'audio-capture') return 'No microphone was found'
+  if (error === 'network') return 'Speaking needs a connection'
+  if (error === 'no-speech') return 'Nothing was heard: press Space twice to try again'
+  return null
 }
 
 /** The browser's speech recognition, where it has one. */
@@ -142,8 +156,9 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     dot?.remove(); dot = null
     if (level) { cancelAnimationFrame(level.frame); level.stream?.getTracks().forEach(track => track.stop()); void level.context?.close(); level = null }
   }
-  const breathe = async () => {
-    if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !dot) return
+  /** The resting dot's breath at once, and the voice's level once listening has the microphone. */
+  const breathe = () => {
+    if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !dot) return null
     const shift = dot.querySelector<HTMLElement>('.aa-prompt-caret-hue')!
     level = { frame: 0 }
     let analyser: AnalyserNode | null = null
@@ -165,16 +180,19 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
       level.frame = requestAnimationFrame(step)
     }
     level.frame = requestAnimationFrame(step)
-    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') return
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      if (!dot || !level) { stream.getTracks().forEach(track => track.stop()); return }
-      const context = new AudioContext()
-      analyser = context.createAnalyser()
-      analyser.fftSize = samples.length
-      context.createMediaStreamSource(stream).connect(analyser)
-      Object.assign(level, { stream, context })
-    } catch { /* the breath alone */ }
+    // Asked for only once dictation has the microphone, never beside it in Safari: a failure keeps the breath alone.
+    return async () => {
+      if (safari || !navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') return
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        if (!dot || !level) { stream.getTracks().forEach(track => track.stop()); return }
+        const context = new AudioContext()
+        analyser = context.createAnalyser()
+        analyser.fftSize = samples.length
+        context.createMediaStreamSource(stream).connect(analyser)
+        Object.assign(level, { stream, context })
+      } catch { /* the breath alone */ }
+    }
   }
 
   const text = () => (field.textContent ?? '').replace(/\s+/g, ' ').trim()
@@ -205,11 +223,11 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     field.append(dot)
     worded()
     caretAtDot()
-    void breathe()
     field.dataset.placeholder = 'Listening…'
     speech.lang = doc.documentElement.lang || navigator.language
     speech.continuous = true
     speech.interimResults = true
+    let failure: string | null = null
     speech.onresult = event => {
       for (let index = event.resultIndex; index < event.results.length; index++) {
         const result = event.results[index]
@@ -232,9 +250,13 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
       const away = !!selection?.rangeCount && field.contains(selection.anchorNode) && !(selection.isCollapsed && dot && selection.anchorNode === field && field.childNodes[selection.anchorOffset] === dot)
       if (!away) caretAtDot()
     }
-    speech.onend = () => { listening = null; stopDot(); delete field.dataset.listening; field.dataset.placeholder = options.placeholder ?? 'Ask AI to write' }
-    speech.onerror = () => speech.onend?.()
-    try { speech.start() } catch { speech.onend?.() }
+    speech.onend = () => { listening = null; stopDot(); delete field.dataset.listening; field.dataset.placeholder = failure ?? options.placeholder ?? 'Ask AI to write' }
+    // Never failing silently: what went wrong is said where the words would be.
+    speech.onerror = event => { failure = listeningFailure(event.error) ?? failure; speech.onend?.() }
+    // Started first and alone, within the key's own press, so the browser asks for the microphone once.
+    try { speech.start() } catch { failure = 'Speaking could not start here'; speech.onend?.(); return }
+    const followVoice = breathe()
+    if (followVoice) speech.onaudiostart = () => { void followVoice() }
   }
 
   const send = async () => {
