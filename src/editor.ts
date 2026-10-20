@@ -186,7 +186,12 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
    * An empty document shows the product's placeholder; an empty paragraph
    * with the caret in it says how to reach the styles.
    */
-  const showPlaceholder = (selection = readSelection()) => {
+  // The selection is read in the body, never as a default parameter: a product
+  // bundling the built aa.js with Rolldown (Vite+) binds a default that calls a
+  // function declared later in the same `let` to a same-named outer function,
+  // and the editor throws as it draws.
+  const showPlaceholder = (selection?: Selection2 | null) => {
+    if (selection === undefined) selection = readSelection()
     const caret = selection && !selected && !readOnly && comparePos(selection.anchor, selection.focus) === 0 ? selection.focus.block : -1
     elements().forEach((element, index) => {
       const block = blocks[index]
@@ -266,7 +271,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
 
   /** Draw again every block whose shown syntax changed with the selection. */
-  const applyReveal = (selection = readSelection()) => {
+  const applyReveal = (selection?: Selection2 | null) => {
+    if (selection === undefined) selection = readSelection()
     if (composing) return
     const els = elements()
     let changed = false
