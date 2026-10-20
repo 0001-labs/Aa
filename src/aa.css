@@ -289,6 +289,8 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 .aa-menu button .aa-icon { order: 2; }
 .aa-menu button > span:not(.aa-icon) { order: 1; flex: 1; min-width: 0; overflow: hidden; }
 .aa-menu button > span:not(.aa-icon)[data-cut] { mask-image: linear-gradient(to right, black calc(100% - var(--aa-square)), transparent 100%); }
+/* A person in the menu (the people to mention) is their round avatar, never stretched as the words are. */
+.aa-menu button > span.aa-avatar { order: 0; flex: 0 0 auto; }
 .aa-menu-empty { display: block; height: calc(var(--aa-square) - 1px); padding: calc(3px * var(--aa-sf)) calc(4px * var(--aa-sf)) 0; box-sizing: border-box; background: var(--aa-menu-fill); }
 /* The sheet (sheet.ts): ds1/overlay.css draws its shape, handle, motion and
    backdrop on the frame Design system 1's controls.css gives a modal, drawn
