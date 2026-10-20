@@ -18,6 +18,8 @@
   h1 { margin: 0; font: inherit; font-family: var(--ds-typeface-medium); font-weight: var(--ds-type-weight-bold); }
   .side { color: var(--ds-text-color-muted); }
   aa-editor { min-height: calc(20 * var(--ds-unit)); }
+  .comments { margin-bottom: calc(2 * var(--ds-unit)); color: var(--ds-text-color); }
+  .comments[hidden] { display: none; }
   pre { margin: 0; font-family: var(--typeface-mono); font-size: calc(13px * var(--ds-sf)); line-height: var(--ds-unit); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   /* A row of one square, its words and buttons on the lower sixteen. */
   .bar { display: flex; align-items: flex-end; gap: var(--ds-unit); min-height: var(--ds-unit); margin-bottom: var(--ds-unit); line-height: calc(16px * var(--ds-sf)); }
@@ -30,11 +32,13 @@
 <body>
 <main>
   <section>
-    <div class="bar"><h1>Aa</h1><button id="readonly" aria-pressed="false">Read only</button><button id="undo">Undo</button><button id="redo">Redo</button></div>
+    <div class="bar"><h1>Aa</h1><button id="readonly" aria-pressed="false">Read only</button><button id="undo">Undo</button><button id="redo">Redo</button><button id="comments-beside" aria-pressed="false">Comments beside</button></div>
     <aa-editor id="editor" placeholder="Write" toolbar></aa-editor>
   </section>
   <section class="side">
     <div class="bar"><h1>What it stores</h1></div>
+    <!-- The comments stand beside the text when asked; otherwise each thread opens at its words. -->
+    <aside id="comments" class="comments" hidden></aside>
     <pre id="source"></pre>
   </section>
   <section>

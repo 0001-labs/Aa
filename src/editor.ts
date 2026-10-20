@@ -18,6 +18,8 @@ import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
 import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from './marks'
 import { openPrompt, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
+import { createCommentsView, type CommentsView } from './comments-view'
+import type { AnchoredThread, CommentStore } from './comments'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -87,6 +89,21 @@ export type EditorOptions = {
   prompt?: Prompter
   /** Whether `correct` starts on; `editor.correcting` turns it on and off. */
   correcting?: boolean
+  /**
+   * Comments on ranges of the text (`src/comments.ts`): the product's store
+   * of threads, people and permissions. Aa marks the commented words, keeps
+   * the anchors right as the text changes, and draws the threads in a popover
+   * at the words or in the store's `panel`. Without it, nothing is commented.
+   */
+  comments?: CommentStore
+}
+
+/** The comments from outside: open a thread, start one on the selection, close what is open. */
+export type EditorComments = {
+  open(threadId: string): void
+  start(): boolean
+  close(): boolean
+  readonly threads: readonly AnchoredThread[]
 }
 
 export type Editor = {
@@ -121,6 +138,8 @@ export type Editor = {
   setHistoryProvider(provider: { undo(): boolean; redo(): boolean } | null): void
   /** Whether the words are corrected as they are written; always false without `correct`. */
   correcting: boolean
+  /** The comments, where the editor has a `comments` store. */
+  readonly comments?: EditorComments
   destroy(): void
 }
 
@@ -737,6 +756,9 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const key = event.key.toLowerCase()
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
+    // ⌘⇧M comments on the selected words; Escape puts an open thread away first of all.
+    if (mod && event.shiftKey && !event.altKey && key === 'm' && comments) { event.preventDefault(); comments.start(); return }
+    if (event.key === 'Escape' && comments?.close()) { event.preventDefault(); return }
     // Escape puts the marks of what AI changed away first, then selects the block.
     if (event.key === 'Escape' && marks?.hideSummary()) { event.preventDefault(); return }
     if (event.key === 'Escape' && marks?.size) { event.preventDefault(); marks.clear(); return }
@@ -994,6 +1016,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let asking: OpenPrompt | null = null
   /** What the last answer changed, marked to be seen and taken back. */
   let marks: Marks | null = null
+  let comments: CommentsView | null = null
   /** The blocks a prompt is about: its section, from the heading over it to the next, itself left out. */
   const sectionOf = (index: number): number[] => {
     let first = index, last = index
@@ -1315,6 +1338,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       const anchor = selection ? keep(selection.anchor) : { block: 0, offset: 0 }, focus = selection ? keep(selection.focus) : anchor
       if (selection) { setSelection(anchor, focus); applyReveal({ anchor, focus }) }
       history.reset({ blocks, anchor, focus })
+      comments?.changed()
     },
     get readOnly() { return readOnly },
     set readOnly(value: boolean) { setReadOnly(value) },
@@ -1386,6 +1410,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       }
     },
     setHistoryProvider(provider) { historyProvider = provider },
+    get comments() { return comments ?? undefined },
     get correcting() { return !!correction?.enabled },
     set correcting(value: boolean) { if (!correction || correction.enabled === value) return; correction.enabled = value; markSpelling(value) },
     destroy() {
@@ -1410,12 +1435,21 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('aa-atom-prompt', onAtomPrompt)
       asking?.close()
       marks?.destroy()
+      comments?.destroy()
       host.removeEventListener('compositionstart', onCompositionStart)
       host.removeEventListener('compositionend', onCompositionEnd)
       document.removeEventListener('selectionchange', onSelectionChange)
       sweep(true)
     },
   }
+  if (options.comments) comments = createCommentsView(host, {
+    store: options.comments,
+    value: () => toMarkdown(blocks),
+    selection: () => editor.selection(),
+    decorate: ranges => editor.decorate(ranges, 'comments'),
+    selectRange: (start, end) => editor.selectRange(start, end),
+    readOnly: () => readOnly,
+  })
   stopControls = createControls(editor, options)
   return editor
 }

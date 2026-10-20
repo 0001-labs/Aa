@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import type { Editor } from './editor'
+import { textChange } from './comments'
 
 export type PeerSelection = { id: string; label: string; anchor: Uint8Array; focus: Uint8Array }
 /** Convex supplies one atomic initialization, a reactive state query, and an append mutation. */
@@ -16,14 +17,8 @@ export type CollaborationOptions = { id: string; label?: string; onError?(error:
 export type Collaboration = { ready: Promise<void>; flush(): Promise<void>; retry(): Promise<void>; destroy(): void; readonly pending: number }
 const LOCAL = Symbol('local'), REMOTE = Symbol('remote')
 
-/** The smallest source replacement needed to mirror a Markdown edit into Y.Text. */
-export function textChange(before: string, after: string): { start: number; end: number; text: string } {
-  let start = 0
-  while (start < before.length && start < after.length && before[start] === after[start]) start++
-  let end = before.length, tail = after.length
-  while (end > start && tail > start && before[end - 1] === after[tail - 1]) { end--; tail-- }
-  return { start, end, text: after.slice(start, tail) }
-}
+/** The smallest source replacement needed to mirror a Markdown edit into Y.Text: the diff comments follow too. */
+export { textChange }
 
 export function connectCollaboration(editor: Editor, transport: CollaborationTransport, options: CollaborationOptions): Collaboration {
   const doc = new Y.Doc(), text = doc.getText('markdown')

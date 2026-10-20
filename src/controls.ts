@@ -102,6 +102,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   toolbar.actions = [...marks.map(mark => ({ id: mark, icon: mark, label: { bold: 'Bold', italic: 'Italic', strike: 'Strikethrough', code: 'Code', link: 'Link', equation: 'Equation' }[mark], run: () => { restore(); editor.format(mark) } })),
     { id: 'turn', icon: 'text', label: 'Turn into', run: () => { restore(); const active = editor.activeBlock(); if (active) open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), (toolbar.querySelector('[data-action="turn"]') ?? toolbar).getBoundingClientRect()) } },
     ...inserts.map(command => ({ ...command, run: () => { restore(); command.run(editor) } })),
+    // Comment on the selected words, where the product keeps comments.
+    ...(options.comments ? [{ id: 'comment', icon: 'comment', label: 'Comment', run: () => { restore(); editor.comments?.start() } }] : []),
     ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
   ]
   if (options.onFiles) toolbar.actions = [...toolbar.actions, { id: 'image', label: 'Image or file', icon: 'image', run: () => {

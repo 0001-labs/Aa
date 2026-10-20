@@ -1,6 +1,6 @@
 import './src/aa.css'
 import { startScaling } from './src/ds1/0-face/scaling'
-import { createEditor, defineAaEditor, imageAtom, type AaEditorElement, type Corrector, type PromptAnswer, type Prompter } from './src/index'
+import { createEditor, defineAaEditor, imageAtom, memoryCommentStore, type AaEditorElement, type Corrector, type PromptAnswer, type Prompter } from './src/index'
 import { diagramAtom } from './src/diagram'
 
 // Design system 1's scale goes on before anything is drawn, so a phone's first paint is already to scale.
@@ -34,41 +34,6 @@ const prompt: Prompter = async (said, { kind, text, before = '', after = '', doc
   if (result.status !== 'success' || !result.value || (typeof result.value !== 'string' && typeof result.value !== 'object')) throw new Error('Not answered')
   return result.value as string | PromptAnswer
 }
-
-const editor = document.getElementById('editor') as AaEditorElement
-editor.options = {
-  atoms: [imageAtom, diagramAtom],
-  correct,
-  prompt,
-  drawEquation: (element, tex, displayMode) => {
-    let active = true
-    element.textContent = tex
-    void Promise.all([import('katex'), import('katex/dist/katex.min.css')]).then(([{ default: katex }]) => {
-      if (active) katex.render(tex, element, { displayMode, throwOnError: false, trust: false })
-    }).catch(() => { /* Keep the TeX source visible if the renderer cannot load. */ })
-    return () => { active = false }
-  },
-  onFiles: async files => {
-    const instance = editor.editor
-    if (!instance) return
-    let selection = instance.selection()
-    for (const file of files) {
-      const url = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error)
-        reader.readAsDataURL(file)
-      })
-      if (instance.readOnly || !selection) return
-      const name = file.name.replace(/[\[\]\n]/g, '')
-      const source = `${/^(image|audio|video)\//.test(file.type) ? '!' : ''}[${name}](${url})`
-      const start = selection.start, before = instance.value.slice(0, start), after = instance.value.slice(selection.end)
-      const text = `${before && !before.endsWith('\n\n') ? '\n\n' : ''}${source}${after && !after.startsWith('\n\n') ? '\n\n' : ''}`
-      instance.replace(start, selection.end, text)
-      selection = instance.selection()
-    }
-  },
-}
-defineAaEditor()
 
 const SAMPLE = `# Aa
 
@@ -125,6 +90,65 @@ Drawn -> Kept as Markdown
 
 Addresses turn into links by themselves: https://using.link and www.ezo.gs.`
 
+/**
+ * Comments, kept here in the tab as a product's backend would keep them: two
+ * people have already commented on the sample, one thread resolved; you write
+ * as Joachim. Select words and press Comment in the toolbar (or ⌘⇧M) to start a
+ * thread, press marked words to open theirs, @ in a reply names someone.
+ */
+const joachim = { id: 'joachim', name: 'Joachim' }, ann = { id: 'ann', name: 'Ann Lund' }, bo = { id: 'bo', name: 'Bo Ek' }
+const anchor = (text: string, quote: string) => { const from = text.indexOf(quote); return { from, to: from + quote.length, quote } }
+const hour = 3_600_000, now = Date.now()
+const comments = memoryCommentStore({
+  me: joachim, people: [joachim, ann, bo], delay: 150,
+  threads: [
+    { id: 'blocks', ...anchor(SAMPLE, 'Each paragraph is a block of its own'), comments: [
+      { id: 'b1', author: ann, body: 'Should this say what a block is for a reader who has never used Notion?', createdAt: now - 26 * hour },
+      { id: 'b2', author: bo, body: '@Ann Lund I would keep it: the next sentence shows it.', createdAt: now - 3 * hour, mentions: [ann] },
+    ], createdAt: now - 26 * hour, updatedAt: now - 3 * hour },
+    { id: 'drag', ...anchor(SAMPLE, 'Drag a block up or down to move it'), comments: [
+      { id: 'd1', author: bo, body: 'Say that a still press lifts it first.', createdAt: now - 50 * hour },
+    ], createdAt: now - 50 * hour, updatedAt: now - 20 * hour, resolvedAt: now - 20 * hour, resolvedBy: joachim },
+  ],
+})
+
+const editor = document.getElementById('editor') as AaEditorElement
+editor.options = {
+  comments,
+  atoms: [imageAtom, diagramAtom],
+  correct,
+  prompt,
+  drawEquation: (element, tex, displayMode) => {
+    let active = true
+    element.textContent = tex
+    void Promise.all([import('katex'), import('katex/dist/katex.min.css')]).then(([{ default: katex }]) => {
+      if (active) katex.render(tex, element, { displayMode, throwOnError: false, trust: false })
+    }).catch(() => { /* Keep the TeX source visible if the renderer cannot load. */ })
+    return () => { active = false }
+  },
+  onFiles: async files => {
+    const instance = editor.editor
+    if (!instance) return
+    let selection = instance.selection()
+    for (const file of files) {
+      const url = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      if (instance.readOnly || !selection) return
+      const name = file.name.replace(/[\[\]\n]/g, '')
+      const source = `${/^(image|audio|video)\//.test(file.type) ? '!' : ''}[${name}](${url})`
+      const start = selection.start, before = instance.value.slice(0, start), after = instance.value.slice(selection.end)
+      const text = `${before && !before.endsWith('\n\n') ? '\n\n' : ''}${source}${after && !after.startsWith('\n\n') ? '\n\n' : ''}`
+      instance.replace(start, selection.end, text)
+      selection = instance.selection()
+    }
+  },
+}
+defineAaEditor()
+
+
 const source = document.getElementById('source')!
 const readOnly = document.getElementById('readonly') as HTMLButtonElement
 editor.value = SAMPLE
@@ -136,6 +160,16 @@ readOnly.addEventListener('click', () => {
   readOnly.setAttribute('aria-pressed', String(editor.readOnly))
 })
 document.getElementById('undo')!.addEventListener('click', () => { editor.undo(); show() })
+// Comments beside the text: the same store drawn in the panel, the editor made again around it.
+const beside = document.getElementById('comments-beside') as HTMLButtonElement, panel = document.getElementById('comments') as HTMLElement
+beside.addEventListener('click', () => {
+  const on = beside.getAttribute('aria-pressed') !== 'true'
+  beside.setAttribute('aria-pressed', String(on))
+  panel.hidden = !on
+  comments.panel = on ? panel : undefined
+  const parent = editor.parentElement!, next = editor.nextSibling
+  editor.remove(); parent.insertBefore(editor, next)
+})
 document.getElementById('redo')!.addEventListener('click', () => { editor.redo(); show() })
 
 document.getElementById('share')!.addEventListener('click', async event => {

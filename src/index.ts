@@ -13,3 +13,6 @@ export { select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type Block
 export { createPlainEditor, type PlainEditorOptions } from './plain'
 export type { Corrector, CorrectionContext } from './correction'
 export { glisten, PROMPT_HERE, type Prompter, type PromptAnswer, type PromptContext } from './prompt'
+export { textChange, mapRange, applyEdit, relocate, anchorThreads, movedThreads, sortThreads, threadsAt, countThreads, commentsLabel, mentionsIn, mentionQuery, relativeTime, initialOf, personColour, type CommentStore, type CommentThread, type Comment, type CommentPerson, type CommentRange, type CommentMove, type AnchoredThread, type TextEdit } from './comments'
+export { memoryCommentStore, type MemoryCommentStore } from './comments-memory'
+export type { EditorComments } from './editor'

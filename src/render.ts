@@ -9,7 +9,8 @@ import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block } fro
 import { tableAlignments, tableRows } from './table'
 import { icons } from './icons'
 
-export type Decoration = { from: number; to: number; className: string; label?: string }
+/** A run of a block's words drawn with a class (and a title, and attributes a layer reads back, `data-comment` say); `from === to` is a caret. */
+export type Decoration = { from: number; to: number; className: string; label?: string; attributes?: Record<string, string> }
 
 /**
  * Makes the element an atom is drawn in: a `.aa-atom` that is not editable,
@@ -158,6 +159,8 @@ function decorateNode(node: HTMLElement, offset: number, decorations: readonly D
     for (const range of ranges) if (range.from < offset + end && range.to > offset + start) {
       span.classList.add(...range.className.split(/\s+/).filter(Boolean))
       if (range.label) span.title = range.label
+      // Two ranges on the same words both name the span: their values stand side by side.
+      for (const [name, value] of Object.entries(range.attributes ?? {})) span.setAttribute(name, span.hasAttribute(name) ? `${span.getAttribute(name)} ${value}` : value)
     }
     node.append(span)
   }
