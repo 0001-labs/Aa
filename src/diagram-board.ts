@@ -2,8 +2,8 @@
  * A diagram's board: a diagram drawn in an editor and changed where it
  * stands, by hand. Its words are never shown: the caret come into its block,
  * a press or Tab gives the board the keys, and it rules its squares under
- * the drawing. Its row of tools (Design system 1's Context bar) stands on the
- * square under the board for as long as the writing can be changed, with
+ * the drawing. Its row of tools (Design system 1's Context bar) stands in the
+ * middle of the board's last square for as long as the writing can be changed, with
  * one colour picker for the pale accents, a Select-faced menu in the top
  * layer.
  *

@@ -87,12 +87,14 @@
   white-space: nowrap;
 }
 
-/* A label is writing: it starts on its column's edge, as writing on the
-   board does, and a name runs on past its column rather than being cut. */
+/* A label is writing, the title too: it starts an item's padding in from
+   its column's edge, as a box's words do, and a name runs on past its
+   column rather than being cut. */
 .label {
   width: max-content;
   min-width: calc(var(--w) * var(--diagram-unit));
 }
+.label > span { padding-inline-start: var(--item-text-padding, 4px); }
 
 /* A box is an item cell, four squares by one: the cell's paper and the
    cell's own light hairline (the page's outline colour, which crosses the

@@ -1,6 +1,6 @@
 /* A diagram's board: the drawing on Design system 1's squares, ruled under
    it, and, while it has the keys, more of them, its Context row of tools,
-   light grey, in the middle under it. Nothing moves
+   light grey, in the middle of its last square. Nothing moves
    in the drawing for the board: it stands where it stood. */
 :host {
   --board-unit: var(--aa-diagram-unit, var(--ds-grid-unit, calc(20px * var(--sf, 1))));
@@ -180,15 +180,18 @@
 
 /* The tools: Design system 1's Context face, a row of squares 19px high a
    pixel apart, in the light grey of the squares with marks in the ink, in
-   the middle of the square under the board, for as long as the writing can
-   be changed. */
+   the middle of the board's last square, inside its paper, for as long as
+   the writing can be changed. Not chosen, the paper keeps that square free
+   for them under the drawing; chosen, its rows run past the drawing. */
+:host([data-editable]:not([data-active])) .paper { padding-bottom: var(--board-unit); }
 .tools {
+  position: relative;
   display: flex;
   gap: 1px;
   width: max-content;
   max-width: 100%;
   height: calc(var(--board-unit) - 1px);
-  margin-top: 1px;
+  margin-top: calc(1px - var(--board-unit));
   overflow-x: auto;
   scrollbar-width: none;
   clip-path: inset(0 round var(--ds-radius, calc(4px * var(--board-sf))));
