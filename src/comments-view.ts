@@ -365,7 +365,8 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       if (event.key === 'Escape') { event.preventDefault(); close() }
     })
     field.addEventListener('blur', () => setTimeout(() => { if (menuField === field && !menu?.contains(doc.activeElement)) hideMenu() }, 120))
-    const post = iconButton(key === 'draft' ? 'Comment' : 'Reply', 'up', () => send(key, field.value))
+    // A short arrow up, so the send reads as a press and not as a way up the page.
+    const post = iconButton(key === 'draft' ? 'Comment' : 'Reply', 'send', () => send(key, field.value))
     post.classList.add('aa-composer-send')
     post.disabled = busy.has(key)
     form.append(field, post)

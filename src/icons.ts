@@ -1,5 +1,6 @@
 import checkIcon from './icons/check.svg?raw'
 import noteIcon from './icons/note.svg?raw'
+import sendIcon from './icons/send.svg?raw'
 import icon0 from "./icons/bold.svg?raw"
 import icon1 from "./icons/bullet.svg?raw"
 import icon2 from "./icons/callout.svg?raw"
@@ -37,6 +38,7 @@ import icon33 from "./icons/slash.svg?raw"
 export const icons: Record<string, string> = {
   "./icons/check.svg": checkIcon,
   "./icons/note.svg": noteIcon,
+  "./icons/send.svg": sendIcon,
   "./icons/bold.svg": icon0,
   "./icons/bullet.svg": icon1,
   "./icons/callout.svg": icon2,
