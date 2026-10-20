@@ -124,6 +124,68 @@ describe('asking AI', () => {
     editor = undefined; host = undefined
   })
 
+  it('marks what an answer changed, and reverts one change, its others left as they are', async () => {
+    const value = '# Notes\n\n- [x] Milk\n- [x] Bread\n\nEnd'
+    const e = setup(value, async () => ({ document: '# A morning worth having\n\n- [ ] Milk\n- [ ] Bread\n\nEnd' }))
+    e.selectRange(value.length)
+    key(host!.children[3], 'Enter')
+    key(host!.children[4], ' ')
+    field()!.textContent = 'Make the title more captivating and uncheck the boxes'
+    key(field()!, 'Enter')
+    await settle()
+    // A dot for the title and one for each box.
+    const kinds = [...document.querySelectorAll<HTMLElement>('.aa-ai-mark')].map(mark => mark.dataset.kind)
+    expect(kinds).toEqual(['dot', 'dot', 'dot'])
+    const reverts = document.querySelectorAll<HTMLButtonElement>('.aa-ai-revert')
+    expect(reverts[0].getAttribute('aria-label')).toBe('Revert what AI changed here')
+    reverts[0].click()
+    expect(e.value).toBe('# Notes\n\n- [ ] Milk\n- [ ] Bread\n\nEnd')
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    expect(document.querySelectorAll('.aa-ai-mark')).toHaveLength(2)
+    // The revert is a step of its own: undo gives the answer's title back.
+    e.undo()
+    expect(e.value).toBe('# A morning worth having\n\n- [ ] Milk\n- [ ] Bread\n\nEnd')
+  })
+
+  it('holds a run of blocks an answer wrote, and takes it all back from the hold', async () => {
+    const e = setup('One\n\nTwo', async ({}, { document }) => ({ document: document!.replace('⟦here⟧', '- A\n- B\n- C') }))
+    e.selectRange(3)
+    key(host!.children[0], 'Enter')
+    key(host!.children[1], ' ')
+    field()!.textContent = 'List three'
+    key(field()!, 'Enter')
+    await settle()
+    expect([...document.querySelectorAll<HTMLElement>('.aa-ai-mark')].map(mark => mark.dataset.kind)).toEqual(['section'])
+    expect(document.querySelector('.aa-ai-hold')).not.toBeNull()
+    document.querySelector<HTMLButtonElement>('.aa-ai-revert')!.click()
+    expect(e.value).toBe('One\n\nTwo')
+  })
+
+  it('puts the marks away with Escape, and drops a mark whose block is changed by hand', async () => {
+    const e = setup('One\n\nTwo', async () => ({ document: 'One more\n\nTwo' }))
+    e.selectRange(3)
+    key(host!.children[0], 'Enter')
+    key(host!.children[1], ' ')
+    field()!.textContent = 'Say more'
+    key(field()!, 'Enter')
+    await settle()
+    expect(document.querySelectorAll('.aa-ai-mark')).toHaveLength(1)
+    e.replace(0, 3, 'Uno')
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    expect(document.querySelectorAll('.aa-ai-mark')).toHaveLength(0)
+    editor!.destroy(); host!.remove()
+    const f = setup('One\n\nTwo', async () => ({ document: 'One more\n\nTwo' }))
+    f.selectRange(3)
+    key(host!.children[0], 'Enter')
+    key(host!.children[1], ' ')
+    field()!.textContent = 'Say more'
+    key(field()!, 'Enter')
+    await settle()
+    f.selectRange(0)
+    key(host!.children[0], 'Escape')
+    expect(document.querySelectorAll('.aa-ai-mark')).toHaveLength(0)
+  })
+
   it('both edits and inserts where an answer asks for both, and keeps nothing it cannot place exactly', async () => {
     const e = setup('One\n\nTwo', async () => ({ edits: [{ find: 'One', replace: 'First' }, { find: 'Nowhere', replace: 'x' }], insert: 'Between' }))
     e.selectRange(3)

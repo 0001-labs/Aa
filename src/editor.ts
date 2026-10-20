@@ -16,6 +16,7 @@ import { paintSelection } from './selection'
 import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
+import { createMarks, type AiChange, type Marks } from './marks'
 import { openPrompt, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 
 /**
@@ -248,6 +249,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     for (const element of fresh) host.insertBefore(element, anchor)
     showPlaceholder()
     sweep()
+    marks?.draw()
   }
 
   // ----- the selection -----
@@ -735,6 +737,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const key = event.key.toLowerCase()
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
+    // Escape puts the marks of what AI changed away first, then selects the block.
+    if (event.key === 'Escape' && marks?.size) { event.preventDefault(); marks.clear(); return }
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
     if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
       const block = blocks[selection.focus.block]
@@ -987,6 +991,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   // ----- asking AI -----
 
   let asking: OpenPrompt | null = null
+  /** What the last answer changed, marked to be seen and taken back. */
+  let marks: Marks | null = null
   /** The blocks a prompt is about: its section, from the heading over it to the next, itself left out. */
   const sectionOf = (index: number): number[] => {
     let first = index, last = index
@@ -1084,7 +1090,50 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       if (old.includes(each)) return
       const stop = shimmer(elements()[index], [[0, each.source.length]]); shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000)
     })
+    marks?.set(changesBetween(old, blocks))
     return { caret: target }
+  }
+
+  /**
+   * What an answer changed, run by run: between the blocks it left as they
+   * were, the blocks it put in and the blocks they took the place of. The
+   * prompt's own empty block is not something it took away.
+   */
+  const changesBetween = (old: readonly Block[], next: readonly Block[]): AiChange[] => {
+    const changes: AiChange[] = []
+    let from = 0
+    let added: Block[] = []
+    const flush = (to: number) => {
+      const before = old.slice(from, to).filter(block => block.source)
+      // As many blocks put in as taken out: each is a change of its own (a box ticked, a title reworded).
+      if (added.length && added.length === before.length) added.forEach((block, index) => changes.push({ blocks: [block], before: [before[index]] }))
+      else if (added.length) changes.push({ blocks: added, before })
+      added = []
+    }
+    for (const block of next) {
+      const at = old.indexOf(block)
+      if (at < from) { added.push(block); continue }
+      flush(at)
+      from = at + 1
+    }
+    flush(old.length)
+    return changes
+  }
+
+  /** One change an answer made put back as it was, as one step to undo, the caret where it is; refused once its blocks have changed by hand. */
+  const revertChange = (change: AiChange): boolean => {
+    const first = blocks.indexOf(change.blocks[0]), count = change.blocks.length
+    if (readOnly || destroyed || first < 0 || change.blocks.some((block, index) => blocks[first + index] !== block)) return false
+    const last = first + count - 1
+    const shift = change.before.length - count
+    const kept = readSelection()
+    const next = renumber([...blocks.slice(0, first), ...change.before, ...blocks.slice(last + 1)])
+    const move = (pos: Pos): Pos => pos.block > last ? { ...pos, block: pos.block + shift } : pos.block >= first ? { block: Math.max(0, Math.min(first + change.before.length - 1, next.length - 1)), offset: 0 } : pos
+    const anchor = kept ? move(kept.anchor) : { block: Math.min(first, next.length - 1), offset: 0 }
+    const focus = kept ? move(kept.focus) : anchor
+    const clamp = (pos: Pos): Pos => ({ block: Math.min(pos.block, next.length - 1), offset: Math.min(pos.offset, next[Math.min(pos.block, next.length - 1)].source.length) })
+    commit(next, clamp(anchor), clamp(focus), 'edit')
+    return true
   }
 
   /**
@@ -1187,6 +1236,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
 
+  marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange })
   renderAll()
   const stopSelection = paintSelection(host)
   const stopSpanning = selectAcrossBlocks(host, () => readOnly || destroyed)
@@ -1321,6 +1371,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('aa-atom-leave', onAtomLeave)
       host.removeEventListener('aa-atom-prompt', onAtomPrompt)
       asking?.close()
+      marks?.destroy()
       host.removeEventListener('compositionstart', onCompositionStart)
       host.removeEventListener('compositionend', onCompositionEnd)
       document.removeEventListener('selectionchange', onSelectionChange)

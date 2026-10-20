@@ -403,3 +403,77 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 @media (forced-colors: active) {
   .aa-glisten { display: none; }
 }
+
+/* What an AI answer changed: a Sharp blue dot after a changed block, a soft
+   Zenith blue hold round a run of blocks it wrote. The dot grows into
+   Design system 1's button, one control high, to revert the change; it grows
+   and fades by transform and opacity alone. */
+.aa-ai-marks { position: fixed; inset: 0; z-index: 999; pointer-events: none; }
+.aa-ai-hold {
+  position: fixed;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--ds-sharp-blue, var(--sharp-blue, #594dff)) 45%, transparent);
+  border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1)));
+  background: color-mix(in srgb, var(--ds-zenith-blue, var(--zenith-blue, #ccccff)) 30%, transparent);
+  mix-blend-mode: multiply;
+  animation: aa-ai-appear 240ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@media (prefers-color-scheme: dark) { .aa-ai-hold { mix-blend-mode: screen; background: color-mix(in srgb, var(--ds-sharp-blue, var(--sharp-blue, #594dff)) 18%, transparent); } }
+.aa-ai-revert {
+  position: fixed;
+  display: block;
+  width: calc(16px * var(--aa-sf, 1));
+  height: calc(16px * var(--aa-sf, 1));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translate(calc(2px * var(--aa-sf, 1)), -50%);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: aa-ai-appear 240ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+.aa-ai-dot {
+  position: absolute;
+  left: calc(4px * var(--aa-sf, 1));
+  top: calc(5px * var(--aa-sf, 1));
+  width: calc(6px * var(--aa-sf, 1));
+  height: calc(6px * var(--aa-sf, 1));
+  border-radius: 50%;
+  background: var(--ds-sharp-blue, var(--sharp-blue, #594dff));
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+.aa-ai-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: calc(16px * var(--aa-sf, 1));
+  padding: 0 calc(4px * var(--aa-sf, 1));
+  border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1)));
+  background: var(--ds-sharp-blue, var(--sharp-blue, #594dff));
+  color: var(--ds-white, #fff);
+  font: inherit;
+  font-family: var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))), system-ui, sans-serif;
+  font-size: var(--ds-type-size-default, calc(14px * var(--aa-sf, 1)));
+  line-height: calc(16px * var(--aa-sf, 1));
+  white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.25);
+  transform-origin: calc(7px * var(--aa-sf, 1)) 50%;
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), opacity 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+.aa-ai-revert:hover .aa-ai-dot,
+.aa-ai-revert:focus-visible .aa-ai-dot { opacity: 0; transform: scale(2); }
+.aa-ai-revert:hover .aa-ai-label,
+.aa-ai-revert:focus-visible .aa-ai-label { opacity: 1; transform: none; }
+.aa-ai-revert:focus-visible { outline: none; }
+.aa-ai-revert:focus-visible .aa-ai-label { box-shadow: 0 0 0 2px var(--ds-focus-ring, #594dff), 0 0 0 3px var(--ds-white, #fff); }
+.aa-ai-mark[data-kind="section"] .aa-ai-revert { transform: translate(calc(-16px * var(--aa-sf, 1)), -50%); }
+.aa-ai-mark[data-kind="section"] .aa-ai-label { left: auto; right: 0; transform-origin: calc(100% - 7px * var(--aa-sf, 1)) 50%; }
+@keyframes aa-ai-appear { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .aa-ai-hold, .aa-ai-revert { animation: none; }
+  .aa-ai-dot, .aa-ai-label { transition: none; }
+}
+@media (forced-colors: active) { .aa-ai-hold { border-color: Highlight; background: none; } }
+
