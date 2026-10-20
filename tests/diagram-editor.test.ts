@@ -140,23 +140,38 @@ describe('drawing on a diagram\'s board', () => {
     expect(e.value).toBe(SOURCE)
   })
 
+  it('writes in an item at a click, and carries it only once the press moves', async () => {
+    const e = setup(SOURCE)
+    await drawingIn(blockElements()[1])!.updateComplete
+    press(1, 3)
+    const field = part<HTMLInputElement>('.rename')
+    expect(field.hidden).toBe(false)
+    expect(field.value).toBe('B')
+    field.value = 'Bee'
+    key('Enter', {}, field)
+    expect(e.value).toContain('[Bee] @ 0 3')
+    // A click on an empty square writes nothing.
+    press(10, 10)
+    expect(part<HTMLInputElement>('.rename').hidden).toBe(true)
+  })
+
   it('puts a box carried out of the tools where it is let go, and names it there', async () => {
     const e = setup(SOURCE)
     press(8, 8)
     // Let go over the paper: it is twenty squares by ten here.
     part<HTMLElement>('.paper').getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 400, height: 200 })
-    await drag([0, -2], [10, 6], tool('Box'))
-    expect(e.value).toContain('[B] @ 0 3\n[Box] @ 9 6\nA -> B')
+    await drag([0, -2], [10, 6], tool('Item'))
+    expect(e.value).toContain('[B] @ 0 3\n[Item] @ 9 6\nA -> B')
     await Promise.resolve()
     const field = part<HTMLInputElement>('.rename')
     expect(field.hidden).toBe(false)
-    expect(field.value).toBe('Box')
+    expect(field.value).toBe('Item')
     field.value = 'Ship'
     key('Enter', {}, field)
     expect(e.value).toContain('[Ship] @ 9 6')
     // One step names it, one put it there.
     e.undo()
-    expect(e.value).toContain('[Box] @ 9 6')
+    expect(e.value).toContain('[Item] @ 9 6')
     e.undo()
     expect(e.value).toBe(SOURCE)
   })
@@ -164,12 +179,12 @@ describe('drawing on a diagram\'s board', () => {
   it('puts a box pressed in the tools on a free square, beside what is chosen', () => {
     const e = setup(SOURCE)
     press(1, 3)
-    tool('Box').click()
-    expect(e.value).toContain('[B] @ 0 3\n[Box] @ 6 3\n')
+    tool('Item').click()
+    expect(e.value).toContain('[B] @ 0 3\n[Item] @ 6 3\n')
     key('Escape', {}, part('.rename'))
     key('Escape')
-    tool('Post-it').click()
-    expect(e.value).toContain('[Box] @ 6 3\n{Note} @ 0 5 w8\n')
+    tool('Note').click()
+    expect(e.value).toContain('[Item] @ 6 3\n{Note} @ 0 5 w8\n')
   })
 
   it('draws a line from the box pressed to the box let go over, and makes it an arrow', async () => {
@@ -248,8 +263,8 @@ describe('drawing on a diagram\'s board', () => {
     expect(e.value).toContain('[Sea] @ 8 0\nA -> B\nA -- Sea')
     await nextTask()
     // B adds a box on a free square, named at once.
-    key('Escape'); key('b')
-    expect(e.value).toContain('[Box] @ 0 5')
+    key('Escape'); key('i')
+    expect(e.value).toContain('[Item] @ 0 5')
   })
 
   it('fits the width it is read in when wrapping is on, written on its fence, one step to undo', () => {
@@ -297,7 +312,7 @@ describe('a diagram just started', () => {
     const board = host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
     expect(board.hasAttribute('data-active')).toBe(true)
     // Box, post-it, line, arrow, the colour and delete; the colours themselves are in the colour's menu.
-    expect([...board.shadowRoot!.querySelectorAll('.tools button')].map(button => button.getAttribute('aria-label'))).toEqual(['Box (B)', 'Post-it (P)', 'Line (L)', 'Arrow (A)', 'Colour', 'Fit the width', 'Delete'])
+    expect([...board.shadowRoot!.querySelectorAll('.tools button')].map(button => button.getAttribute('aria-label'))).toEqual(['Item (I)', 'Note (N)', 'Line (L)', 'Arrow (A)', 'Colour', 'Fit the width', 'Delete'])
     expect(board.shadowRoot!.querySelectorAll('.colors button').length).toBe(8)
     expect(e.value).toBe(DIAGRAM_START)
   })

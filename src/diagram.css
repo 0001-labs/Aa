@@ -276,11 +276,11 @@
   color: light-dark(color-mix(in oklab, var(--marker) 70%, #1e1e1e), var(--marker));
 }
 
-/* A post-it is a frame the groups placed on it stand on: the lines' ink
-   hairline straddling the grid line, square cornered, the paper showing
-   through unless a colour fills it, edge and all. */
+/* A post-it (a note, to a person) is a frame the groups placed on it stand
+   on: the lines' ink hairline straddling the grid line, square cornered,
+   filled as a box is (a cell's ground) unless a colour fills it, edge and all. */
 .post-it {
-  --box-fill: transparent;
+  --box-fill: var(--aa-diagram-cell, light-dark(#fff, #000));
   --box-edge: var(--diagram-ink);
   position: absolute;
   left: calc(var(--x) * var(--diagram-unit));

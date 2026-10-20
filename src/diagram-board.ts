@@ -13,12 +13,13 @@
  * post-it in whole columns; a box or a post-it carried out of the tools lands
  * where it is let go (pressed, it lands on a free square), and is named at
  * once; with Line or Arrow pressed, a line runs from the box pressed to the
- * box let go over. A double press or Enter names a box where it stands.
+ * box let go over. A click on a box (an item to a person) or a post-it (a
+ * note) writes in it where it stands, as a double press or Enter does.
  *
  * The keys reach all of it: Tab and Shift-Tab choose each group, box and
  * line in turn, the arrows move what is chosen a square (Shift four), Alt
  * and the arrows size it, Enter names it, L or A joins it to another (Tab to
- * the one to join, Enter), B and P add a box or a post-it, Delete takes it
+ * the one to join, Enter), I and N add an item or a note, Delete takes it
  * away, Escape lets it go, and the arrows with nothing chosen give the caret
  * back to the writing.
  *
@@ -58,14 +59,14 @@ const CHIPS: Record<DiagramColor, string> = {
   white: 'light-dark(var(--ds-slate-light, #e6e6e6), var(--ds-white, #fff))',
 }
 /** What a group is called when it is chosen, for a screen reader. */
-const KIND_NAMES: Record<DiagramGroup['kind'], string> = { box: 'box', stack: 'group', 'post-it': 'post-it', month: 'month', grid: 'grid', chart: 'chart' }
+const KIND_NAMES: Record<DiagramGroup['kind'], string> = { box: 'item', stack: 'group', 'post-it': 'note', month: 'month', grid: 'grid', chart: 'chart' }
 /** How near a line a press takes it, in squares. */
 const NEAR_LINE = 0.3
 /** How long a group let go takes to settle onto its squares, in milliseconds: Drag's shortest drop. */
 const SETTLE = 330
 /** A box added stands an item across and a square down; a post-it two items a side. */
 const SIZES = { box: { w: 4, h: 1 }, 'post-it': { w: 8, h: 8 } } as const
-const HELP = 'Tab chooses each box and line. Arrows move what is chosen, Alt and arrows size it, Enter names it, L or A joins it to another, B adds a box, P a post-it, Delete takes it away.'
+const HELP = 'Tab chooses each item and line. Arrows move what is chosen, Alt and arrows size it, Enter or a click writes in it, L or A joins it to another, I adds an item, N a note, Delete takes it away.'
 
 /** What each editor's boards are doing, by the editor's element: a block is drawn again after each change. */
 const states = new WeakMap<Element, State>()
@@ -173,8 +174,8 @@ export class AaDiagramBoardElement extends Base {
       return node
     }
     this.#buttons = {
-      box: button('Box (B)', () => this.#add('box'), icon(boxIcon)),
-      postIt: button('Post-it (P)', () => this.#add('post-it'), icon(noteIcon)),
+      box: button('Item (I)', () => this.#add('box'), icon(boxIcon)),
+      postIt: button('Note (N)', () => this.#add('post-it'), icon(noteIcon)),
       line: button('Line (L)', () => this.#lineTool('line'), icon(connectIcon)),
       arrow: button('Arrow (A)', () => this.#lineTool('arrow'), icon(arrowIcon)),
       color: button('Colour', () => this.#pickColour(), chip(null)),
@@ -478,7 +479,7 @@ export class AaDiagramBoardElement extends Base {
     }
     const group = this.#layout.groups[target.group]
     if (!group) return ''
-    return `${this.#nameOf(target) ?? 'Unnamed'}, ${target.box !== undefined ? 'box' : KIND_NAMES[group.kind]}`
+    return `${this.#nameOf(target) ?? 'Unnamed'}, ${target.box !== undefined ? 'item' : KIND_NAMES[group.kind]}`
   }
 
   /** Hand the editor the block written anew; the board is drawn again with it. */
@@ -499,7 +500,7 @@ export class AaDiagramBoardElement extends Base {
 
   // ----- carried on Drag's grid engine -----
 
-  /** A press on the paper: the grip sizes what is chosen; with Line or Arrow pressed a box starts a line; otherwise what is pressed is chosen and carried. */
+  /** A press on the paper: the grip sizes what is chosen; with Line or Arrow pressed an item starts a line; otherwise what is pressed is chosen, carried once it lifts, and a click on it writes its words. */
   #press({ point, target: pressed, event }: GridPress): GridGesture | null {
     if (!this.#editable()) return null
     // The press is the board's: the caret, the selection and the block's own drag stay where they were.
@@ -518,7 +519,9 @@ export class AaDiagramBoardElement extends Base {
       this.#setMode('choose')
     }
     this.#choose(hit)
-    return hit && 'group' in hit ? this.#moving(hit) : null
+    if (!hit || !('group' in hit)) return null
+    // A click writes in it at once; a press that moves (a finger held still first) carries it.
+    return { ...this.#moving(hit), onClick: () => this.#startRename(hit) }
   }
 
   /** A gesture that draws the diagram as it would be written as it is carried, and writes it once let go. */
@@ -726,7 +729,7 @@ export class AaDiagramBoardElement extends Base {
   #add(kind: 'box' | 'post-it', at = this.#freeSpot(kind)) {
     if (!this.#editable()) return
     this.#activate()
-    const name = freeName(this.#layout, kind === 'box' ? 'Box' : 'Note')
+    const name = freeName(this.#layout, kind === 'box' ? 'Item' : 'Note')
     const source = addGroup(this.#source, this.#layout, kind, name, at.x, at.y)
     const index = layoutDiagram(source).groups.findIndex(group => (group.kind === 'box' ? group.boxes[0]?.text : group.name) === name)
     const target = index >= 0 ? { group: index } : null
@@ -884,7 +887,7 @@ export class AaDiagramBoardElement extends Base {
     if (mod || event.altKey) return
     // Space asks AI to draw on it, where the editor can ask (Space twice listens).
     if (event.key === ' ' && !this.#state.renaming) { event.preventDefault(); this.#ask(); return }
-    if (key === 'b' || key === 'p') { event.preventDefault(); this.#add(key === 'b' ? 'box' : 'post-it'); return }
+    if (key === 'i' || key === 'n') { event.preventDefault(); this.#add(key === 'i' ? 'box' : 'post-it'); return }
     if (key === 'l' || key === 'a') {
       event.preventDefault()
       const mode = key === 'l' ? 'line' : 'arrow'

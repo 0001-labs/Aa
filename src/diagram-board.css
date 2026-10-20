@@ -88,8 +88,8 @@
   pointer-events: none;
 }
 
-/* What is chosen is ringed two pixels inside its squares, as Design system 1
-   rings a chosen cell, so a box at the paper's edge keeps its whole ring. */
+/* What is chosen is set on its squares, unringed for now: its grip shows it
+   is chosen. The ring keeps its place so it can be drawn again. */
 .ring,
 .ghost-box,
 .grip {
@@ -116,9 +116,6 @@
   .ghost-box { transition: none; }
 }
 
-.ring { box-shadow: inset 0 0 0 2px var(--board-ring); }
-/* A line being drawn rings the box it would end on. */
-.aim { opacity: 0.6; }
 .ghost-box { box-shadow: inset 0 0 0 1px var(--board-ring); opacity: 0.6; }
 .ring[hidden], .ghost-box[hidden], .grip[hidden] { display: none; }
 
@@ -165,7 +162,6 @@
   border: 0;
   border-radius: 0;
   outline: none;
-  box-shadow: 0 0 0 2px var(--board-ring);
   background: light-dark(#fff, #000);
   color: inherit;
   font: inherit;
