@@ -132,6 +132,13 @@ test('anything else turns halfway down, every run along the grid', () => {
   ])
 })
 
+test('a box is whole items across, as a board sizes it', () => {
+  const diagram = layoutDiagram('[One]\n[Two] @ 0 2 w8\nWide @ 0 4 w12\n  Box\n[Between] @ 0 7 w11\n[Past] @ 0 9 w99')
+  expect(diagram.boxes.map(box => [box.text, box.w])).toEqual([['One', 4], ['Two', 8], ['Box', 12], ['Between', 8], ['Past', 40]])
+  expect(diagram.labels[0]).toMatchObject({ text: 'Wide', w: 12 })
+  expect(diagram.columns).toBe(40)
+})
+
 test('widths, back arrows, chains, qualified names and lines it cannot read', () => {
   const diagram = layoutDiagram('In @ 0 0 w6\n  Same\nOut @ 8 0\n  Same\nIn.Same <- Out.Same\n[X] @ 0 4\n[Y] @ 0 6\nX -> Y -> Nowhere\n@ 6 4\n  Unnamed')
   expect(diagram.boxes[0]).toEqual({ text: 'Same', x: 0, y: 1, w: 4 })

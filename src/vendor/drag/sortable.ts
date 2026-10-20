@@ -29,8 +29,16 @@ export type SortableStart = {
   mode: 'FLUID' | 'SNAP';
 };
 
+/** The item the lifted one is held over, to be put together with it rather than beside it. */
+export type SortableCombine = {
+  draggableId: string;
+  droppableId: string;
+};
+
 export type SortableUpdate = SortableStart & {
+  /** No destination while combining: the lifted item is over another, not between two. */
   destination: SortableLocation | null;
+  combine: SortableCombine | null;
 };
 
 export type SortableResult = SortableUpdate & {
@@ -43,6 +51,12 @@ export type SortableContainerArgs = {
   type?: string;
   axis?: SortableAxis;
   isDropDisabled?: () => boolean;
+  /**
+   * Whether an item held over the middle of another here combines with it
+   * (as a list dropped onto a list makes a folder), Pangea's rule: the
+   * leading edge inside the middle half of the other item.
+   */
+  isCombineEnabled?: () => boolean;
   /** The list's name in announcements; its aria-label or id when left out. */
   label?: string;
 };
@@ -87,11 +101,19 @@ export type SortableMessages = {
   lifted: (at: SortableAnnouncement) => string;
   moved: (at: SortableAnnouncement) => string;
   outside: (item: string) => string;
+  combining: (item: string, target: string) => string;
+  combined: (item: string, target: string) => string;
   dropped: (at: SortableAnnouncement) => string;
   returned: (at: SortableAnnouncement) => string;
 };
 
 export type SortableOptions = {
+  /**
+   * Called as the item is about to lift, before anything is measured, so the
+   * page can draw itself as the drag needs (a selection folded into the row
+   * that carries it). Draw it synchronously (`flushSync` in React).
+   */
+  onBeforeCapture?: (before: { draggableId: string; mode: SortableStart['mode'] }) => void;
   /** Called once the item lifts. */
   onDragStart?: (start: SortableStart) => void;
   /** Called when the destination changes. */
@@ -145,6 +167,8 @@ const defaultMessages: SortableMessages = {
   lifted: (at) => `Lifted ${at.item}, position ${at.position} of ${at.count} in ${at.list}.`,
   moved: (at) => `${at.item}, position ${at.position} of ${at.count} in ${at.list}.`,
   outside: (item) => `${item} is outside every list.`,
+  combining: (item, target) => `${item} is over ${target}. Drop to put them together.`,
+  combined: (item, target) => `Dropped ${item} onto ${target}.`,
   dropped: (at) => `Dropped ${at.item} at position ${at.position} of ${at.count} in ${at.list}.`,
   returned: (at) => `${at.item} is back at position ${at.position} of ${at.count} in ${at.list}.`,
 };
@@ -168,8 +192,9 @@ const handleStyles = `
 :root[data-drag-active],:root[data-drag-active] *{-webkit-user-select:none!important;user-select:none!important;cursor:grabbing!important}
 `;
 
-type ContainerRegistration = Required<Omit<SortableContainerArgs, 'isDropDisabled' | 'label'>> & {
+type ContainerRegistration = Required<Omit<SortableContainerArgs, 'isDropDisabled' | 'isCombineEnabled' | 'label'>> & {
   isDropDisabled: () => boolean;
+  isCombineEnabled: () => boolean;
   label: () => string;
 };
 
@@ -249,6 +274,8 @@ type Session = {
   scrollFrame: number | null;
   impactFrame: number | null;
   dropping: boolean;
+  /** The sibling the lifted item is held over, to combine with; the gap stays as it was. */
+  combine: { container: ContainerSnapshot; slot: Slot } | null;
 };
 
 export function createSortable(options: SortableOptions = {}): SortableController {
@@ -279,6 +306,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       type: args.type ?? 'default',
       axis: args.axis ?? 'vertical',
       isDropDisabled: args.isDropDisabled ?? (() => false),
+      isCombineEnabled: args.isCombineEnabled ?? (() => false),
       label: () => args.label ?? args.element.getAttribute('aria-label') ?? args.id,
     };
     containers.set(args.element, registration);
@@ -537,7 +565,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
   }
 
   function lift(
-    registration: ItemRegistration,
+    pressed: ItemRegistration,
     pointerId: number,
     startX: number,
     startY: number,
@@ -546,6 +574,12 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (pending?.timer) clearTimeout(pending.timer);
     pending = null;
 
+    options.onBeforeCapture?.({ draggableId: pressed.id, mode });
+    const registration = registrationFor(pressed);
+    if (!registration) {
+      removeWindowListeners();
+      return;
+    }
     const document = registration.element.ownerDocument;
     const view = document.defaultView ?? window;
     const homeRegistration = closestContainer(registration);
@@ -683,6 +717,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       scrollFrame: null,
       impactFrame: null,
       dropping: false,
+      combine: null,
     };
 
     element.style.visibility = 'hidden';
@@ -746,11 +781,28 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       }
     }
 
+    // Combining is checked first, against the gap as it stands, which it leaves where it is.
+    const combining = over && current.mode === 'FLUID' ? combineIn(current, over) : null;
+    if (combining && over) {
+      if (setCombine(current, { container: over, slot: combining })) {
+        options.onDragUpdate?.(updateOf(current));
+        announce(messages.combining(current.item.label(), combining.item.label()));
+      }
+      return;
+    }
+    const uncombined = setCombine(current, null);
+
     let next: Session['destination'] = null;
     if (over) next = { container: over, index: indexIn(current, over) };
 
     const previous = current.destination;
-    if (previous?.container === next?.container && previous?.index === next?.index) return;
+    if (previous?.container === next?.container && previous?.index === next?.index) {
+      if (uncombined) {
+        options.onDragUpdate?.(updateOf(current));
+        announceMove(current);
+      }
+      return;
+    }
     current.destination = next;
     applyShifts(current, previous?.container ?? null);
     current.overlay.ownerDocument.documentElement.toggleAttribute('data-drag-outside', !next);
@@ -853,18 +905,52 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     placePreview(current, true);
   }
 
-  /** The lifted item's index in a container, with Pangea's hysteresis. */
-  function indexIn(current: Session, snapshot: ContainerSnapshot): number {
+  /** Where the lifted item runs along a list's axis now, in the viewport. */
+  function spanOf(current: Session, snapshot: ContainerSnapshot): { start: number; end: number } {
     const vertical = snapshot.registration.axis === 'vertical';
-    const offset = offsetOf(current, snapshot);
     const liftStart = vertical ? current.liftBox.top : current.liftBox.left;
     const size = vertical ? current.liftBox.height : current.liftBox.width;
     const moved =
       vertical
         ? options.lockAxis === 'x' ? 0 : current.lastY - current.startY
         : options.lockAxis === 'y' ? 0 : current.lastX - current.startX;
-    const draggedStart = liftStart + moved;
-    const draggedEnd = draggedStart + size;
+    return { start: liftStart + moved, end: liftStart + moved + size };
+  }
+
+  /**
+   * The sibling the lifted item is held over, by Pangea's rule: before the
+   * gap, the leading edge inside its middle half; after the gap, the
+   * trailing edge inside the middle half of where it has moved to.
+   */
+  function combineIn(current: Session, snapshot: ContainerSnapshot): Slot | null {
+    const destination = current.destination;
+    if (!destination || destination.container !== snapshot || !snapshot.registration.isCombineEnabled()) return null;
+    const vertical = snapshot.registration.axis === 'vertical';
+    const scrolled = vertical ? offsetOf(current, snapshot).y : offsetOf(current, snapshot).x;
+    const dragged = spanOf(current, snapshot);
+    return snapshot.slots.find((slot, position) => {
+      const size = vertical ? slot.box.height : slot.box.width;
+      const after = position >= destination.index;
+      const start = baselineStart(current, snapshot, slot) - scrolled + (after ? snapshot.room : 0);
+      const threshold = size / 4;
+      const edge = after ? dragged.end : dragged.start;
+      return edge > start + threshold && edge < start + size - threshold;
+    }) ?? null;
+  }
+
+  function setCombine(current: Session, next: Session['combine']): boolean {
+    if (current.combine?.slot === next?.slot) return false;
+    current.combine?.slot.item.element.removeAttribute('data-drag-combine');
+    next?.slot.item.element.setAttribute('data-drag-combine', '');
+    current.combine = next;
+    return true;
+  }
+
+  /** The lifted item's index in a container, with Pangea's hysteresis. */
+  function indexIn(current: Session, snapshot: ContainerSnapshot): number {
+    const vertical = snapshot.registration.axis === 'vertical';
+    const offset = offsetOf(current, snapshot);
+    const { start: draggedStart, end: draggedEnd } = spanOf(current, snapshot);
     const scrolled = vertical ? offset.y : offset.x;
     const centres = snapshot.slots.map((slot) => baselineStart(current, snapshot, slot) - scrolled + (vertical ? slot.box.height : slot.box.width) / 2);
     const count = centres.length;
@@ -995,11 +1081,41 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (current.scrollFrame !== null) cancelAnimationFrame(current.scrollFrame);
     if (current.impactFrame !== null) cancelAnimationFrame(current.impactFrame);
 
+    // Dropped onto another item: it shrinks into it and fades, as Pangea's does.
+    if (reason === 'DROP' && current.combine) {
+      const { container, slot } = current.combine;
+      const result: SortableResult = { ...startOf(current), destination: null, combine: combineOf(current), reason };
+      const vertical = container.registration.axis === 'vertical';
+      const offset = offsetOf(current, container);
+      const index = container.slots.indexOf(slot);
+      const along = baselineStart(current, container, slot) + (current.destination && index >= current.destination.index ? container.room : 0);
+      const x = (vertical ? slot.box.left : along) - offset.x - current.liftBox.left;
+      const y = (vertical ? along : slot.box.top) - offset.y - current.liftBox.top;
+      const { maxDuration, easing } = settings.drop;
+      if (reducedMotion) {
+        finish(current, result);
+        return;
+      }
+      current.preview.style.transition = `transform ${maxDuration}ms ${easing}, opacity ${maxDuration}ms ${easing}`;
+      current.preview.style.transform = previewTransform(x, y, current.previewScale * 0.75);
+      current.preview.style.opacity = '0';
+      let finished = false;
+      const done = () => {
+        if (finished) return;
+        finished = true;
+        finish(current, result);
+      };
+      current.preview.addEventListener('transitionend', done, { once: true });
+      setTimeout(done, maxDuration + 50);
+      return;
+    }
+    setCombine(current, null);
+
     // A cancel, or a drop outside every list, sends the item home.
     // A product may take an item dropped outside every list, where it lies.
     if (reason === 'DROP' && !current.destination && current.mode === 'FLUID') {
       if (options.onDropOutside?.(startOf(current), { x: current.lastX, y: current.lastY })) {
-        finish(current, { ...startOf(current), destination: null, reason: 'DROP' });
+        finish(current, { ...startOf(current), destination: null, combine: null, reason: 'DROP' });
         return;
       }
     }
@@ -1019,6 +1135,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     const result: SortableResult = {
       ...startOf(current),
       destination: returning || !current.destination ? null : locationOf(current.destination),
+      combine: null,
       reason,
     };
 
@@ -1084,7 +1201,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     } finally {
       cleanup(current);
     }
-    if (at) announce(result.reason === 'DROP' && result.destination ? messages.dropped(at) : messages.returned(at));
+    if (result.combine && current.combine) announce(messages.combined(current.item.label(), current.combine.slot.item.label()));
+    else if (at) announce(result.reason === 'DROP' && result.destination ? messages.dropped(at) : messages.returned(at));
     // A keyboard drag keeps the focus on the moved item, wherever it was drawn again.
     if (current.mode === 'SNAP') {
       for (const registration of items.values()) {
@@ -1111,6 +1229,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     });
     element.style.visibility = current.sourceVisibility;
     element.removeAttribute('data-drag-source');
+    current.combine?.slot.item.element.removeAttribute('data-drag-combine');
     current.reserved?.registration.element.style.removeProperty('--drag-reserve');
     for (const snapshot of current.containers) snapshot.registration.element.removeAttribute('data-drag-over');
     current.overlay.remove();
@@ -1153,8 +1272,24 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
   function updateOf(current: Session): SortableUpdate {
     return {
       ...startOf(current),
-      destination: current.destination ? locationOf(current.destination) : null,
+      destination: current.destination && !current.combine ? locationOf(current.destination) : null,
+      combine: combineOf(current),
     };
+  }
+
+  function combineOf(current: Session): SortableCombine | null {
+    return current.combine
+      ? { draggableId: current.combine.slot.item.id, droppableId: current.combine.container.registration.id }
+      : null;
+  }
+
+  /** The item's registration now: the page may have drawn it again before the lift. */
+  function registrationFor(lifted: ItemRegistration): ItemRegistration | null {
+    if (lifted.element.isConnected && items.get(lifted.element) === lifted) return lifted;
+    for (const candidate of items.values()) {
+      if (candidate.id === lifted.id && candidate.type === lifted.type && candidate.element.isConnected) return candidate;
+    }
+    return null;
   }
 
   function locationOf(destination: NonNullable<Session['destination']>): SortableLocation {

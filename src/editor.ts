@@ -5,7 +5,7 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, type AtomSyntax, type Block } from './markdown'
+import { IMAGE, EQUATION, fencedAtom, type AtomSyntax, type Block } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
@@ -282,9 +282,23 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       draw(els[index], block, reveal)
       changed = true
     })
-    if (!changed) return
-    sweep()
-    if (selection) setSelection(selection.anchor, selection.focus)
+    if (changed) {
+      sweep()
+      if (selection) setSelection(selection.anchor, selection.focus)
+    }
+    handToAtom(selection)
+  }
+
+  /**
+   * The caret come into a block an atom draws whole and changes itself (a
+   * diagram's board) is that atom's: it takes the keys, and gives them back
+   * in `aa-atom-leave`.
+   */
+  const handToAtom = (selection: Selection2 | null) => {
+    if (!selection || readOnly || selected || comparePos(selection.anchor, selection.focus) !== 0) return
+    const index = selection.focus.block
+    if (!fencedAtom(blocks[index], atoms)) return
+    elements()[index]?.querySelector<HTMLElement>('[data-aa-interactive]')?.focus({ preventScroll: true })
   }
 
   // ----- offsets into the Markdown -----
@@ -927,6 +941,18 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     options.onChange?.(toMarkdown(blocks))
     host.dispatchEvent(new Event('aa-change'))
   }
+  /** An atom that had the keys gives them back: the caret goes on to the start of the block after it, or back to the end of the one before. */
+  const onAtomLeave = (event: Event) => {
+    const forward = (event as CustomEvent<{ forward?: unknown }>).detail?.forward !== false
+    const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
+    if (destroyed || !element || element.parentElement !== host) return
+    event.stopPropagation()
+    const index = elements().indexOf(element) + (forward ? 1 : -1)
+    if (index < 0 || index >= blocks.length) return
+    const pos = { block: index, offset: forward ? startOf(index) : blocks[index].source.length }
+    elements()[index].focus({ preventScroll: true })
+    setSelection(pos); applyReveal({ anchor: pos, focus: pos }); keepCaretInView()
+  }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
@@ -986,6 +1012,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('drop', onDrop)
   host.addEventListener('paste', onPaste)
   host.addEventListener('aa-atom-change', onAtomChange)
+  host.addEventListener('aa-atom-leave', onAtomLeave)
   host.addEventListener('compositionstart', onCompositionStart)
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
@@ -1119,6 +1146,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('drop', onDrop)
       host.removeEventListener('paste', onPaste)
       host.removeEventListener('aa-atom-change', onAtomChange)
+      host.removeEventListener('aa-atom-leave', onAtomLeave)
       host.removeEventListener('compositionstart', onCompositionStart)
       host.removeEventListener('compositionend', onCompositionEnd)
       document.removeEventListener('selectionchange', onSelectionChange)

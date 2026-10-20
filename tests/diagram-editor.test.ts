@@ -28,17 +28,32 @@ describe('a diagram in the editor', () => {
     expect(readBlock(block)).toBe('```diagram\n[A]\n[B] @ 0 3\nA -> B\n```')
     expect(e.value).toBe(SOURCE)
   })
-  it('shows its words as code with the caret in it, the drawing under them reading back as nothing', () => {
+  it('never shows its words: the caret come into it gives its board the keys', () => {
     const e = setup(SOURCE)
     e.selectRange(SOURCE.indexOf('[B]'))
     const block = blockElements()[1]
-    expect(block.hasAttribute('data-drawn')).toBe(false)
-    expect(block.querySelector('.aa-c')?.textContent).toBe('[A]')
-    const preview = block.querySelector<HTMLElement>('.aa-atom[data-preview]')!
-    expect(preview.dataset.source).toBe('')
-    expect(drawingIn(preview)?.source).toBe('[A]\n[B] @ 0 3\nA -> B')
+    const board = block.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
+    expect(block.hasAttribute('data-drawn')).toBe(true)
+    expect(block.querySelector('.aa-c')).toBeNull()
+    expect(block.textContent).not.toContain('[A]')
     expect(readBlock(block)).toBe('```diagram\n[A]\n[B] @ 0 3\nA -> B\n```')
-    expect(e.selection()).toEqual({ start: SOURCE.indexOf('[B]'), end: SOURCE.indexOf('[B]') })
+    expect(document.activeElement).toBe(board)
+    expect(board.hasAttribute('data-active')).toBe(true)
+    expect(e.value).toBe(SOURCE)
+  })
+  it('gives the keys back to the writing after it or before it', () => {
+    const e = setup(SOURCE)
+    e.selectRange(SOURCE.indexOf('[B]'))
+    const board = () => host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
+    board().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, composed: true, cancelable: true }))
+    expect(e.selection()).toEqual({ start: SOURCE.indexOf('Below'), end: SOURCE.indexOf('Below') })
+    e.selectRange(SOURCE.indexOf('[B]'))
+    expect(document.activeElement).toBe(board())
+    board().dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, composed: true, cancelable: true }))
+    expect(e.selection()).toEqual({ start: 'Above'.length, end: 'Above'.length })
+    e.selectRange(SOURCE.indexOf('[B]'))
+    board().dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, composed: true, cancelable: true }))
+    expect(e.selection()).toEqual({ start: SOURCE.indexOf('Below'), end: SOURCE.indexOf('Below') })
   })
   it('stays code while its fence is still open, and other fences stay code', () => {
     for (const value of ['```diagram\n[A]', '```js\nlet a\n```']) {
@@ -53,14 +68,15 @@ describe('a diagram in the editor', () => {
 
 describe('starting a diagram', () => {
   const press = (label: string) => (document.querySelector(`aa-toolbar button[aria-label="${label}"]`) as HTMLButtonElement).click()
-  it('takes an empty block from the toolbar, the caret on its first line of words', () => {
+  it('takes an empty block from the toolbar, its board taking the keys at once', () => {
     const e = setup('', { toolbar: true })
     e.selectRange(0)
     press('Diagram')
     expect(e.value).toBe(DIAGRAM_START)
-    const first = DIAGRAM_START.indexOf('\n') + 1
-    expect(e.selection()).toEqual({ start: first, end: first })
-    expect(blockElements()[0].hasAttribute('data-drawn')).toBe(false)
+    expect(blockElements()[0].hasAttribute('data-drawn')).toBe(true)
+    const board = host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
+    expect(document.activeElement).toBe(board)
+    expect(board.hasAttribute('data-active')).toBe(true)
   })
   it('comes after the block the caret is in, as one step to undo', () => {
     const e = setup('Words', { toolbar: true })
@@ -87,61 +103,142 @@ describe('drawing on a diagram\'s board', () => {
   const board = () => host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
   const part = <T extends Element>(selector: string) => board().shadowRoot!.querySelector<T>(selector)!
   // A square is twenty pixels and the paper starts at the page's corner here, so a square's middle is at 20n + 10.
-  const pointer = (type: string, x: number, y: number) => part('.paper').dispatchEvent(new PointerEvent(type, { clientX: x * 20 + 10, clientY: y * 20 + 10, pointerId: 1, pointerType: 'mouse', button: 0, bubbles: true, composed: true, cancelable: true }))
-  const key = (key: string, target: Element = board()) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }))
-  const tool = (label: string) => part<HTMLButtonElement>(`.tools button[aria-label^="${label}"]`).click()
+  const pointer = (type: string, x: number, y: number, target: Element = part('.paper')) => target.dispatchEvent(new PointerEvent(type, { clientX: x * 20 + 10, clientY: y * 20 + 10, pointerId: 1, pointerType: 'mouse', button: 0, bubbles: true, composed: true, cancelable: true }))
+  const press = (x: number, y: number) => { pointer('pointerdown', x, y); pointer('pointerup', x, y) }
+  /** A press carried from one square to another; the click a drop swallows is over once the task is. */
+  const drag = async (from: [number, number], to: [number, number], target?: Element) => {
+    pointer('pointerdown', ...from, target)
+    pointer('pointermove', ...to)
+    pointer('pointerup', ...to)
+    await new Promise(resolve => setTimeout(resolve))
+  }
+  const key = (key: string, options: KeyboardEventInit = {}, target: Element = board()) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true, ...options }))
+  const tool = (label: string) => part<HTMLButtonElement>(`.tools button[aria-label^="${label}"]`)
+  const nextTask = () => new Promise(resolve => setTimeout(resolve))
 
-  it('moves a group a square at a time and writes its place, as one step to undo', () => {
+  it('moves a group a square at a time and writes its place, as one step to undo', async () => {
     const e = setup(SOURCE)
-    pointer('pointerdown', 1, 0)
-    pointer('pointermove', 5, 0)
-    pointer('pointerup', 5, 0)
+    await drag([1, 0], [5, 0])
     expect(e.value).toBe(SOURCE.replace('[A]', '[A] @ 4 0'))
     expect(board().hasAttribute('data-active')).toBe(true)
+    expect(document.activeElement).toBe(board())
     e.undo()
     expect(e.value).toBe(SOURCE)
   })
 
-  it('places a box on the square pressed and names it there', async () => {
+  it('puts a box carried out of the tools where it is let go, and names it there', async () => {
     const e = setup(SOURCE)
-    pointer('pointerdown', 8, 8); pointer('pointerup', 8, 8)
-    tool('Box')
-    pointer('pointerdown', 10, 6)
-    expect(e.value).toContain('[B] @ 0 3\n[Box] @ 10 6\nA -> B')
+    press(8, 8)
+    // Let go over the paper: it is twenty squares by ten here.
+    part<HTMLElement>('.paper').getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 400, height: 200 })
+    await drag([0, -2], [10, 6], tool('Box'))
+    expect(e.value).toContain('[B] @ 0 3\n[Box] @ 9 6\nA -> B')
     await Promise.resolve()
     const field = part<HTMLInputElement>('.rename')
     expect(field.hidden).toBe(false)
     expect(field.value).toBe('Box')
     field.value = 'Ship'
-    key('Enter', field)
-    expect(e.value).toContain('[Ship] @ 10 6')
+    key('Enter', {}, field)
+    expect(e.value).toContain('[Ship] @ 9 6')
+    // One step names it, one put it there.
+    e.undo()
+    expect(e.value).toContain('[Box] @ 9 6')
+    e.undo()
+    expect(e.value).toBe(SOURCE)
   })
 
-  it('draws an arrow from the box pressed to the box let go over', () => {
+  it('puts a box pressed in the tools on a free square, beside what is chosen', () => {
     const e = setup(SOURCE)
-    pointer('pointerdown', 8, 8); pointer('pointerup', 8, 8)
-    tool('Line')
-    pointer('pointerdown', 1, 3)
-    pointer('pointermove', 1, 0)
-    pointer('pointerup', 1, 0)
+    press(1, 3)
+    tool('Box').click()
+    expect(e.value).toContain('[B] @ 0 3\n[Box] @ 6 3\n')
+    key('Escape', {}, part('.rename'))
+    key('Escape')
+    tool('Post-it').click()
+    expect(e.value).toContain('[Box] @ 6 3\n{Note} @ 0 5 w8\n')
+  })
+
+  it('draws a line from the box pressed to the box let go over, and makes it an arrow', async () => {
+    const e = setup(SOURCE)
+    press(8, 8)
+    tool('Line').click()
+    expect(tool('Line').getAttribute('aria-pressed')).toBe('true')
+    await drag([1, 3], [1, 0])
     expect(e.value).toContain('A -> B\nB -- A\n```')
+    expect(tool('Line').getAttribute('aria-pressed')).toBe('true')
+    tool('Arrow').click()
+    expect(e.value).toContain('A -> B\nB -> A\n```')
+    expect(board().dataset.mode).toBe('choose')
+  })
+
+  it('sizes a box by its grip in whole items', async () => {
+    const e = setup(SOURCE)
+    press(1, 0)
+    const grip = part<HTMLElement>('.grip')
+    expect(grip.hidden).toBe(false)
+    await drag([4, 0], [9, 0], grip)
+    expect(e.value).toBe(SOURCE.replace('[A]', '[A] w8'))
   })
 
   it('colours what is chosen, and takes a group away with its lines', () => {
     const e = setup(SOURCE)
-    pointer('pointerdown', 1, 3); pointer('pointerup', 1, 3)
-    part<HTMLButtonElement>('.tools button[aria-label="Pink"]').click()
+    press(1, 3)
+    tool('Pink').click()
     expect(e.value).toContain('[B] @ 0 3 pink')
     key('Backspace')
     expect(e.value).toBe('Above\n\n```diagram\n[A]\n```\n\nBelow')
   })
 
+  it('reaches everything from the keys, one step of undo for each change', async () => {
+    const three = 'Above\n\n```diagram\n[A]\n[B] @ 0 3\n[C] @ 8 0\nA -> B\n```\n\nBelow'
+    const e = setup(three)
+    e.selectRange(three.indexOf('[B]'))
+    expect(document.activeElement).toBe(board())
+    // Tab chooses each in turn: the groups as written, then the lines.
+    key('Tab'); key('Tab'); key('Tab'); key('Tab')
+    key('Delete')
+    expect(e.value).toBe(three.replace('\nA -> B', ''))
+    e.undo()
+    key('Tab')
+    key('ArrowRight', { shiftKey: true })
+    expect(e.value).toContain('\n[A] @ 4 0\n')
+    key('ArrowDown')
+    expect(e.value).toContain('\n[A] @ 4 1\n')
+    key('ArrowRight', { altKey: true })
+    expect(e.value).toContain('\n[A] @ 4 1 w8\n')
+    e.undo(); e.undo(); e.undo()
+    expect(e.value).toBe(three)
+    // L joins what is chosen to the one Tab reaches, Enter draws it.
+    key('Escape')
+    key('Tab')
+    key('l')
+    key('Tab'); key('Tab')
+    key('Enter')
+    expect(e.value).toContain('A -> B\nA -- C\n```')
+    // Enter names what is chosen.
+    key('Tab', { shiftKey: true })
+    key('Tab', { shiftKey: true })
+    key('Enter')
+    await Promise.resolve()
+    const field = part<HTMLInputElement>('.rename')
+    expect(field.value).toBe('C')
+    field.value = 'Sea'
+    key('Enter', {}, field)
+    expect(e.value).toContain('[Sea] @ 8 0\nA -> B\nA -- Sea')
+    await nextTask()
+    // B adds a box on a free square, named at once.
+    key('Escape'); key('b')
+    expect(e.value).toContain('[Box] @ 0 5')
+  })
+
   it('keeps its keys and presses from the writing around it', () => {
     const e = setup(SOURCE)
-    pointer('pointerdown', 1, 0); pointer('pointerup', 1, 0)
+    press(8, 8)
     key('a')
     expect(e.value).toBe(SOURCE)
-    expect(board().dataset.tool).toBe('arrow')
+    expect(board().dataset.mode).toBe('arrow')
+    key('Escape')
+    expect(board().dataset.mode).toBe('choose')
     expect(blockElements()[1].hasAttribute('data-drawn')).toBe(true)
   })
 
@@ -155,12 +252,13 @@ describe('drawing on a diagram\'s board', () => {
 })
 
 describe('a diagram just started', () => {
-  it('shows its board\'s tools under its words', () => {
+  it('shows its board\'s tools', () => {
     const e = setup('', { toolbar: true })
     e.selectRange(0)
     ;(document.querySelector('aa-toolbar button[aria-label="Diagram"]') as HTMLButtonElement).click()
-    const board = host!.querySelector<AaDiagramBoardElement>('.aa-atom[data-preview] aa-diagram-board')!
+    const board = host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
     expect(board.hasAttribute('data-active')).toBe(true)
     expect(board.shadowRoot!.querySelectorAll('.tools button').length).toBeGreaterThan(10)
+    expect(e.value).toBe(DIAGRAM_START)
   })
 })

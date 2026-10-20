@@ -277,7 +277,6 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 .aa-block[data-fence][data-drawn] { padding: 0; border-radius: 0; box-shadow: none; background: none; font-size: inherit; letter-spacing: inherit; }
 .aa-block[data-fence] > .aa-atom { display: block; max-width: 100%; overflow-x: auto; font-family: "Inter Arrows", var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))), system-ui, sans-serif; font-size: var(--aa-size, var(--ds-type-size-default, calc(14px * var(--aa-sf)))); letter-spacing: var(--aa-letterspacing, var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf)))); }
 .aa-block[data-fence] > .aa-atom > * { margin-inline-start: 0; }
-.aa-block[data-fence] > .aa-atom[data-preview] { margin-top: var(--aa-unit); }
 
 .aa-peer-caret { position: relative; display: inline; border-left: calc(1px * var(--aa-sf)) solid var(--aa-accent, var(--ds-sharp-blue, Highlight)); }
 .aa-peer-caret::after { content: attr(data-label); position: absolute; bottom: 100%; left: 0; font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf))); white-space: nowrap; background: var(--aa-accent, var(--ds-sharp-blue, Highlight)); color: var(--ds-white, HighlightText); }

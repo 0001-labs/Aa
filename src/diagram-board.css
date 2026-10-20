@@ -1,5 +1,5 @@
 /* A diagram's board: the drawing on Design system 1's squares, and, while it
-   is chosen, the squares themselves ruled under it and a Context row of
+   has the keys, the squares themselves ruled under it and a Context row of
    tools over it, in the square the writing above leaves free. Nothing moves
    in the drawing for the board: it stands where it stood. */
 :host {
@@ -57,11 +57,14 @@
 
 :host([data-editable]) .paper { cursor: default; }
 :host([data-editable][data-over]) .paper { cursor: grab; }
+:host([data-mode="line"]) .paper,
+:host([data-mode="arrow"]) .paper,
+:host([data-joining]) .paper { cursor: crosshair; }
+/* Carried, the cursor says what the gesture is wherever the pointer is. */
+:host([data-moving]),
 :host([data-moving]) .paper { cursor: grabbing; }
-:host([data-tool="box"]) .paper,
-:host([data-tool="post-it"]) .paper,
-:host([data-tool="line"]) .paper,
-:host([data-tool="arrow"]) .paper { cursor: crosshair; }
+:host([data-sizing]),
+:host([data-sizing]) .paper { cursor: ew-resize; }
 
 .layer {
   position: absolute;
@@ -70,9 +73,11 @@
   pointer-events: none;
 }
 
-/* What is chosen wears the focus ring, two pixels round its squares. */
+/* What is chosen is ringed two pixels inside its squares, as Design system 1
+   rings a chosen cell, so a box at the paper's edge keeps its whole ring. */
 .ring,
-.ghost-box {
+.ghost-box,
+.grip {
   position: absolute;
   left: calc(var(--x) * var(--board-unit));
   top: calc(var(--y) * var(--board-unit));
@@ -81,9 +86,31 @@
   box-sizing: border-box;
 }
 
-.ring { box-shadow: 0 0 0 2px var(--board-ring); }
+.ring { box-shadow: inset 0 0 0 2px var(--board-ring); }
+/* A line being drawn rings the box it would end on. */
+.aim { opacity: 0.6; }
 .ghost-box { box-shadow: inset 0 0 0 1px var(--board-ring); opacity: 0.6; }
-.ring[hidden], .ghost-box[hidden] { display: none; }
+.ring[hidden], .ghost-box[hidden], .grip[hidden] { display: none; }
+
+/* The grip of what is chosen sizes it: a range's thumb, one control high and
+   half a control wide, astride the box's end; a post-it's sits on its corner. */
+.grip {
+  left: calc((var(--x) + var(--w)) * var(--board-unit) - 4px * var(--board-sf));
+  top: calc(var(--y) * var(--board-unit) + (var(--h) * var(--board-unit) - 16px * var(--board-sf)) / 2);
+  width: calc(8px * var(--board-sf));
+  height: calc(16px * var(--board-sf));
+  border-radius: calc(2px * var(--board-sf));
+  background: var(--board-ring);
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.grip[data-corner] {
+  top: calc((var(--y) + var(--h)) * var(--board-unit) - 4px * var(--board-sf));
+  height: calc(8px * var(--board-sf));
+  cursor: nwse-resize;
+}
 
 .lines {
   position: absolute;
@@ -124,7 +151,8 @@
 
 /* The tools: Design system 1's Context face, a row of squares 19px high a
    pixel apart, black with white marks in both themes, in the square over
-   the board. */
+   the board. In the top layer they are set there by the board; where a
+   browser has no top layer they stand there in place. */
 .tools {
   position: absolute;
   z-index: 3;
@@ -139,6 +167,20 @@
   scrollbar-width: none;
   clip-path: inset(0 round var(--ds-radius, calc(4px * var(--board-sf))));
 }
+
+.tools[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: max-content;
+  max-width: calc(100vw - 2px);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+}
+
+.tools[popover]:not(:popover-open) { display: none; }
 
 .tools button { flex: 0 0 auto; }
 

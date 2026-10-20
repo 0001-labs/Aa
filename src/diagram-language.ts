@@ -39,14 +39,17 @@
  * next. `Group.Box` names one box where two groups share a name. A line
  * starting `//` is left out.
  *
- * Every box is an item cell, four squares across and one down, and every group
+ * Every box is an item cell, four squares across and one down, or a wider
+ * item of whole items, as a board draws one sized by hand: `w8` makes a
+ * group's boxes two items across, `w12` three, and a width between whole
+ * items keeps the one under it, so `w6` is still an item's width. Every group
  * a line reaches stands on the grid two squares at a time, on a column or
  * halfway across one: its place across is taken to the nearest even square,
  * so two groups side by side stand two squares apart and the line between
- * them is two squares long. `w6` is still read, and leaves the box an item's
- * width. A group no line reaches keeps the square it names, so chips in a
- * row can stand a square apart, as a legend's do; and so does a group placed
- * on a post-it, since the post-it is the frame it is set in.
+ * them is two squares long. A group no line reaches keeps the square it
+ * names, so chips in a row can stand a square apart, as a legend's do; and so
+ * does a group placed on a post-it, since the post-it is the frame it is set
+ * in.
  *
  * `{Ship}` is a post-it: a square frame that holds whatever groups are placed
  * on it, its name one square in from its top left corner. It is twelve
@@ -230,6 +233,8 @@ type Rect = { x: number; y: number; w: number; h: number }
 
 /** A box is an item cell, four squares across; a post-it stands on columns this wide. */
 export const DIAGRAM_BOX_WIDTH = 4
+/** The widest a box or a post-it is written, in squares: ten items. */
+export const DIAGRAM_MAX_WIDTH = 40
 /** A group stands on the grid this many squares at a time, a column or half of one: two side by side are two squares apart. */
 export const DIAGRAM_STEP = 2
 /** How far across a row of groups placed in turn runs before the next row: the app's width. */
@@ -240,6 +245,12 @@ export const DIAGRAM_POST_IT_SIZE = 12
 export const DIAGRAM_MONTH_WIDTH = 7
 const GUTTER = 2
 const MAX_SQUARES = 200
+
+/** A box's width in squares for the width written for it: whole items, the one under it between two, an item at the least. */
+export function diagramBoxWidth(written?: number): number {
+  if (written === undefined || !Number.isFinite(written)) return DIAGRAM_BOX_WIDTH
+  return Math.max(DIAGRAM_BOX_WIDTH, Math.min(DIAGRAM_MAX_WIDTH, Math.floor(written / DIAGRAM_BOX_WIDTH) * DIAGRAM_BOX_WIDTH))
+}
 
 /** The nearest of a list's columns, in squares from the left: where a post-it stands. */
 const onColumn = (x: number) => Math.round(x / DIAGRAM_BOX_WIDTH) * DIAGRAM_BOX_WIDTH
@@ -538,12 +549,13 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     if (!name && x === undefined) { unread.push(number); return }
     // A post-it is square, whichever side it names, and whole columns across.
     const side = Math.max(DIAGRAM_BOX_WIDTH, onColumn(w ?? h ?? DIAGRAM_POST_IT_SIZE))
-    // A box is an item's width whatever width is written for it.
+    // A box is whole items across, an item's width unless it says more.
+    const across = diagramBoxWidth(w)
     current = postIt
       ? { label: postIt[1].trim(), boxes: [], boxLines: [], x, y, w: side, h: side, postIt: true, color, line: number, end: number }
       : single
-        ? { boxes: [single[1].trim()], boxLines: [number], x, y, w: DIAGRAM_BOX_WIDTH, color, line: number, end: number }
-        : { label: name || undefined, boxes: [], boxLines: [], x, y, w: DIAGRAM_BOX_WIDTH, color, line: number, end: number }
+        ? { boxes: [single[1].trim()], boxLines: [number], x, y, w: across, color, line: number, end: number }
+        : { label: name || undefined, boxes: [], boxLines: [], x, y, w: across, color, line: number, end: number }
     groups.push(current)
   })
 

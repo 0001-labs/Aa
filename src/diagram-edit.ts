@@ -2,14 +2,15 @@
  * A diagram changed where it is drawn, written back as words. Every change
  * here takes a diagram's source and its layout (`layoutDiagram`), and gives
  * the source as it would be written by hand for the change: a group moved
- * has its `@ x y`, a box added is a line of its own, a line drawn between
- * two boxes is `A -> B`, and a group taken away takes its lines with it.
+ * has its `@ x y`, a group sized has its `w8`, a box added is a line of its
+ * own, a line drawn between two boxes is `A -> B` (and `A -- B` once it is
+ * made a plain line), and a group taken away takes its lines with it.
  * Nothing else in the source moves, so what a person wrote stays theirs.
  *
  * Nothing here touches the page, so a server can make the same changes.
  */
 
-import { DIAGRAM_COLORS, type Diagram, type DiagramColor, type DiagramGroup } from './diagram-language'
+import { DIAGRAM_BOX_WIDTH, DIAGRAM_COLORS, DIAGRAM_MAX_WIDTH, DIAGRAM_POST_IT_SIZE, diagramBoxWidth, type Diagram, type DiagramColor, type DiagramGroup } from './diagram-language'
 
 /** What is chosen on a drawing: a group, one box of a stack, or a line. */
 export type DiagramTarget = { group: number; box?: number } | { join: number }
@@ -105,14 +106,16 @@ function dropJoins(all: string[], gone: Set<string>): string[] {
 }
 
 /** A group's first line written again: its name, place, sizes and colour. */
-function header(raw: string, group: DiagramGroup, change: { name?: string; x?: number; y?: number; color?: DiagramColor | null }): string {
+function header(raw: string, group: DiagramGroup, change: { name?: string; x?: number; y?: number; w?: number; color?: DiagramColor | null }): string {
   // Months, grids and charts carry their own brackets: only their place is written again.
   if (group.kind === 'month' || group.kind === 'grid' || group.kind === 'chart') {
     if (change.x === undefined || change.y === undefined) return raw
     const place = ` @ ${change.x} ${change.y}`
     return PLACE.test(` ${raw}`) ? ` ${raw}`.replace(PLACE, place).slice(1) : `${raw.trimEnd()}${place}`
   }
-  const sizes = (raw.match(WIDTH) ?? []).join('')
+  // A size given is written as `w`, or left out where it is the one a group has unwritten.
+  const unwritten = group.kind === 'post-it' ? DIAGRAM_POST_IT_SIZE : DIAGRAM_BOX_WIDTH
+  const sizes = change.w === undefined ? (raw.match(WIDTH) ?? []).join('') : change.w === unwritten ? '' : ` w${change.w}`
   const name = change.name ?? (group.kind === 'box' ? group.boxes[0]?.text : group.name) ?? ''
   const word = group.kind === 'box' ? `[${name}]` : group.kind === 'post-it' ? `{${name}}` : name
   const x = change.x ?? group.x, y = change.y ?? group.y
@@ -139,6 +142,23 @@ export function moveGroup(source: string, diagram: Diagram, index: number, x: nu
   return all.join('\n')
 }
 
+/**
+ * A box, a stack or a post-it set to another width, in squares: a box's in
+ * whole items (`w8` for two), a post-it's side in whole columns, nothing
+ * written for the size a group has unwritten.
+ */
+export function resizeGroup(source: string, diagram: Diagram, index: number, w: number): string {
+  const group = diagram.groups[index]
+  if (!group || (group.kind !== 'box' && group.kind !== 'stack' && group.kind !== 'post-it')) return source
+  const size = group.kind === 'post-it'
+    ? Math.max(DIAGRAM_BOX_WIDTH, Math.min(DIAGRAM_MAX_WIDTH, Math.round(w / DIAGRAM_BOX_WIDTH) * DIAGRAM_BOX_WIDTH))
+    : diagramBoxWidth(Math.round(w / DIAGRAM_BOX_WIDTH) * DIAGRAM_BOX_WIDTH)
+  if (size === group.w) return source
+  const all = lines(source)
+  all[group.line - 1] = header(all[group.line - 1], group, { w: size })
+  return all.join('\n')
+}
+
 /** A new group on a square: a lone box `[Box] @ x y`, or a post-it `{Note} @ x y w8`, after the groups already written. */
 export function addGroup(source: string, diagram: Diagram, kind: 'box' | 'post-it', name: string, x: number, y: number): string {
   const all = source.trim() ? lines(source) : []
@@ -154,6 +174,23 @@ export function addGroup(source: string, diagram: Diagram, kind: 'box' | 'post-i
 export function addJoin(source: string, from: string, to: string, op: '--' | '->' = '->'): string {
   const text = source.replace(/\s+$/, '')
   return `${text}${text ? '\n' : ''}${from} ${op} ${to}`
+}
+
+/**
+ * A line made plain (`--`) or an arrow (`->`). An arrow already pointing
+ * either way, or both, stays as it points.
+ */
+export function joinKind(source: string, diagram: Diagram, target: DiagramTarget, op: '--' | '->'): string {
+  if (!('join' in target)) return source
+  const join = diagram.joins[target.join]
+  if (!join) return source
+  const all = lines(source)
+  const pairs = pairsOf(all[join.line - 1])
+  const at = pairs.findIndex(pair => (key(pair.from) === key(join.from) && key(pair.to) === key(join.to)) || (key(pair.from) === key(join.to) && key(pair.to) === key(join.from)))
+  if (at < 0 || (op === '--') === (pairs[at].op === '--')) return source
+  pairs[at] = { ...pairs[at], op }
+  all.splice(join.line - 1, 1, ...writePairs(pairs))
+  return all.join('\n')
 }
 
 /** A group or a box called something else, and every line that reached it by its old name. */

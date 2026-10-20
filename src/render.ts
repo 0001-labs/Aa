@@ -40,7 +40,8 @@ export type Reveal = { from: number; to: number } | null
 
 /** The key of what a reveal shows: which groups, and whether the block is active. Same key, same drawing. */
 export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): string {
-  if (!reveal) return ''
+  // A block an atom draws whole (a diagram) is drawn the same wherever the caret is.
+  if (!reveal || fencedAtom(block, atoms)) return ''
   const groups: string[] = []
   for (const run of blockRuns(block, atoms)) {
     if (!run.group) continue
@@ -80,10 +81,10 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     element.removeAttribute('data-body-active')
   }
   if (block.kind === 'table') { renderTable(element, block, decorations); renderCarets(element, decorations); return }
-  // A fenced block an atom draws (a diagram) is that drawing; with the caret
-  // in it, its words are written as code and the drawing follows under them.
+  // A fenced block an atom draws (a diagram) is that drawing, the caret in it
+  // or not: its words are never shown, and it is changed where it is drawn.
   const fenced = fencedAtom(block, atoms)
-  element.toggleAttribute('data-drawn', !!fenced && !reveal)
+  element.toggleAttribute('data-drawn', !!fenced)
   if (fenced) element.dataset.fence = fenced.name
   else delete element.dataset.fence
 
@@ -101,14 +102,14 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   let destination: DocumentFragment | HTMLElement = fragment
   let visible = false
   let lastBreak = false
-  for (const run of fenced && reveal ? blockRuns(block, atoms.filter(atom => atom !== fenced)) : blockRuns(block, atoms)) {
+  for (const run of blockRuns(block, atoms)) {
     if (block.kind === 'callout' && run.from >= block.source.indexOf('\n') && block.source.includes('\n') && destination === fragment) { fragment.append(body); destination = body }
     lastBreak = run.kind === 'break'
     if (run.kind === 'break') { destination.append(document.createElement('br')); continue }
     const text = block.source.slice(run.from, run.to)
     if (!text) continue
     if (run.kind === 'atom') {
-      if (run.group && reveal && reveal.from <= run.to && reveal.to >= run.from) destination.append(document.createTextNode(text))
+      if (run.group && reveal && !fenced && reveal.from <= run.to && reveal.to >= run.from) destination.append(document.createTextNode(text))
       else destination.append(kept.get(`${run.atom}\u0000${text}`)?.shift() ?? draw(run.atom!, text))
       visible = true
       continue
@@ -132,13 +133,6 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     node.textContent = text
     decorateNode(node, run.from, decorations)
     destination.append(node)
-  }
-  // The drawing under the words reads back as nothing: the words are its source.
-  if (fenced && reveal) {
-    const preview = draw(fenced.name, block.source)
-    preview.dataset.source = ''
-    preview.dataset.preview = ''
-    fragment.append(preview)
   }
   // A block with no line to stand on gets one: an empty block, one ending on
   // a line break, or one whose every character is hidden syntax.

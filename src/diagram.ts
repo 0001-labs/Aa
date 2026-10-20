@@ -1,7 +1,8 @@
 /**
  * Diagrams, Aa's optional entry (`@0001-labs/aa/diagram`): boxes and lines
- * on Design system 1's squares, written rather than drawn. The language is
- * `diagram-language.ts`; this draws it.
+ * on Design system 1's squares, drawn by hand on a board and kept as words.
+ * The words are `diagram-language.ts`, which servers and agents read; this
+ * draws them.
  *
  * - `<aa-diagram source="[Ideas]&#10;[Agents] @ 0 3&#10;Ideas -> Agents"></aa-diagram>`
  * - `<aa-diagram>…the source as text…</aa-diagram>`
@@ -9,8 +10,8 @@
  *
  * `defineAaDiagram()` defines the element, under a product's own name too
  * (`defineAaDiagram('ezo-diagram')`), and `diagramAtom` gives an editor
- * fenced ```diagram blocks drawn in place, with a toolbar button and a slash
- * command that start one.
+ * fenced ```diagram blocks drawn in place and changed there by hand, with a
+ * toolbar button and a slash command that start one.
  *
  * It sizes itself in squares (`--diagram-columns`, `--diagram-rows` on the
  * host), so whatever holds it can reserve its rows before it has drawn. Once
@@ -356,10 +357,10 @@ export const DIAGRAM_START = '```diagram\n[Idea]\n[Plan] @ 6 0\nIdea -> Plan\n``
 /**
  * Fenced ```diagram blocks drawn in place in an editor: `atoms: [imageAtom,
  * diagramAtom]`. The drawing stands in for its words on a board
- * (`diagram-board.ts`): pressed, it shows its squares and the tools that
- * draw on them, and writes what is drawn back as words. Its Words tool, or
- * the caret moved into the block, writes the words as code with the board
- * under them. Its toolbar button and slash command start one.
+ * (`diagram-board.ts`), and its words are never shown: pressed, or with the
+ * caret come into the block, it shows its squares and the tools that draw
+ * on them, is changed there by hand and from the keys, and writes what is
+ * drawn back as words. Its toolbar button and slash command start one.
  */
 export const diagramAtom: Atom = {
   name: 'diagram',

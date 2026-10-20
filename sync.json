@@ -6,7 +6,7 @@
       "sheets": { "to": "src/ds1", "sheets": ["context.css"] }
     },
     "Drag": {
-      "sortable": { "to": "src/vendor/drag" }
+      "sortable": { "to": "src/vendor/drag", "grid": true }
     }
   }
 }
