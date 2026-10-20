@@ -626,6 +626,10 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
   animation: aa-comments-in 220ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 @keyframes aa-comments-in { from { opacity: 0; transform: translateY(calc(4px * var(--aa-sf, 1))); } }
+/* Over the page the card is its own ground, exactly half a square inside its line all round, and its
+   rows stand centred in their squares rather than on the sixteen: nothing beside them to line up with. */
+.aa-comments[data-mode="popover"] :is(.aa-thread-head, .aa-comment-meta, .aa-composer, .aa-comment-reactions, .aa-thread-actions) { align-items: center; }
+.aa-comments[data-mode="popover"] .aa-composer textarea { padding: 0; }
 .aa-comments[data-mode="panel"] .aa-thread + .aa-thread { margin-top: calc(var(--aa-unit) / 2); }
 /* Design system 1's text tabs at a panel's head: the words alone with no fill, each tab padded 4px and
    4px apart so the words stand twelve apart, the run 4px back so the first word starts on the edge,
