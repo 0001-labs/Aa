@@ -62,7 +62,7 @@ const Base = typeof HTMLElement === 'undefined' ? (class {} as typeof HTMLElemen
 let sheet: CSSStyleSheet | undefined
 
 export class AaDiagramElement extends Base {
-  static observedAttributes = ['source']
+  static observedAttributes = ['source', 'wrap', 'data-editing']
 
   #source: string | undefined
   #changed = true
@@ -71,6 +71,9 @@ export class AaDiagramElement extends Base {
   #diagram: Diagram = layoutDiagram('')
   /** Each name's width in squares, as last measured here. */
   #widths = new Map<string, number>()
+  /** The squares across the diagram's holder has, where it wraps. */
+  #room: number | undefined
+  #resize: ResizeObserver | undefined
   /** How round a line's turns are, in squares: a cell's corner radius in a rounded shape, none in the square one. */
   #bend = 0
   /** Settles once the diagram has drawn what it was last given. */
@@ -87,8 +90,9 @@ export class AaDiagramElement extends Base {
   /** The diagram as last laid out. */
   get diagram(): Diagram { return this.#diagram }
 
-  attributeChangedCallback(name: string, _old: string | null, value: string | null) {
+  attributeChangedCallback(name: string, old: string | null, value: string | null) {
     if (name === 'source') this.source = value ?? undefined
+    else if (old !== value) { this.#changed = true; this.requestUpdate() }
   }
 
   connectedCallback() {
@@ -110,12 +114,21 @@ export class AaDiagramElement extends Base {
     void document.fonts?.ready.then(() => { if (this.isConnected) this.requestUpdate() })
     shapeWatchers.add(this)
     watchShape()
+    // The holder's width is the room a wrapping diagram fits, and says whether one that does not wrap fits the window.
+    if (typeof ResizeObserver !== 'undefined' && this.parentElement) {
+      this.#resize ??= new ResizeObserver(() => this.requestUpdate())
+      this.#resize.observe(this.parentElement)
+    }
     this.requestUpdate()
   }
 
   disconnectedCallback() {
     shapeWatchers.delete(this)
+    this.#resize?.disconnect()
   }
+
+  /** Whether it is laid out again to fit its holder: `wrap`, and not while its board is drawing on it. */
+  #wraps(): boolean { return this.hasAttribute('wrap') && !this.hasAttribute('data-editing') }
 
   /** Draw again once the current task is done; many asks make one drawing. */
   requestUpdate() {
@@ -132,7 +145,7 @@ export class AaDiagramElement extends Base {
   shapeChanged() { this.requestUpdate() }
 
   #layout() {
-    this.#diagram = layoutDiagram(this.#source ?? '', text => this.#widths.get(text))
+    this.#diagram = layoutDiagram(this.#source ?? '', text => this.#widths.get(text), this.#wraps() && this.#room ? { room: this.#room } : {})
   }
 
   #update() {
@@ -160,6 +173,17 @@ export class AaDiagramElement extends Base {
     const unit = root.querySelector<HTMLElement>('.label, .box')?.getBoundingClientRect().height ?? 0
     if (!unit) return
     // A turn is as round as a cell's corner, the radius the product hands in.
+    // Wider than the window, it cannot reach past its holder on both sides: it stands at its holder's edge and scrolls sideways itself.
+    const width = this.#diagram.columns * unit
+    const holder = this.parentElement?.getBoundingClientRect()
+    const narrow = !this.hasAttribute('data-editing') && !!holder && width > holder.width && width - holder.width > 2 * Math.min(holder.left, window.innerWidth - holder.right)
+    this.toggleAttribute('data-narrow', narrow)
+    const room = holder && holder.width ? Math.max(4, Math.floor(holder.width / unit)) : undefined
+    if (this.#wraps() && room !== this.#room) {
+      this.#room = room
+      this.#changed = true
+      this.requestUpdate()
+    } else this.#room = room
     const bend = (parseFloat(getComputedStyle(this).getPropertyValue('--aa-diagram-radius')) || 0) / unit
     if (Math.abs(bend - this.#bend) > 0.01) {
       this.#bend = bend

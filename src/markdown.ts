@@ -179,7 +179,8 @@ export type AtomSyntax = {
 /** The atom a closed code block is drawn as, by its fence's language, if any is given one. */
 export function fencedAtom<T extends AtomSyntax>(block: Block, atoms: readonly T[]): T | undefined {
   if (block.kind !== 'code' || !codeClosed(block)) return undefined
-  const language = block.source.slice(0, block.prefix).replace(/^ {0,3}(`{3,}|~{3,})/, '').trim().toLowerCase()
+  // The language is the info string's first word; what follows it (a diagram's `wrap`) is the atom's.
+  const language = block.source.slice(0, block.prefix).replace(/^ {0,3}(`{3,}|~{3,})/, '').trim().toLowerCase().split(/\s+/)[0]
   return language ? atoms.find(atom => atom.fence?.toLowerCase() === language) : undefined
 }
 

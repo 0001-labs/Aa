@@ -259,10 +259,14 @@ const onStep = (x: number) => Math.round(x / DIAGRAM_STEP) * DIAGRAM_STEP
 /** The next even square at or after a square. */
 const nextStep = (x: number) => Math.ceil(x / DIAGRAM_STEP) * DIAGRAM_STEP
 
+/** How a diagram is laid out: `room`, the squares across it may take, to wrap it into when it is wider. */
+export type DiagramLayoutOptions = { room?: number }
+
 /** A name's width in squares, as the drawing sets it, or nothing when it cannot tell. */
 export type DiagramMeasure = (text: string) => number | undefined
 
-const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})[ \t]*diagram[ \t]*$/i
+// A fence may say more after its language: `wrap` (see `diagramWraps`).
+const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})[ \t]*diagram(?:[ \t]+[^`\n]*?)?[ \t]*$/i
 const TITLE = /^#{1,4}[ \t]+(.+)$/
 const COMMENT = /^\/\//
 const JOIN = /[ \t]+(<->|->|<-|--)[ \t]+/
@@ -319,6 +323,22 @@ export function isDiagramBlock(text: string): boolean {
   if (!open) return false
   const close = lines[lines.length - 1].trim()
   return close[0] === open[1][0] && /^(`{3,}|~{3,})$/.test(close) && close.length >= open[1].length
+}
+
+/**
+ * Whether a fenced diagram wraps: ```` ```diagram wrap ```` lays it out again
+ * to fit the room it is given, in strips one under another as lines of
+ * writing wrap, so nobody scrolls sideways to read it. Unwrapped, it keeps
+ * its own layout.
+ */
+export function diagramWraps(fence: string): boolean {
+  return /^ {0,3}(?:`{3,}|~{3,})[ \t]*diagram\b[^\n]*[ \t]wrap\b/i.test(fence.split('\n')[0] ?? '')
+}
+
+/** The fence's first line with wrapping turned on or off, the rest of it kept. */
+export function diagramFenceWrapped(fence: string, wrap: boolean): string {
+  const without = fence.replace(/[ \t]+wrap\b/i, '')
+  return wrap ? `${without.trimEnd()} wrap` : without
 }
 
 /** The source inside a fenced diagram, without its fences. */
@@ -400,7 +420,7 @@ const key = (name: string) => name.trim().toLowerCase()
  * Read a diagram's source and set every box, label and line on the grid.
  * `measure` gives a name's width, so a line into it meets its middle.
  */
-export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram {
+export function layoutDiagram(source: string, measure?: DiagramMeasure, options: DiagramLayoutOptions = {}): Diagram {
   const labels: DiagramLabel[] = []
   const groups: Group[] = []
   const joins: { from: string; to: string; arrow: boolean; reverse: boolean; line: number }[] = []
@@ -610,6 +630,8 @@ export function layoutDiagram(source: string, measure?: DiagramMeasure): Diagram
     }
     rects.set(group, { x: group.x, y: group.y, w: group.w, h })
   }
+
+  if (options.room !== undefined) wrapGroups(groups, rects, options.room)
 
   const boxes: DiagramBox[] = []
   const days: DiagramDay[] = []
@@ -901,4 +923,40 @@ function turning(x1: number, from: number, x2: number, to: number): DiagramSegme
     { x1, y1: turn, x2, y2: turn },
     { x1: x2, y1: turn, x2, y2: to },
   ].filter(s => s.x1 !== s.x2 || s.y1 !== s.y2)
+}
+
+/**
+ * Groups laid out again to fit `room` squares across, as writing wraps: they
+ * are taken from left to right into strips each no wider than the room, a
+ * strip keeping the places its groups have among themselves, and each strip
+ * set two rows under the one before it, at the left edge. A post-it carries
+ * the groups placed on it. A group wider than the room has a strip of its own.
+ */
+function wrapGroups(groups: Group[], rects: Map<Group, Rect>, room: number) {
+  const all = groups.map(group => rects.get(group)!)
+  if (!all.length || Math.max(...all.map(rect => rect.x + rect.w)) <= room) return
+  const frames = groups.filter(group => group.postIt).map(group => rects.get(group)!)
+  const frameOf = (rect: Rect) => frames.find(frame => frame !== rect && rect.x >= frame.x && rect.x < frame.x + frame.w && rect.y >= frame.y && rect.y < frame.y + frame.h)
+  // A post-it and what stands on it move as one.
+  const units = new Map<Rect, Rect[]>()
+  for (const rect of all) {
+    const frame = frameOf(rect) ?? rect
+    units.set(frame, [...(units.get(frame) ?? []), rect])
+  }
+  const order = [...units.keys()].sort((a, b) => a.x - b.x || a.y - b.y)
+  const strips: { start: number; units: Rect[] }[] = []
+  for (const unit of order) {
+    const strip = strips[strips.length - 1]
+    if (strip && unit.x + unit.w - strip.start <= room) strip.units.push(unit)
+    else strips.push({ start: unit.x, units: [unit] })
+  }
+  if (strips.length < 2) return
+  let bottom = 0
+  strips.forEach((strip, index) => {
+    const pieces = strip.units.flatMap(unit => units.get(unit)!)
+    const top = Math.min(...pieces.map(rect => rect.y))
+    const dy = index ? bottom + GUTTER - top : 0
+    for (const rect of pieces) { rect.x -= strip.start; rect.y += dy }
+    bottom = Math.max(bottom, ...pieces.map(rect => rect.y + rect.h))
+  })
 }

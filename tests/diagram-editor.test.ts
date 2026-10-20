@@ -194,8 +194,15 @@ describe('drawing on a diagram\'s board', () => {
   it('colours what is chosen, and takes a group away with its lines', () => {
     const e = setup(SOURCE)
     press(1, 3)
-    tool('Pink').click()
+    // One colour tool opens the colours; choosing one closes them.
+    expect(part<HTMLElement>('.colors').hidden).toBe(true)
+    tool('Colour').click()
+    expect(part<HTMLElement>('.colors').hidden).toBe(false)
+    part<HTMLButtonElement>('.colors button[aria-label="Pink"]').click()
     expect(e.value).toContain('[B] @ 0 3 pink')
+    expect(part<HTMLElement>('.colors').hidden).toBe(true)
+    expect(tool('Colour').disabled).toBe(false)
+    expect(part<HTMLButtonElement>('.colors button[aria-label="Pink"]').getAttribute('aria-checked')).toBe('true')
     key('Backspace')
     expect(e.value).toBe('Above\n\n```diagram\n[A]\n```\n\nBelow')
   })
@@ -242,6 +249,21 @@ describe('drawing on a diagram\'s board', () => {
     expect(e.value).toContain('[Box] @ 0 5')
   })
 
+  it('fits the width it is read in when wrapping is on, written on its fence, one step to undo', () => {
+    const e = setup(SOURCE)
+    press(8, 8)
+    expect(tool('Fit the width').getAttribute('aria-pressed')).toBe('false')
+    tool('Fit the width').click()
+    expect(e.value).toBe(SOURCE.replace('```diagram\n', '```diagram wrap\n'))
+    expect(blockElements()[1].hasAttribute('data-drawn')).toBe(true)
+    expect(drawingIn(blockElements()[1])!.hasAttribute('wrap')).toBe(true)
+    expect(tool('Fit the width').getAttribute('aria-pressed')).toBe('true')
+    tool('Fit the width').click()
+    expect(e.value).toBe(SOURCE)
+    e.undo()
+    expect(e.value).toBe(SOURCE.replace('```diagram\n', '```diagram wrap\n'))
+  })
+
   it('keeps its keys and presses from the writing around it', () => {
     const e = setup(SOURCE)
     press(8, 8)
@@ -269,7 +291,9 @@ describe('a diagram just started', () => {
     ;(document.querySelector('aa-toolbar button[aria-label="Diagram"]') as HTMLButtonElement).click()
     const board = host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
     expect(board.hasAttribute('data-active')).toBe(true)
-    expect(board.shadowRoot!.querySelectorAll('.tools button').length).toBeGreaterThan(10)
+    // Box, post-it, line, arrow, the colour and delete; the colours themselves are in the colour's menu.
+    expect([...board.shadowRoot!.querySelectorAll('.tools button')].map(button => button.getAttribute('aria-label'))).toEqual(['Box (B)', 'Post-it (P)', 'Line (L)', 'Arrow (A)', 'Colour', 'Fit the width', 'Delete'])
+    expect(board.shadowRoot!.querySelectorAll('.colors button').length).toBe(8)
     expect(e.value).toBe(DIAGRAM_START)
   })
 })

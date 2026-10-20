@@ -37,6 +37,23 @@
   display: none;
 }
 
+/* Wider than the window, so it cannot reach past what holds it on both sides
+   (a phone): it stands at its holder's edge, where its first words are, and
+   scrolls sideways within itself, its squares kept whole. */
+:host([data-narrow]) {
+  max-width: 100%;
+  margin-inline-start: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+:host([data-narrow]) .lines,
+:host([data-narrow]) .chart-ink {
+  right: auto;
+  width: calc(var(--diagram-columns, 0) * var(--diagram-unit));
+}
+
 /* Lines lie over the boxes, so an arrow's tip and a line's start are drawn
    whole where they meet a box's edge rather than hidden under it. A line is
    one stroke with mitred turns and flat ends: it starts on the grid line a

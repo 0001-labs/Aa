@@ -1,6 +1,6 @@
 {
   "Design system 1": {
-    "commit": "36724dbfab4b943a64ff725757855b5fc1877b7e",
+    "commit": "49922d7f8ebda13e38cdeefe6e9958b729405534",
     "version": "0.3.0-alpha.28",
     "dirty": true,
     "files": {
@@ -24,6 +24,7 @@
       "src/ds1/component-metrics.css": "1c5c0a1b5e309598e78bd76d95af941688de2d1dcd3e4e14222bd48560ff04c4",
       "src/ds1/context.css": "8792e1bf0b6a5e1a78a8241c5947b3295f0619d463b2cce08d836eb38b31e0b4",
       "src/icons/box.svg": "915679ba8bc7ef80a7355336ff0521177b7752878166af00c17f589e34e6aa14",
+      "src/icons/column.svg": "3f007b8e73ed6d80b5070db6ea5d95e515733d67c02574dd46dd4d9c5f8cd9a1",
       "src/icons/connect.svg": "5ec3b25d77d13a88d50abba9c6b15d9856798511c0bc4d6736237736598f2d95",
       "src/icons/cursor.svg": "7a204a31698b0454b366e569daff662c88f85983d3c526dfe084951436ddc2a3",
       "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab",

@@ -10,6 +10,9 @@
   --board-fill: light-dark(var(--ds-black, #2a2a2a), var(--ds-slate, #1e1e1e));
   --board-ink: var(--ds-white, #ffffff);
   --board-hover: color-mix(in srgb, var(--board-fill) 78%, var(--board-ink));
+  --board-paper: light-dark(var(--ds-white, #fff), var(--ds-slate, #1e1e1e));
+  --board-text: var(--ds-text-color, light-dark(#1e1e1e, #fff));
+  --board-rule-strong: light-dark(rgb(30 30 30 / 0.2), rgb(255 255 255 / 0.2));
   position: relative;
   display: block;
   outline: none;
@@ -164,41 +167,23 @@
 .rename[hidden] { display: none; }
 
 /* The tools: Design system 1's Context face, a row of squares 19px high a
-   pixel apart, black with white marks in both themes, in the square over
-   the board. In the top layer they are set there by the board; where a
-   browser has no top layer they stand there in place. */
+   pixel apart, black with white marks in both themes, on the square under
+   the board, a pixel below it, for as long as the writing can be changed. */
 .tools {
-  position: absolute;
-  z-index: 3;
-  bottom: 100%;
-  left: 0;
   display: flex;
   gap: 1px;
+  width: max-content;
   max-width: 100%;
   height: calc(var(--board-unit) - 1px);
-  margin-bottom: 1px;
+  margin-top: 1px;
   overflow-x: auto;
   scrollbar-width: none;
   clip-path: inset(0 round var(--ds-radius, calc(4px * var(--board-sf))));
 }
 
-.tools[popover] {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  width: max-content;
-  max-width: calc(100vw - 2px);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-}
-
-.tools[popover]:not(:popover-open) { display: none; }
-
 .tools button { flex: 0 0 auto; }
 
-:host(:not([data-active])) .tools { display: none; }
+:host(:not([data-editable])) .tools { display: none; }
 
 .tools button {
   display: inline-flex;
@@ -242,3 +227,49 @@
 }
 
 .chip[data-none] { background: none; box-shadow: inset 0 0 0 1px currentColor; }
+
+/* The colours: Design system 1's Select menu, half a square inside its line,
+   a colour a square with its name 4px after its chip, on the sixteen. */
+.colors {
+  position: fixed;
+  z-index: 4;
+  inset: auto;
+  box-sizing: border-box;
+  width: calc(6 * var(--board-unit));
+  margin: 0;
+  padding: calc(var(--board-unit) / 2 - 1px) 0;
+  border: 1px solid var(--board-rule-strong);
+  border-radius: var(--ds-radius, calc(4px * var(--board-sf)));
+  background: var(--board-paper);
+  color: var(--board-text);
+}
+
+.colors[hidden] { display: none; }
+
+.colors button {
+  display: flex;
+  align-items: flex-end;
+  gap: calc(4px * var(--board-sf));
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--board-unit);
+  margin: 0;
+  padding: 0 calc(var(--board-unit) / 2 - 1px);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: calc(16px * var(--board-sf));
+  text-align: start;
+  cursor: pointer;
+}
+
+.colors .chip { flex: 0 0 auto; margin: 0 calc(2px * var(--board-sf)) calc(2px * var(--board-sf)); }
+.colors button:hover,
+.colors button[aria-checked="true"] { background: var(--board-rule); }
+.colors button:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px var(--board-ring); }
+
+/* With a mouse and keys, Delete is the key's; a finger has the tool. */
+@media (hover: hover) and (pointer: fine) {
+  .tools .for-touch { display: none; }
+}

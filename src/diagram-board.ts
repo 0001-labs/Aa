@@ -2,8 +2,10 @@
  * A diagram's board: a diagram drawn in an editor and changed where it
  * stands, by hand. Its words are never shown: the caret come into its block,
  * a press or Tab gives the board the keys, and it rules its squares under
- * the drawing and shows a row of tools over it (Design system 1's Context
- * bar, in the top layer so nothing around it cuts it off).
+ * the drawing. Its row of tools (Design system 1's Context bar) stands on the
+ * square under the board for as long as the writing can be changed, with
+ * one colour picker for the pale accents, a Select-faced menu in the top
+ * layer.
  *
  * Everything is carried on Drag's grid engine (`src/vendor/drag/grid.ts`), a
  * whole square at a time: a group pressed and carried lands on other
@@ -28,7 +30,7 @@
  * the keys back when it is drawn again.
  */
 
-import { DIAGRAM_COLORS, layoutDiagram, type Diagram, type DiagramColor, type DiagramGroup } from './diagram-language'
+import { DIAGRAM_COLORS, diagramFenceWrapped, diagramWraps, layoutDiagram, type Diagram, type DiagramColor, type DiagramGroup } from './diagram-language'
 import { addGroup, addJoin, colorTarget, deleteTarget, freeName, joinKind, moveGroup, referenceOf, renameTarget, resizeGroup, type DiagramTarget } from './diagram-edit'
 import { createGrid, type GridController, type GridGesture, type GridPoint, type GridPress } from './vendor/drag/grid'
 import styles from './diagram-board.css?inline'
@@ -37,6 +39,7 @@ import noteIcon from './icons/note.svg?raw'
 import connectIcon from './icons/connect.svg?raw'
 import arrowIcon from './icons/right.svg?raw'
 import deleteIcon from './icons/delete.svg?raw'
+import wrapIcon from './icons/column.svg?raw'
 
 /** Choosing and carrying, or drawing lines from box to box. */
 type Mode = 'choose' | 'line' | 'arrow'
@@ -100,8 +103,9 @@ export class AaDiagramBoardElement extends Base {
   #lines!: SVGSVGElement
   #rename!: HTMLInputElement
   #tools!: HTMLElement
+  #colors!: HTMLElement
   #probe!: HTMLElement
-  #buttons!: { box: HTMLButtonElement; postIt: HTMLButtonElement; line: HTMLButtonElement; arrow: HTMLButtonElement; colors: HTMLButtonElement[]; delete: HTMLButtonElement }
+  #buttons!: { box: HTMLButtonElement; postIt: HTMLButtonElement; line: HTMLButtonElement; arrow: HTMLButtonElement; color: HTMLButtonElement; colors: HTMLButtonElement[]; wrap: HTMLButtonElement; delete: HTMLButtonElement }
   #state: State = { block: -1, mode: 'choose', target: null, renaming: null, active: false, keep: false, said: '' }
   #grid: GridController | null = null
   /** A gesture drawing on the board's own layer: what is chosen is not drawn over it. */
@@ -116,6 +120,7 @@ export class AaDiagramBoardElement extends Base {
     this.#source = lines.slice(1, -1).join('\n')
     this.#layout = layoutDiagram(this.#source)
     if (!this.shadowRoot) this.#build(value.tag)
+    this.#drawing!.toggleAttribute('wrap', diagramWraps(this.#open))
     this.#drawing!.source = this.#source
   }
 
@@ -128,8 +133,11 @@ export class AaDiagramBoardElement extends Base {
     this.#tools = part('div', 'tools')
     this.#tools.setAttribute('role', 'toolbar')
     this.#tools.setAttribute('aria-label', 'Diagram')
-    // In the top layer, the tools stand over whatever holds the board, never cut off by it.
-    if ('popover' in HTMLElement.prototype) this.#tools.setAttribute('popover', 'manual')
+    // The colours open from one tool, in the top layer so nothing around the board cuts them off.
+    this.#colors = part('div', 'colors', true)
+    this.#colors.setAttribute('role', 'menu')
+    this.#colors.setAttribute('aria-label', 'Colour')
+    if ('popover' in HTMLElement.prototype) this.#colors.setAttribute('popover', 'manual')
     this.#paper = part('div', 'paper')
     this.#drawing = document.createElement(tag)
     const layer = part('div', 'layer')
@@ -145,7 +153,7 @@ export class AaDiagramBoardElement extends Base {
     layer.append(this.#ring, this.#aim, this.#ghost, this.#lines, this.#grip, this.#rename)
     // The drawing stays in the page, slotted onto the paper, so a product's own rules for its diagram element reach it.
     this.#paper.append(document.createElement('slot'), layer)
-    root.append(style, this.#probe, this.#tools, this.#paper)
+    root.append(style, this.#probe, this.#paper, this.#tools, this.#colors)
     this.append(this.#drawing)
 
     const button = (label: string, run: () => void, content: HTMLElement) => {
@@ -167,11 +175,23 @@ export class AaDiagramBoardElement extends Base {
       postIt: button('Post-it (P)', () => this.#add('post-it'), icon(noteIcon)),
       line: button('Line (L)', () => this.#lineTool('line'), icon(connectIcon)),
       arrow: button('Arrow (A)', () => this.#lineTool('arrow'), icon(arrowIcon)),
-      colors: [null, ...DIAGRAM_COLORS].map(color => button(color ? COLOR_NAMES[color] : 'No colour', () => this.#colour(color), chip(color))),
+      color: button('Colour', () => this.#pickColour(), chip(null)),
+      colors: [null, ...DIAGRAM_COLORS].map(color => {
+        const entry = button(color ? COLOR_NAMES[color] : 'No colour', () => { this.#closeColours(); this.#colour(color) }, chip(color))
+        entry.setAttribute('role', 'menuitemradio')
+        entry.append(Object.assign(document.createElement('span'), { textContent: color ? COLOR_NAMES[color] : 'No colour' }))
+        return entry
+      }),
+      wrap: button('Fit the width', () => this.#wrap(), icon(wrapIcon)),
       delete: button('Delete', () => this.#delete(), icon(deleteIcon)),
     }
-    const { box, postIt, line, arrow, colors } = this.#buttons
-    this.#tools.append(box, postIt, gap(), line, arrow, gap(), ...colors, gap(), this.#buttons.delete)
+    const { box, postIt, line, arrow, color, colors } = this.#buttons
+    color.setAttribute('aria-haspopup', 'menu')
+    color.setAttribute('aria-expanded', 'false')
+    // Delete is for a finger; a keyboard has its own key for it.
+    const last = gap(); last.classList.add('for-touch'); this.#buttons.delete.classList.add('for-touch')
+    this.#tools.append(box, postIt, gap(), line, arrow, gap(), color, gap(), this.#buttons.wrap, last, this.#buttons.delete)
+    this.#colors.append(...colors)
     this.#drawTools()
   }
 
@@ -211,8 +231,10 @@ export class AaDiagramBoardElement extends Base {
     listen(this, 'focusin', () => { if (!this.#state.active && this.#editable()) { this.#state.active = true; this.#show(true) } })
     listen(this, 'focusout', event => this.#focusOut(event))
     listen(this.#rename, 'blur', () => { if (!this.#rename.hidden) this.#finishRename(true) })
-    listen(window, 'scroll', () => this.#placeTools(), { capture: true, passive: true })
-    listen(window, 'resize', () => this.#placeTools())
+    listen(this.#colors, 'pointerdown', event => { event.preventDefault(); event.stopPropagation() })
+    listen(this.#colors, 'keydown', event => this.#colourKey(event))
+    listen(window, 'scroll', () => this.#closeColours(), { capture: true, passive: true })
+    listen(window, 'resize', () => this.#closeColours())
     // The editor reads none of what happens on the board: its keys, its typing and its pastes are the board's.
     for (const type of ['keyup', 'keypress', 'beforeinput', 'input', 'paste', 'cut', 'copy', 'compositionstart', 'compositionupdate', 'compositionend', 'click', 'dblclick'] as const) {
       listen(this, type, event => event.stopPropagation())
@@ -234,7 +256,7 @@ export class AaDiagramBoardElement extends Base {
     this.#stop = []
     this.#grid = null
     this.#carrying = false
-    this.#hideTools()
+    this.#closeColours()
   }
 
   #host(): HTMLElement | null { return this.closest('.aa') as HTMLElement | null }
@@ -267,13 +289,13 @@ export class AaDiagramBoardElement extends Base {
   /** The board as chosen or not: its squares and tools, what is chosen ringed. */
   #show(active: boolean) {
     this.toggleAttribute('data-active', active)
+    // Drawn on, the diagram stands as written: it wraps only to be read.
+    this.#drawing?.toggleAttribute('data-editing', active)
     this.dataset.mode = this.#state.mode
     this.#size(this.#layout)
     this.#drawTools()
     this.#drawChoice()
-    if (!active) { this.#hideTools(); return }
-    try { if (this.#tools.hasAttribute('popover') && this.isConnected && !this.#tools.matches(':popover-open')) this.#tools.showPopover() } catch { /* drawn in place instead */ }
-    this.#placeTools()
+    if (!active) this.#closeColours()
   }
 
   /** Room for the next box beside and under the drawing, and never less than the drawing being carried. */
@@ -282,16 +304,37 @@ export class AaDiagramBoardElement extends Base {
     this.style.setProperty('--board-rows', String(Math.max(layout.rows + 3, this.#layout.rows + 3, 6)))
   }
 
-  #hideTools() {
-    try { if (this.#tools?.matches(':popover-open')) this.#tools.hidePopover() } catch { /* never shown */ }
+  /** The colours, opened under their tool, or over it where the window has no room under it. */
+  #pickColour() {
+    if (!this.#colors.hidden) { this.#closeColours(); return }
+    this.#colors.hidden = false
+    this.#buttons.color.setAttribute('aria-expanded', 'true')
+    try { if (this.#colors.hasAttribute('popover')) this.#colors.showPopover() } catch { /* drawn in place instead */ }
+    const tool = this.#buttons.color.getBoundingClientRect(), unit = this.#unit(), height = this.#colors.offsetHeight
+    // Half a square from its tool, as Design system 1's menus stand.
+    this.#colors.style.left = `${Math.max(0, Math.min(tool.left, window.innerWidth - this.#colors.offsetWidth))}px`
+    this.#colors.style.top = `${tool.bottom + unit / 2 + height <= window.innerHeight ? tool.bottom + unit / 2 : Math.max(0, tool.top - unit / 2 - height)}px`
+    const current = this.#buttons.colors.find(entry => entry.getAttribute('aria-checked') === 'true') ?? this.#buttons.colors[0]
+    if (this.matches(':focus-visible') || this.shadowRoot?.activeElement === this.#buttons.color) current.focus({ preventScroll: true })
   }
 
-  /** The tools in the square over the board, or under its paper where the window has no room above it. */
-  #placeTools() {
-    if (!this.#state.active || !this.#tools.hasAttribute('popover')) return
-    const board = this.getBoundingClientRect(), paper = this.#paper.getBoundingClientRect(), unit = this.#unit()
-    this.#tools.style.left = `${Math.max(0, Math.min(board.left, window.innerWidth - this.#tools.offsetWidth))}px`
-    this.#tools.style.top = `${board.top - unit >= 0 ? board.top - unit : paper.bottom + 1}px`
+  #closeColours() {
+    if (!this.#colors || this.#colors.hidden) return
+    this.#colors.hidden = true
+    this.#buttons.color.setAttribute('aria-expanded', 'false')
+    try { if (this.#colors.matches(':popover-open')) this.#colors.hidePopover() } catch { /* never shown */ }
+    if (this.shadowRoot?.activeElement && this.#colors.contains(this.shadowRoot.activeElement)) this.focus({ preventScroll: true })
+  }
+
+  /** In the colours: the arrows go up and down them, Escape closes them. */
+  #colourKey(event: KeyboardEvent) {
+    const entries = this.#buttons.colors
+    const at = entries.indexOf(this.shadowRoot?.activeElement as HTMLButtonElement)
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); this.#closeColours(); return }
+    const step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0
+    if (!step) return
+    event.preventDefault(); event.stopPropagation()
+    entries[(at + step + entries.length) % entries.length].focus({ preventScroll: true })
   }
 
   #drawTools() {
@@ -299,12 +342,19 @@ export class AaDiagramBoardElement extends Base {
     const group = target && 'group' in target ? this.#layout.groups[target.group] : undefined
     const colourable = !!group && (group.kind === 'box' || group.kind === 'stack' || group.kind === 'post-it')
     const line = target && 'join' in target ? this.#layout.lines[target.join] : undefined
-    const { line: lineButton, arrow, colors } = this.#buttons
+    const { line: lineButton, arrow, color, colors } = this.#buttons
     // A line chosen shows what it is; otherwise what a line drawn now will be.
     lineButton.setAttribute('aria-pressed', String(line ? !line.arrow : this.#state.mode === 'line'))
     arrow.setAttribute('aria-pressed', String(line ? line.arrow : this.#state.mode === 'arrow'))
-    for (const chip of colors) chip.disabled = !colourable
+    // The colour tool wears the colour of what is chosen, and the menu checks it.
+    const worn = target && 'group' in target && group ? (target.box !== undefined ? group.boxes[target.box]?.color ?? group.color : group.color) : undefined
+    color.disabled = !colourable
+    if (!colourable) this.#closeColours()
+    const swatch = color.querySelector<HTMLElement>('.chip')!
+    if (worn) { swatch.style.setProperty('--chip', CHIPS[worn]); delete swatch.dataset.none } else { swatch.style.removeProperty('--chip'); swatch.dataset.none = '' }
+    colors.forEach((entry, index) => entry.setAttribute('aria-checked', String(([null, ...DIAGRAM_COLORS][index] ?? undefined) === worn)))
     this.#buttons.delete.disabled = !target
+    this.#buttons.wrap.setAttribute('aria-pressed', String(diagramWraps(this.#open)))
   }
 
   /** Line or Arrow: a line chosen becomes one; otherwise lines are drawn from box to box until it is pressed again. */
@@ -429,10 +479,10 @@ export class AaDiagramBoardElement extends Base {
   }
 
   /** Hand the editor the block written anew; the board is drawn again with it. */
-  #commit(source: string, next: Partial<Pick<State, 'target' | 'renaming' | 'mode'>> = {}, said = '') {
-    if (source === this.#source) { Object.assign(this.#state, next); this.#drawTools(); this.#drawChoice(); return }
+  #commit(source: string, next: Partial<Pick<State, 'target' | 'renaming' | 'mode'>> = {}, said = '', open = this.#open) {
+    if (source === this.#source && open === this.#open) { Object.assign(this.#state, next); this.#drawTools(); this.#drawChoice(); return }
     Object.assign(this.#state, next, { active: true, keep: true, said })
-    const block = `${this.#open}\n${source}${source ? '\n' : ''}${this.#close}`
+    const block = `${open}\n${source}${source ? '\n' : ''}${this.#close}`
     this.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, composed: true, detail: { source: block } }))
     // Not taken (read only, or no editor to take it): the board stays as it was.
     if (this.isConnected) { this.#state.keep = false; this.#state.said = ''; this.#drawing!.source = this.#source; this.#drawChoice() }
@@ -739,6 +789,12 @@ export class AaDiagramBoardElement extends Base {
   #colour(color: DiagramColor | null) {
     const target = this.#state.target
     if (target) this.#commit(colorTarget(this.#source, this.#layout, target, color), { target }, color ? COLOR_NAMES[color] : 'No colour')
+  }
+
+  /** Wrapping on or off: fitted to the width it is read in, in strips, or kept as drawn. It is written on the fence (```` ```diagram wrap ````). */
+  #wrap() {
+    const wraps = !diagramWraps(this.#open)
+    this.#commit(this.#source, {}, wraps ? 'Fits the width' : 'Keeps its layout', diagramFenceWrapped(this.#open, wraps))
   }
 
   #delete() {

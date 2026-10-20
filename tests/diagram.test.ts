@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
-import { diagramBlockRows, diagramFences, diagramListColumns, isDiagramBlock, layoutDiagram, writingLineRows } from '../src/diagram-language'
+import { diagramBlockRows, diagramFenceWrapped, diagramFences, diagramListColumns, diagramWraps, isDiagramBlock, layoutDiagram, writingLineRows } from '../src/diagram-language'
 import { defineAaDiagram } from '../src/diagram'
 
 defineAaDiagram()
@@ -130,6 +130,22 @@ test('anything else turns halfway down, every run along the grid', () => {
     { x1: 2, y1: 3, x2: 10, y2: 3 },
     { x1: 10, y1: 3, x2: 10, y2: 4 },
   ])
+})
+
+test('wrapping lays a wide diagram out again in strips that fit its room, as writing wraps', () => {
+  const source = '[A] @ 0 0\n[B] @ 6 0\n[C] @ 12 2\n{Note} @ 20 0 w8\n[D] @ 21 2\nA -> B\nB -> C'
+  expect(layoutDiagram(source, undefined, { room: 40 }).groups.map(group => [group.x, group.y])).toEqual(layoutDiagram(source).groups.map(group => [group.x, group.y]))
+  const wrapped = layoutDiagram(source, undefined, { room: 16 })
+  // A and B and C fit sixteen squares; the post-it starts a strip of its own, two rows under, carrying what stands on it.
+  expect(wrapped.groups.map(group => [group.x, group.y])).toEqual([[0, 0], [6, 0], [12, 2], [0, 5], [1, 7]])
+  expect(wrapped.columns).toBe(16)
+  expect(wrapped.lines).toHaveLength(2)
+  expect(diagramWraps('```diagram wrap')).toBe(true)
+  expect(diagramWraps('```diagram')).toBe(false)
+  expect(diagramFenceWrapped('```diagram', true)).toBe('```diagram wrap')
+  expect(diagramFenceWrapped('```diagram wrap', false)).toBe('```diagram')
+  expect(isDiagramBlock('```diagram wrap\n[A]\n```')).toBe(true)
+  expect(diagramFences('```diagram wrap\n[A]\n```')).toEqual([{ start: 0, end: 2 }])
 })
 
 test('a box is whole items across, as a board sizes it', () => {
