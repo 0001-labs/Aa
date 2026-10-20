@@ -1,15 +1,16 @@
 /* A diagram's board: the drawing on Design system 1's squares, ruled under
-   it, and, while it has the keys, more of them, its Context row of tools
-   in the middle under it. Nothing moves
+   it, and, while it has the keys, more of them, its Context row of tools,
+   light grey, in the middle under it. Nothing moves
    in the drawing for the board: it stands where it stood. */
 :host {
   --board-unit: var(--aa-diagram-unit, var(--ds-grid-unit, calc(20px * var(--sf, 1))));
   --board-sf: var(--ds-sf, var(--sf, 1));
   --board-ring: var(--ds-focus-ring, #594dff);
   --board-rule: light-dark(rgb(30 30 30 / 0.1), rgb(255 255 255 / 0.1));
-  --board-fill: light-dark(var(--ds-black, #2a2a2a), var(--ds-slate, #1e1e1e));
-  --board-ink: var(--ds-white, #ffffff);
-  --board-hover: color-mix(in srgb, var(--board-fill) 78%, var(--board-ink));
+  /* The tools in the squares' own light grey, their marks in the ink. */
+  --board-fill: light-dark(rgb(30 30 30 / 0.06), rgb(255 255 255 / 0.08));
+  --board-ink: var(--ds-text-color, light-dark(#1e1e1e, #ffffff));
+  --board-hover: light-dark(rgb(30 30 30 / 0.12), rgb(255 255 255 / 0.16));
   --board-paper: light-dark(var(--ds-white, #fff), var(--ds-slate, #1e1e1e));
   --board-text: var(--ds-text-color, light-dark(#1e1e1e, #fff));
   --board-rule-strong: light-dark(rgb(30 30 30 / 0.2), rgb(255 255 255 / 0.2));
@@ -178,8 +179,9 @@
 .rename[hidden] { display: none; }
 
 /* The tools: Design system 1's Context face, a row of squares 19px high a
-   pixel apart, black with white marks in both themes, on the square under
-   the board, a pixel below it, for as long as the writing can be changed. */
+   pixel apart, in the light grey of the squares with marks in the ink, in
+   the middle of the square under the board, for as long as the writing can
+   be changed. */
 .tools {
   display: flex;
   gap: 1px;
@@ -192,8 +194,8 @@
   clip-path: inset(0 round var(--ds-radius, calc(4px * var(--board-sf))));
 }
 
-/* While the diagram is drawn on, its tools stand in the middle under it. */
-:host([data-active]) .tools { margin-inline: auto; }
+/* The tools stand in the middle under the diagram. */
+.tools { margin-inline: auto; }
 
 .tools button { flex: 0 0 auto; }
 
