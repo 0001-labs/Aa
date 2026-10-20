@@ -1,6 +1,7 @@
 import type { Editor, EditorOptions } from './editor'
-import type { TurnKind } from './document'
+import { turnInto as turnBlocks, type TurnKind } from './document'
 import { createDragging } from './drag'
+import { openSheet, type SheetGroup } from './sheet'
 
 import { icons } from './icons'
 export type ToolbarAction = { id: string; label: string; icon: string; run(editor: Editor): void }
@@ -12,9 +13,11 @@ const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'numbered', label: 'Numbered list', icon: 'numbered' }, { kind: 'quote', label: 'Quote', icon: 'quote' },
   { kind: 'code', label: 'Code', icon: 'code-block' }, { kind: 'divider', label: 'Divider', icon: 'divider' },
   { kind: 'callout', label: 'Callout', icon: 'callout' }, { kind: 'toggle', label: 'Toggle', icon: 'toggle' },
-  { kind: 'toggle-h1', label: 'Heading 1', icon: 'h1' }, { kind: 'toggle-h2', label: 'Heading 2', icon: 'h2' }, { kind: 'toggle-h3', label: 'Heading 3', icon: 'h3' },
+  { kind: 'toggle-h1', label: 'Toggle heading 1', icon: 'h1' }, { kind: 'toggle-h2', label: 'Toggle heading 2', icon: 'h2' }, { kind: 'toggle-h3', label: 'Toggle heading 3', icon: 'h3' },
   { kind: 'table', label: 'Table', icon: 'table' }, { kind: 'equation', label: 'Equation', icon: 'equation' },
 ]
+/** The Markdown that writes a kind, shown at its row's end in a sheet. */
+const keys: Partial<Record<TurnKind, string>> = { h1: '#', h2: '##', h3: '###', todo: '[ ]', bullet: '-', numbered: '1.', quote: '>', code: '```', divider: '---', callout: '> [!', table: '|', equation: '$$' }
 function button(label: string, icon: string, action: () => void, text = false): HTMLButtonElement {
   const node = document.createElement('button')
   node.type = 'button'; node.title = label; node.setAttribute('aria-label', label)
@@ -99,8 +102,26 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   let saved: { start: number; end: number } | null = null
   const restore = () => { if (saved) editor.selectRange(saved.start, saved.end) }
   const marks = ['bold', 'italic', 'strike', 'code', 'link', 'equation'] as const
+  // On touch the kinds are a sheet from the foot of the screen (sheet.ts), a row each with the Markdown that writes it.
+  const kindRows = (run: (kind: TurnKind) => void) => kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, key: keys[kind.kind], run: () => { restore(); run(kind.kind) } }))
+  const sheet = (title: string, groups: SheetGroup[]) => { toolbar.hidden = true; openSheet({ title, groups, root: overlayRoot }) }
+  /** A new block of a kind: in place of the empty paragraph the caret is in, or after the block it is in, written as the kind writes an empty block. */
+  const insertKind = (kind: TurnKind) => {
+    const block = editor.activeBlock()
+    if (!block || (block.block.kind === 'paragraph' && !block.block.source.trim())) { editor.turnInto(kind); return }
+    const made = turnBlocks([{ kind: 'paragraph', source: '', prefix: 0 }], { anchor: 0, focus: 0 }, kind)
+    const source = made.blocks.map(each => each.source).join('\n\n')
+    if (source) { editor.replace(block.end, block.end, `\n\n${source}`); editor.selectRange(block.end + 2 + made.caret.offset); return }
+    // An empty paragraph has no Markdown of its own to insert: Enter at the block's end starts one, as the key does.
+    editor.selectRange(block.end)
+    host.children[block.index]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+  }
   toolbar.actions = [...marks.map(mark => ({ id: mark, icon: mark, label: { bold: 'Bold', italic: 'Italic', strike: 'Strikethrough', code: 'Code', link: 'Link', equation: 'Equation' }[mark], run: () => { restore(); editor.format(mark) } })),
-    { id: 'turn', icon: 'text', label: 'Turn into', run: () => { restore(); const active = editor.activeBlock(); if (active) open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), (toolbar.querySelector('[data-action="turn"]') ?? toolbar).getBoundingClientRect()) } },
+    { id: 'turn', icon: 'text', label: 'Turn into', run: () => {
+      restore(); const active = editor.activeBlock(); if (!active) return
+      if (coarse()) sheet('Turn into', [{ rows: kindRows(kind => editor.turnInto(kind)) }])
+      else open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), (toolbar.querySelector('[data-action="turn"]') ?? toolbar).getBoundingClientRect())
+    } },
     ...inserts.map(command => ({ ...command, run: () => { restore(); command.run(editor) } })),
     // Comment on the selected words, where the product keeps comments.
     ...(options.comments ? [{ id: 'comment', icon: 'comment', label: 'Comment', run: () => { restore(); editor.comments?.start() } }] : []),
@@ -112,7 +133,13 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   } }]
   // Touch has no ⌘/ and keeps its long press for selecting words: the block
   // commands, moving a block among them, are a button above the keyboard.
-  if (coarse()) toolbar.actions = [...toolbar.actions,
+  // A plus first on the bar opens Insert block: the kinds, then what the product inserts (a diagram, a picture, its own commands).
+  if (coarse()) toolbar.actions = [
+    { id: 'insert', label: 'Insert block', icon: 'plus', run: () => { restore(); sheet('Insert block', [
+      { label: 'Blocks', rows: kindRows(insertKind) },
+      { label: 'More', rows: [...builtin.filter(command => !kinds.some(kind => kind.kind === command.id)), ...(options.commands ?? [])].map(command => ({ id: command.id, label: command.label, icon: command.icon, run: () => { restore(); command.run(editor) } })) },
+    ]) } },
+    ...toolbar.actions,
     { id: 'block', label: 'Block commands', icon: 'slash', run: () => { restore(); target = editor.activeBlock()?.index ?? -1; blockMenu(toolbar.querySelector('[data-action="block"]')?.getBoundingClientRect()) } },
     { id: 'indent', label: 'Indent', icon: 'indent', run: () => { restore(); editor.indent(1) } },
     { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => { restore(); editor.indent(-1) } },

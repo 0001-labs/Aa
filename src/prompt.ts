@@ -1,8 +1,9 @@
 /**
  * Asking AI where the words are: Space in an empty block (or on a diagram's
  * board) opens a prompt in its place, written in a live colour so it reads as
- * something said to the AI rather than written into the page; Space twice
- * listens instead, the words heard set in italics as they come. Enter sends
+ * something said to the AI rather than written into the page; Space again,
+ * before anything is written, listens instead, the words heard set in
+ * italics as they come. Enter sends
  * it: the prompt glistens while it waits, and so does the writing it is
  * about, then the answer takes the prompt's place, one step to undo. Escape,
  * or Backspace in an empty prompt, puts it away.
@@ -45,9 +46,6 @@ export type PromptContext = {
   document?: string
   signal: AbortSignal
 }
-
-/** How long a second Space has to follow the first to listen instead. */
-const TWICE = 400
 
 type SpeechRecognitionLike = EventTarget & {
   lang: string; continuous: boolean; interimResults: boolean
@@ -121,13 +119,22 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   // The page makes room for the prompt as it grows, so nothing under it is covered.
   const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => options.grow?.(field.offsetHeight))
   resize?.observe(field)
+  // In the page the prompt stands on the page itself, so it goes with its
+  // block as the page scrolls, under a phone's keyboard too, where what is
+  // fixed to the viewport drifts; in a dialog it is fixed, as the dialog is.
+  const inPage = root === doc.body
+  if (inPage) field.dataset.placed = 'page'
+  const origin = () => {
+    if (!inPage) return { x: 0, y: 0 }
+    if (view.getComputedStyle(root).position !== 'static') { const box = root.getBoundingClientRect(); return { x: -box.left - root.clientLeft, y: -box.top - root.clientTop } }
+    return { x: view.scrollX, y: view.scrollY }
+  }
   const place = () => {
-    const rect = options.place()
-    Object.assign(field.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${Math.max(rect.width, 80)}px`, minHeight: `${rect.height}px` })
+    const rect = options.place(), at = origin()
+    Object.assign(field.style, { left: `${rect.left + at.x}px`, top: `${rect.top + at.y}px`, width: `${Math.max(rect.width, 80)}px`, minHeight: `${rect.height}px` })
   }
   place()
   field.focus({ preventScroll: true })
-  const opened = Date.now()
 
   let closed = false
   let sending: AbortController | null = null
@@ -293,10 +300,16 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     if (event.key === 'Escape') { event.preventDefault(); close(); return }
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send(); return }
     if (event.key === 'Backspace' && !field.textContent) { event.preventDefault(); close(); return }
-    // Space twice, at once: listen rather than type.
-    if (event.key === ' ' && !field.textContent && !listening && Date.now() - opened < TWICE) { event.preventDefault(); listen() }
+    // Space again, before anything is written: listen rather than type.
+    if (event.key === ' ' && !field.textContent && !listening) { event.preventDefault(); listen() }
   })
-  for (const type of ['keyup', 'keypress', 'beforeinput', 'input', 'paste', 'cut', 'copy', 'pointerdown', 'click'] as const) field.addEventListener(type, event => event.stopPropagation())
+  // A phone's keyboard may say the Space in beforeinput alone, its keydown unnamed: the same there.
+  field.addEventListener('beforeinput', event => {
+    event.stopPropagation()
+    if (event.isComposing || listening || field.textContent) return
+    if (event.inputType === 'insertText' && (event.data === ' ' || event.data === '\u00a0')) { event.preventDefault(); listen() }
+  })
+  for (const type of ['keyup', 'keypress', 'input', 'paste', 'cut', 'copy', 'pointerdown', 'click'] as const) field.addEventListener(type, event => event.stopPropagation())
   field.addEventListener('blur', () => { if (!sending && !listening && !text()) close() })
   view.addEventListener('scroll', place, true)
   view.addEventListener('resize', place)

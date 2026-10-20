@@ -258,6 +258,24 @@ describe('asking AI', () => {
     expect(f.value).toBe('')
   })
 
+  it('asks and listens from a keyboard that says Space in beforeinput alone', () => {
+    class Speech extends EventTarget {
+      lang = ''; continuous = false; interimResults = false
+      onresult: ((event: unknown) => void) | null = null; onend: (() => void) | null = null; onerror: (() => void) | null = null
+      start() {} stop() {} abort() {}
+    }
+    ;(globalThis as Record<string, unknown>).SpeechRecognition = Speech
+    const e = setup('', async () => 'Heard')
+    e.selectRange(0)
+    const space = () => new InputEvent('beforeinput', { inputType: 'insertText', data: ' ', bubbles: true, cancelable: true })
+    const first = space(); host!.children[0].dispatchEvent(first)
+    expect(first.defaultPrevented).toBe(true)
+    expect(field()).not.toBeNull()
+    const second = space(); field()!.dispatchEvent(second)
+    expect(second.defaultPrevented).toBe(true)
+    expect(field()!.hasAttribute('data-listening')).toBe(true)
+  })
+
   it('listens with Space twice, the words heard in italics', () => {
     class Speech extends EventTarget {
       static last: Speech

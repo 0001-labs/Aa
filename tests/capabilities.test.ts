@@ -144,6 +144,27 @@ describe('controls, decorations and media', () => {
     expect(host!.children[0].hasAttribute('data-selected')).toBe(false)
   })
 
+  it('inserts a block of a kind from the touch toolbar\'s sheet', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    const e = setup('Hello', { toolbar: true })
+    e.selectRange(5)
+    host!.dispatchEvent(new Event('aa-selectionchange'))
+    vi.advanceTimersByTime(140)
+    const toolbar = document.querySelector('.aa-toolbar') as HTMLElement
+    expect(toolbar.firstElementChild?.getAttribute('aria-label')).toBe('Insert block')
+    ;(toolbar.firstElementChild as HTMLButtonElement).click()
+    const sheet = document.querySelector('dialog.aa-sheet') as HTMLDialogElement
+    expect(sheet.classList.contains('ds-overlay--sheet')).toBe(true)
+    expect(sheet.querySelector('.aa-sheet-title')!.textContent).toBe('Insert block')
+    expect(sheet.querySelector('[data-command="h2"] .aa-sheet-key')!.textContent).toBe('##')
+    ;(sheet.querySelector('[data-command="h2"]') as HTMLButtonElement).click()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(e.value.startsWith('Hello\n\n## ')).toBe(true)
+    expect(e.selection()).toEqual({ start: 10, end: 10 })
+    expect(document.querySelector('dialog.aa-sheet')).toBeNull()
+  })
+
   it("draws the toolbar as Design system 1's context bar, a toolbar that leaves the focus in the writing", () => {
     setup('Words', { toolbar: true })
     const toolbar = document.querySelector('aa-toolbar') as HTMLElement

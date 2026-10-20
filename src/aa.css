@@ -8,6 +8,9 @@
 /* The toolbar is Design system 1's context bar, drawn by its own sheet
    (ds1/, copied with Sync 1), which draws without the tokens too. */
 @import "./ds1/context.css";
+/* On touch, Insert block and Turn into are a sheet from the foot of the
+   screen (sheet.ts): Design system 1's, its sheet drawn by overlay.css. */
+@import "./ds1/overlay.css";
 /* Arrows are always Inter: Inter's arrows alone (fonts/LICENSE.md), first in
    every font Aa sets, so the unicode-range draws only arrows with it. */
 @font-face {
@@ -261,6 +264,39 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 .aa-menu button span:last-child { order: 1; flex: 1; min-width: 0; overflow: hidden; }
 .aa-menu button span:last-child[data-cut] { mask-image: linear-gradient(to right, black calc(100% - var(--aa-square)), transparent 100%); }
 .aa-menu-empty { display: block; height: calc(var(--aa-square) - 1px); padding: calc(3px * var(--aa-sf)) calc(4px * var(--aa-sf)) 0; box-sizing: border-box; background: var(--aa-menu-fill); }
+/* The sheet (sheet.ts): ds1/overlay.css draws its shape, handle, motion and
+   backdrop on the frame Design system 1's controls.css gives a modal, drawn
+   here in the same tokens: the paper, a hairline, a square of padding; its
+   title on the first row with Cancel at the end; a group's label in the
+   muted ink on one square; rows one square high, the icon on the first
+   sixteen of its square, the words on the next square, the Markdown that
+   writes the same at the row's end in the code face. */
+dialog.aa-sheet {
+  --aa-sf: var(--ds-sf, var(--sf, 1));
+  --aa-square: var(--ds-unit, var(--1, calc(20px * var(--sf, 1))));
+  box-sizing: border-box; position: fixed; inset: 0; margin: auto;
+  width: 100%; height: fit-content; max-height: calc(100dvh - 2 * var(--aa-square));
+  padding: var(--aa-square); border: 1px solid var(--ds-border-color, light-dark(#d8d8d8, #3d3d3d)); border-radius: 0; box-shadow: none;
+  background: var(--ds-overlay-paper, var(--ds-paper, var(--background, Canvas))); color: var(--ds-text-color, var(--text-color, CanvasText));
+  overflow: auto; overscroll-behavior: contain;
+  font: var(--ds-type-weight-default, 400) var(--ds-type-size-default, calc(14px * var(--aa-sf)))/calc(16px * var(--aa-sf)) "Inter Arrows", var(--ds-typeface-regular, var(--typeface-regular, system-ui)), system-ui, sans-serif;
+  font-feature-settings: var(--ds-font-features, normal); letter-spacing: var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf)));
+  -webkit-tap-highlight-color: transparent;
+}
+dialog.aa-sheet[open] { display: flex; flex-direction: column; gap: var(--aa-square); }
+dialog.aa-sheet:focus { outline: none; }
+dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a2a) 40%, transparent); }
+.aa-sheet-head { display: flex; align-items: flex-end; justify-content: space-between; flex: 0 0 auto; height: var(--aa-square); line-height: calc(16px * var(--aa-sf)); }
+.aa-sheet-title { margin: 0; font: inherit; font-family: "Inter Arrows", var(--ds-typeface-medium, var(--typeface-medium, inherit)), system-ui, sans-serif; font-weight: var(--ds-type-weight-bold, 500); }
+.aa-sheet-cancel { margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; line-height: inherit; cursor: pointer; }
+.aa-sheet-group { display: flex; flex-direction: column; flex: 0 0 auto; }
+.aa-sheet-label { box-sizing: border-box; height: var(--aa-square); padding-top: calc(4px * var(--aa-sf)); line-height: calc(16px * var(--aa-sf)); color: var(--ds-text-color-muted, GrayText); }
+.aa-sheet-row { display: flex; align-items: flex-end; width: 100%; height: var(--aa-square); margin: 0; padding: 0; border: 0; border-radius: calc(2px * var(--aa-sf)); background: none; color: inherit; font: inherit; line-height: calc(16px * var(--aa-sf)); text-align: start; cursor: pointer; }
+.aa-sheet-row:active { background: var(--ds-row-fill-press, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c))); }
+.aa-sheet-row:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: -2px; }
+.aa-sheet-row > .aa-icon { margin-right: calc(var(--aa-square) - 16px * var(--aa-sf)); }
+.aa-sheet-words { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aa-sheet-key { color: var(--ds-text-color-muted, GrayText); font-family: "Inter Arrows", var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, monospace; font-size: calc(var(--ds-code-text-size, 13px) * var(--aa-sf)); letter-spacing: 0; }
 .aa-drop-line { position: fixed; z-index: 1000; height: 1px; background: var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); pointer-events: none; }
 .aa-find { display: flex; flex-wrap: wrap; width: calc(16 * var(--aa-square)); max-width: calc(100vw - 2 * var(--aa-square) - 2px); border: 1px solid var(--aa-rule, var(--ds-border-color, currentColor)); color: var(--ds-text-color, var(--text-color, CanvasText)); background: var(--ds-paper, var(--background, Canvas)); }
 .aa-find input { box-sizing: border-box; font: inherit; color: inherit; background: transparent; width: 50%; min-width: 0; height: var(--aa-square); padding: 0 calc(4px * var(--aa-sf)); border: 0; border-right: 1px solid var(--ds-border-color, currentColor); border-radius: 0; }
@@ -358,6 +394,8 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   padding-inline-end: 0.2em;
   overflow: visible;
 }
+/* On the page itself, with its block; in a dialog, fixed as the dialog is (prompt.ts). */
+.aa-prompt[data-placed="page"] { position: absolute; }
 .aa-prompt:empty::before {
   content: attr(data-placeholder);
   color: var(--aa-prompt-color);

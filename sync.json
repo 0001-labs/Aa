@@ -2,8 +2,8 @@
   "sources": {
     "Design system 1": {
       "icons": { "to": "src/icons", "icons": ["duplicate", "connect", "slash", "cursor", "box", "right", "column", "undo"] },
-      "root": { "to": "public/ds1", "modules": ["scaling"], "scriptsTo": "../../src/ds1" },
-      "sheets": { "to": "src/ds1", "sheets": ["context.css"] }
+      "root": { "to": "public/ds1", "modules": ["scaling", "overlay-swipe"], "scriptsTo": "../../src/ds1" },
+      "sheets": { "to": "src/ds1", "sheets": ["context.css", "overlay.css"] }
     },
     "Drag": {
       "sortable": { "to": "src/vendor/drag", "grid": true }

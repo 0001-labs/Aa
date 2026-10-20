@@ -1,0 +1,283 @@
+/*
+ * Overlay: everything that stands over the page, one component with a type.
+ * A `modal` stands in the centre (controls.css and the element's frame); this
+ * sheet draws the others, for the `ds-overlay` element (`type="sheet"`,
+ * `"drawer"` with `side`, `"screen"`, which mark its native dialog
+ * `data-ds-type` and `data-ds-edge`) and the native frame
+ * (`dialog.ds-overlay.ds-overlay--sheet`, `--drawer` with `--start`,
+ * `--screen`); controls.css imports it. A popover is placed by the element.
+ *
+ * - A sheet is as wide as the screen up to 32 squares and centred beyond
+ *   that, as high as its content up to two squares below the top, with no
+ *   line at its foot; its one line, at the top, is drawn inside its first
+ *   square (`--ds-overlay-line`), so it stands on whole squares. A handle two squares wide stands in the middle of its
+ *   first square and stays there while the content scrolls.
+ * - A drawer is the screen's height and 16 squares wide (`--ds-overlay-width`),
+ *   leaving at least two squares of the page beside it; its one line is on
+ *   the side that faces the page. `end` is the right in a left-to-right page.
+ * - Each keeps the square of padding inside the screen's safe area
+ *   (`env(safe-area-inset-*)`, with `viewport-fit=cover` on the page).
+ * - Each slides in from its edge and back out to it, in transform alone,
+ *   while the backdrop fades; with reduced motion it fades in place. Dragging
+ *   it towards its edge (0-face/overlay-swipe.ts) moves it with the finger and
+ *   fades the backdrop as it goes.
+ * - The page behind a modal native sheet or drawer does not scroll.
+ */
+
+:is(ds-overlay > dialog[data-ds-edge="bottom"], dialog.ds-overlay.ds-overlay--sheet),
+:is(ds-overlay > dialog[data-ds-edge="end"], dialog.ds-overlay.ds-overlay--drawer:not(.ds-overlay--start)),
+:is(ds-overlay > dialog[data-ds-edge="start"], dialog.ds-overlay.ds-overlay--drawer.ds-overlay--start) {
+  --ds-overlay-gap: var(--ds-unit);
+  --ds-overlay-inner: var(--ds-overlay-padding, var(--ds-unit));
+  /* The line it faces the page with is drawn inside its first square. */
+  --ds-overlay-within: max(0px, var(--ds-overlay-inner) - var(--ds-overlay-line, 1px));
+  --ds-overlay-motion: var(--ds-overlay-enter, 380ms);
+  --ds-overlay-curve: var(--ds-overlay-easing, cubic-bezier(0.32, 0.72, 0, 1));
+  margin: 0;
+  gap: var(--ds-overlay-gap);
+  transform: var(--ds-overlay-held);
+  transition:
+    transform var(--ds-overlay-motion) var(--ds-overlay-curve),
+    opacity var(--ds-overlay-motion) var(--ds-overlay-curve),
+    overlay var(--ds-overlay-motion) allow-discrete,
+    display var(--ds-overlay-motion) allow-discrete;
+}
+
+/* Content that supplies its own room. */
+:is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer))[data-ds-overlay-flush] {
+  --ds-overlay-inner: 0px;
+  --ds-overlay-gap: 0px;
+}
+
+:is(ds-overlay > dialog[data-ds-edge="bottom"], dialog.ds-overlay.ds-overlay--sheet) {
+  --ds-overlay-held: translateY(var(--ds-overlay-drag, 0px));
+  --ds-overlay-away: translateY(100%);
+  inset: auto 0 0;
+  width: var(--ds-overlay-width, 100%);
+  max-width: min(100%, var(--ds-overlay-sheet-width, calc(32 * var(--ds-unit))));
+  height: var(--ds-overlay-height, fit-content);
+  max-height: calc(100dvh - var(--ds-overlay-sheet-gap, calc(2 * var(--ds-unit))) - env(safe-area-inset-top, 0px));
+  margin: 0 auto;
+  padding:
+    var(--ds-overlay-within)
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-right, 0px))
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-bottom, 0px))
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-left, 0px));
+  border-bottom: 0;
+}
+
+/* The handle: two squares wide, in the middle of the first square, above the
+ * content as it scrolls. It takes no room: the content starts where it would. */
+:is(ds-overlay > dialog[data-ds-edge="bottom"], dialog.ds-overlay.ds-overlay--sheet)::before {
+  --ds-overlay-handle-height: calc(4px * var(--ds-sf, 1));
+  content: "";
+  display: var(--ds-overlay-handle, block);
+  position: sticky;
+  z-index: 1;
+  /* A sticky offset counts from the content edge, under the sheet's top padding: take that
+     padding off, so the handle is held where it already stands, in the first square. */
+  top: calc((var(--ds-unit) - var(--ds-overlay-handle-height)) / 2 - var(--ds-overlay-line, 1px) - var(--ds-overlay-within));
+  flex: 0 0 auto;
+  align-self: center;
+  width: calc(2 * var(--ds-unit));
+  height: var(--ds-overlay-handle-height);
+  margin-top: calc(var(--ds-overlay-inner) * -1 + (var(--ds-unit) - var(--ds-overlay-handle-height)) / 2);
+  margin-bottom: calc(var(--ds-overlay-inner) - var(--ds-overlay-gap) - var(--ds-overlay-handle-height) - (var(--ds-unit) - var(--ds-overlay-handle-height)) / 2);
+  border-radius: calc(var(--ds-overlay-handle-height) / 2);
+  background: var(--ds-overlay-handle-color, var(--ds-border-color));
+  pointer-events: none;
+}
+
+:is(ds-overlay > dialog[data-ds-edge="end"], dialog.ds-overlay.ds-overlay--drawer:not(.ds-overlay--start)),
+:is(ds-overlay > dialog[data-ds-edge="start"], dialog.ds-overlay.ds-overlay--drawer.ds-overlay--start) {
+  --ds-overlay-held: translateX(var(--ds-overlay-drag, 0px));
+  width: calc(var(--ds-overlay-width, calc(16 * var(--ds-unit))) + var(--ds-overlay-safe-side, 0px));
+  max-width: calc(100vw - 2 * var(--ds-unit));
+  height: 100dvh;
+  max-height: none;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+/* At the right: the end of a left-to-right page, the start of a right-to-left one. */
+:is(ds-overlay > dialog[data-ds-edge="end"], dialog.ds-overlay.ds-overlay--drawer:not(.ds-overlay--start)):not(:dir(rtl)),
+:is(ds-overlay > dialog[data-ds-edge="start"], dialog.ds-overlay.ds-overlay--drawer.ds-overlay--start):dir(rtl) {
+  --ds-overlay-away: translateX(100%);
+  --ds-overlay-safe-side: env(safe-area-inset-right, 0px);
+  inset: 0 0 0 auto;
+  padding:
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-top, 0px))
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-right, 0px))
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-bottom, 0px))
+    var(--ds-overlay-within);
+  border-right: 0;
+}
+
+:is(ds-overlay > dialog[data-ds-edge="start"], dialog.ds-overlay.ds-overlay--drawer.ds-overlay--start):not(:dir(rtl)),
+:is(ds-overlay > dialog[data-ds-edge="end"], dialog.ds-overlay.ds-overlay--drawer:not(.ds-overlay--start)):dir(rtl) {
+  --ds-overlay-away: translateX(-100%);
+  --ds-overlay-safe-side: env(safe-area-inset-left, 0px);
+  inset: 0 auto 0 0;
+  padding:
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-top, 0px))
+    var(--ds-overlay-within)
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-bottom, 0px))
+    calc(var(--ds-overlay-inner) + env(safe-area-inset-left, 0px));
+  border-left: 0;
+}
+
+/* The page behind a native sheet or drawer holds still while it is open, as
+ * the element holds it (the element saves and restores the scroll itself). */
+:root:has(dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer):modal) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Out to its edge, a little quicker than it came; and in from it. */
+:is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer)):not([open]) {
+  --ds-overlay-motion: var(--ds-overlay-exit, 260ms);
+  transform: var(--ds-overlay-away);
+}
+
+@starting-style {
+  :is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer))[open] {
+    transform: var(--ds-overlay-away);
+  }
+}
+
+:is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer))::backdrop {
+  opacity: calc(1 - var(--ds-overlay-progress, 0));
+  transition:
+    opacity var(--ds-overlay-motion, 380ms) ease,
+    overlay var(--ds-overlay-motion, 380ms) allow-discrete,
+    display var(--ds-overlay-motion, 380ms) allow-discrete;
+}
+
+:is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer)):not([open])::backdrop {
+  opacity: 0;
+}
+
+@starting-style {
+  :is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer))[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* While a finger holds it, it follows the finger alone. */
+:is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer))[data-ds-overlay-dragging],
+:is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer))[data-ds-overlay-dragging]::backdrop {
+  transition: none;
+}
+
+/* Reduced motion: no slide. It fades where it stands, a dragged one too. */
+@media (prefers-reduced-motion: reduce) {
+  :is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer)) {
+    --ds-overlay-motion: 150ms;
+    transition:
+      opacity var(--ds-overlay-motion) ease,
+      overlay var(--ds-overlay-motion) allow-discrete,
+      display var(--ds-overlay-motion) allow-discrete;
+  }
+
+  :is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer)):not([open]) {
+    --ds-overlay-motion: 150ms;
+    transform: var(--ds-overlay-held);
+    opacity: 0;
+  }
+
+  @starting-style {
+    :is(ds-overlay > dialog[data-ds-edge], dialog.ds-overlay:is(.ds-overlay--sheet, .ds-overlay--drawer))[open] {
+      transform: var(--ds-overlay-held);
+      opacity: 0;
+    }
+  }
+}
+
+/*
+ * The screen: an overlay over the whole screen, for navigation folded away on
+ * a narrow screen (`ds-header`, `ds-page drawer`, `attachOverlay()`).
+ *
+ * The panel is the dialog frame (`dialog.ds-overlay`) laid over the whole
+ * screen, on the page's own paper, a square of room on every side. Its first
+ * row holds the close button where the menu button stood; what the page
+ * folded away (its navigation and actions) follows, every link one square
+ * high. The page script `0-face/attach-overlay.ts` opens it: it moves the folded parts
+ * into the panel and back, keeps focus inside, closes on Escape, on a link and
+ * when the screen widens, and holds the page's scroll while it is open.
+ * `ds-header` and `ds-page drawer` use the same script and these rules.
+ *
+ *   ds-overlay--screen         on a <dialog class="ds-overlay">, the panel
+ *   ds-overlay__bar             the first row: the close button at its end
+ *   ds-overlay__close           the close button, an icon button
+ *   ds-overlay__toggle          the button that opens it: it carries
+ *                              two icons, the first shown while closed and the
+ *                              second (close) while open
+ *
+ * Tokens: `--ds-overlay-paper` (the page's paper by default).
+ */
+
+:is(ds-overlay > dialog[data-ds-type="screen"], dialog.ds-overlay.ds-overlay--screen) {
+  --ds-overlay-width: 100vw;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: var(--ds-unit);
+  gap: 0;
+  border: 0;
+  background: var(--ds-overlay-paper, var(--background, Canvas));
+  overflow-y: auto;
+}
+
+:is(ds-overlay > dialog[data-ds-type="screen"], dialog.ds-overlay.ds-overlay--screen)[open] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-unit);
+}
+
+/* Content that supplies its own room, as the documentation's navigation does. */
+:is(ds-overlay > dialog[data-ds-type="screen"], dialog.ds-overlay.ds-overlay--screen)[data-ds-overlay-flush] {
+  padding: 0;
+  gap: 0;
+}
+
+:is(ds-overlay > dialog[data-ds-type="screen"], dialog.ds-overlay.ds-overlay--screen)::backdrop {
+  background: transparent;
+}
+
+/* It arrives by fading in and settling half a square, and leaves at once. */
+@media (prefers-reduced-motion: no-preference) {
+  :is(ds-overlay > dialog[data-ds-type="screen"], dialog.ds-overlay.ds-overlay--screen)[open] {
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+
+  @starting-style {
+    :is(ds-overlay > dialog[data-ds-type="screen"], dialog.ds-overlay.ds-overlay--screen)[open] {
+      opacity: 0;
+      transform: translateY(calc(var(--ds-unit) / -2));
+    }
+  }
+}
+
+.ds-overlay__bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: var(--ds-row-height);
+}
+
+/* Centred in the last square of the row, as the menu button is. Two classes,
+   so the button's own margin does not undo it. */
+.ds-overlay__bar > .ds-overlay__close {
+  margin-inline-end: calc((var(--ds-unit) - var(--ds-control-height)) / 2);
+}
+
+/* The toggle shows its first icon while closed and its second while open; the
+   close button, a copy of it, shows the second. */
+.ds-overlay__toggle:not([aria-expanded="true"]) > :nth-child(2),
+.ds-overlay__toggle[aria-expanded="true"] > :first-child:not(:only-child),
+.ds-overlay__close > :first-child:not(:only-child) {
+  display: none;
+}

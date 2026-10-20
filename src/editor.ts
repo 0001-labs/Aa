@@ -532,6 +532,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const spanning = a.block !== b.block
     const collapsed = !spanning && a.offset === b.offset
     const block = blocks[a.block]
+    // A phone's keyboard may say the Space in beforeinput alone, its keydown unnamed: it asks AI as the key does.
+    if (type === 'insertText' && (event.data === ' ' || event.data === '\u00a0') && options.prompt && collapsed) {
+      if (block.kind === 'paragraph' && !block.source) { event.preventDefault(); ask(a.block); return }
+      if (atSentence(selection)) { event.preventDefault(); ask(a.block, true); return }
+    }
     if (block.kind === 'table') {
       const cell = tableRows(block.source).flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
       if (cell && collapsed && ((type === 'deleteContentBackward' && a.offset === cell.from) || (type === 'deleteContentForward' && a.offset === cell.to))) { event.preventDefault(); return }
