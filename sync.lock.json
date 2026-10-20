@@ -1,6 +1,6 @@
 {
   "Design system 1": {
-    "commit": "49922d7f8ebda13e38cdeefe6e9958b729405534",
+    "commit": "9ce5883657586ffb5be806a0aed4ae9c5b5ddae3",
     "version": "0.3.0-alpha.28",
     "dirty": true,
     "files": {
@@ -29,7 +29,8 @@
       "src/icons/cursor.svg": "7a204a31698b0454b366e569daff662c88f85983d3c526dfe084951436ddc2a3",
       "src/icons/duplicate.svg": "478568f4136976af568876e5f82cdf881c76d36daf6733e71cb4daba7b1e8dab",
       "src/icons/right.svg": "8bb9dafaff1156d3f03e04c7d7a9f89913094453eaa51ceea20a58ed7de57c0e",
-      "src/icons/slash.svg": "f861cf1387dcc4989fcd253a8b793af1288bf37fab6098dd737fb4c1690b0112"
+      "src/icons/slash.svg": "f861cf1387dcc4989fcd253a8b793af1288bf37fab6098dd737fb4c1690b0112",
+      "src/icons/undo.svg": "477ddd814369e432cbe4ff42649eb84e12400891656e98d1a2ca95d5712dc2f7"
     }
   },
   "Drag": {

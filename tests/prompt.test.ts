@@ -147,6 +147,41 @@ describe('asking AI', () => {
     expect(e.value).toBe('# A morning worth having\n\n- [ ] Milk\n- [ ] Bread\n\nEnd')
   })
 
+  it('colours only the words an answer changed, and a box it ticked, and says what it did with Hide changes and undo', async () => {
+    const value = '# Notes\n\n- [ ] Milk\n\nShip it on Friday.'
+    const e = setup(value, async () => ({ document: '# Notes\n\n- [x] Milk\n\nShip it on Monday.', summary: 'Ticked Milk and moved the day to Monday' }))
+    e.selectRange(value.length)
+    key(host!.children[2], 'Enter')
+    key(host!.children[3], ' ')
+    field()!.textContent = 'Tick milk and make it Monday'
+    key(field()!, 'Enter')
+    await settle()
+    const changed = [...host!.querySelectorAll('.aa-ai-changed')].map(node => node.textContent)
+    expect(changed).toEqual(['Monday.'])
+    expect((host!.children[1] as HTMLElement).hasAttribute('data-ai-box')).toBe(true)
+    const panel = document.querySelector<HTMLElement>('.aa-ai-summary')!
+    expect(panel.querySelector('.aa-ai-summary-text')!.textContent).toBe('Ticked Milk and moved the day to Monday')
+    // Hide changes keeps the changes and lets the blue go.
+    panel.querySelector<HTMLButtonElement>('.aa-ai-hide')!.click()
+    await new Promise(resolve => setTimeout(resolve, 450))
+    expect(e.value).toBe('# Notes\n\n- [x] Milk\n\nShip it on Monday.')
+    expect(host!.querySelector('.aa-ai-changed')).toBeNull()
+    expect(document.querySelector('.aa-ai-summary')).toBeNull()
+  })
+
+  it('takes the whole answer back from the summary\'s undo, as ⌘Z does', async () => {
+    const e = setup('One\n\nTwo', async () => ({ document: 'One more\n\nTwo', summary: 'Added more' }))
+    e.selectRange(3)
+    key(host!.children[0], 'Enter')
+    const asking = e.value
+    key(host!.children[1], ' ')
+    field()!.textContent = 'Say more'
+    key(field()!, 'Enter')
+    await settle()
+    document.querySelector<HTMLButtonElement>('.aa-ai-summary .aa-ai-undo')!.click()
+    expect(e.value).toBe(asking)
+  })
+
   it('holds a run of blocks an answer wrote, and takes it all back from the hold', async () => {
     const e = setup('One\n\nTwo', async ({}, { document }) => ({ document: document!.replace('⟦here⟧', '- A\n- B\n- C') }))
     e.selectRange(3)
@@ -182,8 +217,16 @@ describe('asking AI', () => {
     key(field()!, 'Enter')
     await settle()
     f.selectRange(0)
+    // The first Escape puts the summary away, the next the marks, their blue fading out first.
+    expect(document.querySelector('.aa-ai-summary')).not.toBeNull()
     key(host!.children[0], 'Escape')
+    expect(document.querySelector('.aa-ai-summary')).toBeNull()
+    expect(document.querySelectorAll('.aa-ai-mark')).toHaveLength(1)
+    key(host!.children[0], 'Escape')
+    expect(host!.hasAttribute('data-ai-fading')).toBe(true)
+    await new Promise(resolve => setTimeout(resolve, 450))
     expect(document.querySelectorAll('.aa-ai-mark')).toHaveLength(0)
+    expect(host!.querySelector('.aa-ai-changed')).toBeNull()
   })
 
   it('both edits and inserts where an answer asks for both, and keeps nothing it cannot place exactly', async () => {

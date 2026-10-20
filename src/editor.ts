@@ -16,7 +16,7 @@ import { paintSelection } from './selection'
 import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
-import { createMarks, type AiChange, type Marks } from './marks'
+import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from './marks'
 import { openPrompt, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 
 /**
@@ -738,6 +738,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
     // Escape puts the marks of what AI changed away first, then selects the block.
+    if (event.key === 'Escape' && marks?.hideSummary()) { event.preventDefault(); return }
     if (event.key === 'Escape' && marks?.size) { event.preventDefault(); marks.clear(); return }
     if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
     if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
@@ -1043,6 +1044,9 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         element.style.minHeight = ''
         const done = applyAnswer(now, answer, inline)
         if (!done) throw new Error('Not answered')
+        // What it did, in a line near the editor's foot: the answer's own words where it gave them.
+        const said = typeof answer === 'object' && typeof answer.summary === 'string' && answer.summary.trim() ? answer.summary.trim() : pendingSummary
+        if (said) marks?.summary(said)
         elements()[Math.min(done.caret, blocks.length - 1)]?.focus({ preventScroll: true })
       },
       close: sent => {
@@ -1090,8 +1094,39 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       if (old.includes(each)) return
       const stop = shimmer(elements()[index], [[0, each.source.length]]); shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000)
     })
-    marks?.set(changesBetween(old, blocks))
+    const changes = changesBetween(old, blocks)
+    marks?.set(changes)
+    pendingSummary = changes.length ? summaryOf(changes) : null
     return { caret: target }
+  }
+
+  let pendingSummary: string | null = null
+  /** What the changes come to, in a line, where the answer gave none of its own. */
+  const summaryOf = (changes: readonly AiChange[]): string => {
+    const boxes = changes.filter(change => change.box).length, others = changes.length - boxes
+    const parts = [boxes ? `${boxes === 1 ? 'a box' : `${boxes} boxes`} ticked or unticked` : '', others ? `${others === 1 ? 'one place' : `${others} places`} rewritten` : ''].filter(Boolean)
+    const line = parts.join(' and ')
+    return line.charAt(0).toUpperCase() + line.slice(1)
+  }
+
+  /** The words the marked changes put in, coloured as a decoration layer of their own; nothing is drawn again unless they moved. */
+  let aiShown = ''
+  const colourChanges = (changes: readonly AiChange[]) => {
+    const ranges: Decoration[] = []
+    for (const change of changes) change.blocks.forEach((block, index) => {
+      const at = blocks.indexOf(block)
+      if (at < 0) return
+      const start = offsetOf({ block: at, offset: 0 })
+      for (const [from, to] of change.words[index] ?? []) ranges.push({ from: start + from, to: start + to, className: 'aa-ai-changed' })
+    })
+    const key = JSON.stringify(ranges)
+    if (key === aiShown) return
+    aiShown = key
+    const before = pendingDecorations ?? shownDecorations()
+    if (ranges.length) decorationLayers.set('ai', ranges); else decorationLayers.delete('ai')
+    decorations = [...decorationLayers.values()].flat()
+    if (composing) { pendingDecorations = before; return }
+    redecorate(before)
   }
 
   /**
@@ -1106,8 +1141,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const flush = (to: number) => {
       const before = old.slice(from, to).filter(block => block.source)
       // As many blocks put in as taken out: each is a change of its own (a box ticked, a title reworded).
-      if (added.length && added.length === before.length) added.forEach((block, index) => changes.push({ blocks: [block], before: [before[index]] }))
-      else if (added.length) changes.push({ blocks: added, before })
+      if (added.length && added.length === before.length) added.forEach((block, index) => {
+        const box = onlyBox(before[index].source, block.source)
+        changes.push({ blocks: [block], before: [before[index]], words: [box ? [] : changedWords(before[index].source.slice(before[index].prefix), block.source.slice(block.prefix)).map(([from, to]) => [from + block.prefix, to + block.prefix] as [number, number])], box })
+      })
+      else if (added.length) changes.push({ blocks: added, before, words: added.map(block => block.source.trim() ? [[block.prefix, block.source.length] as [number, number]] : []) })
       added = []
     }
     for (const block of next) {
@@ -1236,7 +1274,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
 
-  marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange })
+  marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange, shown: colourChanges, undo: () => { undo() } })
   renderAll()
   const stopSelection = paintSelection(host)
   const stopSpanning = selectAcrossBlocks(host, () => readOnly || destroyed)

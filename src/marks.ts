@@ -14,14 +14,60 @@
  */
 
 import type { Block } from './markdown'
+import undoIcon from './icons/undo.svg?raw'
 
-/** One change an answer made: the blocks it put in, and the blocks they took the place of. */
-export type AiChange = { blocks: Block[]; before: Block[] }
+/**
+ * One change an answer made: the blocks it put in, the blocks they took the
+ * place of, and where in each block put in its words are new (in the block's
+ * own offsets); `box` when only a box was ticked or unticked.
+ */
+export type AiChange = { blocks: Block[]; before: Block[]; words: [number, number][][]; box?: boolean }
+
+/** The words of `after` that are not in `before`, as ranges into `after`: whole words, the space between two changed words with them. */
+export function changedWords(before: string, after: string): [number, number][] {
+  const split = (text: string) => text.match(/\s+|[^\s]+/g) ?? []
+  const a = split(before), b = split(after)
+  if (a.length * b.length > 60000) return after.trim() ? [[0, after.length]] : []
+  // The longest run the two share, word by word; what is left of `after` is new.
+  const table = Array.from({ length: a.length + 1 }, () => new Uint16Array(b.length + 1))
+  for (let i = a.length - 1; i >= 0; i--) for (let j = b.length - 1; j >= 0; j--) table[i][j] = a[i] === b[j] ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1])
+  const fresh = new Array<boolean>(b.length).fill(false)
+  let i = 0, j = 0
+  while (j < b.length) {
+    if (i < a.length && a[i] === b[j]) { i++; j++ }
+    else if (i < a.length && table[i + 1][j] >= table[i][j + 1]) i++
+    else { fresh[j] = true; j++ }
+  }
+  const ranges: [number, number][] = []
+  let at = 0
+  b.forEach((token, index) => {
+    const start = at
+    at += token.length
+    if (!fresh[index] || !token.trim()) return
+    // A changed word right after another, a space between them, joins its run.
+    const joins = ranges.length && (fresh[index - 1] || (index > 1 && !b[index - 1].trim() && fresh[index - 2]))
+    if (joins) ranges[ranges.length - 1][1] = at
+    else ranges.push([start, at])
+  })
+  return ranges
+}
+
+/** Whether two blocks differ only in their box being ticked or unticked. */
+export function onlyBox(before: string, after: string): boolean {
+  const box = /^(\s*[-*+][ \t]+)\[([ xX])\]/
+  const a = box.exec(before), b = box.exec(after)
+  return !!a && !!b && a[2].toLowerCase() !== b[2].toLowerCase() && before.slice(a[0].length) === after.slice(b[0].length)
+}
 
 export type Marks = {
   /** Mark these changes, in place of any marked before. */
   set(changes: AiChange[]): void
+  /** Put the marks away, the blue fading back into the ink. */
   clear(): void
+  /** Show what the answer did, in a line, near the foot of the editor, with Hide changes and an undo. */
+  summary(text: string): void
+  /** Put the summary away, the marks kept. */
+  hideSummary(): boolean
   /** Whether anything is marked. */
   readonly size: number
   /** Draw the marks where their blocks stand now; a mark whose blocks are gone goes. */
@@ -35,6 +81,10 @@ export type MarksOptions = {
   elements: () => readonly HTMLElement[]
   /** Put a change back; false when it can no longer be. */
   revert: (change: AiChange) => boolean
+  /** The changes still marked, each time they are drawn, so their words can be coloured. */
+  shown?: (changes: readonly AiChange[]) => void
+  /** Take the whole answer back, as ⌘Z does. */
+  undo?: () => void
   root?: Element
 }
 
@@ -43,20 +93,25 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
   let changes: AiChange[] = []
   let layer: HTMLElement | null = null
   let frame = 0
+  let panel: HTMLElement | null = null
 
   const showing = () => changes.filter(change => change.blocks.every(block => options.blocks().includes(block)))
 
   const draw = () => {
     frame = 0
     changes = showing()
-    if (!changes.length) { layer?.remove(); layer = null; return }
+    options.shown?.(changes)
+    const elements = options.elements(), blocks = options.blocks()
+    // A ticked or unticked box wears the blue too.
+    for (const element of elements) element.toggleAttribute('data-ai-box', changes.some(change => change.box && change.blocks.some(block => elements[blocks.indexOf(block)] === element)))
+    placePanel()
+    if (!changes.length) { layer?.remove(); layer = null; hideSummary(); return }
     if (!layer) {
       const made = doc.createElement('div')
       made.className = 'aa-ai-marks'
       ;(options.root ?? host.closest('dialog') ?? doc.body).append(made)
       layer = made
     }
-    const blocks = options.blocks(), elements = options.elements()
     const drawn = changes.map(change => {
       const boxes = change.blocks.map(block => elements[blocks.indexOf(block)]?.getBoundingClientRect()).filter((box): box is DOMRect => !!box)
       if (!boxes.length) return null
@@ -98,6 +153,54 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
   }
 
   const schedule = () => { if (!frame) frame = view.requestAnimationFrame(draw) }
+
+  /** The panel in the middle of the editor, a square above its visible foot. */
+  const placePanel = () => {
+    if (!panel) return
+    const box = host.getBoundingClientRect()
+    const foot = Math.min(box.bottom, view.innerHeight) - 20
+    panel.style.left = `${box.left + box.width / 2}px`
+    panel.style.top = `${Math.max(box.top, foot)}px`
+  }
+  const hideSummary = () => {
+    if (!panel) return false
+    panel.remove(); panel = null
+    doc.removeEventListener('pointerdown', outside, true)
+    return true
+  }
+  /** A press anywhere but the panel puts the panel away. */
+  const outside = (event: Event) => { if (panel && !(event.target instanceof Node && panel.contains(event.target))) hideSummary() }
+  const summary = (text: string) => {
+    hideSummary()
+    if (!showing().length) return
+    panel = doc.createElement('div')
+    panel.className = 'aa-ai-summary'
+    panel.setAttribute('role', 'status')
+    const line = Object.assign(doc.createElement('p'), { className: 'aa-ai-summary-text', textContent: text })
+    const hide = Object.assign(doc.createElement('button'), { type: 'button', className: 'aa-ai-hide', textContent: 'Hide changes' })
+    const undo = doc.createElement('button')
+    undo.type = 'button'; undo.className = 'aa-ai-undo'; undo.title = 'Undo'; undo.setAttribute('aria-label', 'Undo what AI changed')
+    undo.append(Object.assign(doc.createElement('span'), { className: 'aa-ai-undo-icon' }))
+    ;(undo.firstChild as HTMLElement).style.setProperty('--icon', `url("data:image/svg+xml,${encodeURIComponent(undoIcon)}")`)
+    for (const button of [hide, undo]) button.addEventListener('pointerdown', event => { event.preventDefault(); event.stopPropagation() })
+    hide.addEventListener('click', () => { hideSummary(); clear() })
+    undo.addEventListener('click', () => { hideSummary(); options.undo?.(); schedule() })
+    const actions = Object.assign(doc.createElement('div'), { className: 'aa-ai-summary-actions' })
+    actions.append(hide, undo)
+    panel.append(line, actions)
+    ;(options.root ?? host.closest('dialog') ?? doc.body).append(panel)
+    placePanel()
+    // The press that sent the prompt is long done; from now a press elsewhere puts the panel away.
+    setTimeout(() => { if (panel) doc.addEventListener('pointerdown', outside, true) })
+  }
+  /** The blue fades back into the ink, then the marks go. */
+  const clear = () => {
+    if (!changes.length) return
+    host.setAttribute('data-ai-fading', '')
+    layer?.setAttribute('data-fading', '')
+    const reduced = view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    setTimeout(() => { host.removeAttribute('data-ai-fading'); changes = []; draw() }, reduced ? 0 : 400)
+  }
   const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
   resize?.observe(host)
   view.addEventListener('scroll', schedule, true)
@@ -105,7 +208,9 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
 
   return {
     set(next) { changes = next.filter(change => change.blocks.length); draw() },
-    clear() { changes = []; draw() },
+    clear,
+    summary,
+    hideSummary,
     get size() { return showing().length },
     draw: schedule,
     destroy() {
@@ -114,6 +219,7 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
       view.removeEventListener('scroll', schedule, true)
       view.removeEventListener('resize', schedule)
       layer?.remove()
+      hideSummary()
     },
   }
 }
