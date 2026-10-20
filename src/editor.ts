@@ -1072,7 +1072,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       place: () => { const now = element.getBoundingClientRect(); return caret ? new DOMRect(now.left + start, now.top + dy, Math.max(now.width - start - end, 80), line || caret.height) : now },
       indent: dx,
       type: element,
-      placeholder: inline ? 'Press space to speak' : undefined,
+      placeholder: inline ? 'Ask AI or press space to speak' : undefined,
       // The block is as tall as the prompt in it, so the blocks under it move down as it grows.
       grow: height => { element.style.minHeight = height ? `${dy + height}px` : '' },
       about: () => sectionOf(blocks.indexOf(block)).map(at => elements()[at]),

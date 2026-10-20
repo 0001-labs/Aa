@@ -814,7 +814,7 @@ export class AaDiagramBoardElement extends Base {
       type: this,
       // The board makes room under its tools for the prompt, so the writing under it moves down as it grows.
       grow: height => { this.style.paddingBottom = height ? `${height + 1}px` : '' },
-      placeholder: 'Press space to speak',
+      placeholder: 'Ask AI or press space to speak',
       about: () => this.#drawing ? [this.#drawing] : [],
       send: async (prompt, signal) => {
         const detail: { prompt: string; text: string; signal: AbortSignal; answer?: Promise<string> } = { prompt, text: this.#source, signal }

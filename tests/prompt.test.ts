@@ -120,7 +120,7 @@ describe('asking AI', () => {
       const block = host!.lastElementChild as HTMLElement
       expect(block.dataset.hint).toBe('Press space for AI')
       key(block, ' ')
-      expect(field()!.dataset.placeholder).toBe('Press space to speak')
+      expect(field()!.dataset.placeholder).toBe('Ask AI or press space to speak')
       field()!.textContent = 'Add bread'
       key(field()!, 'Enter')
       await settle()
@@ -143,7 +143,7 @@ describe('asking AI', () => {
     key(block, ' ')
     rects.mockRestore()
     const prompt = field()!
-    expect(prompt.dataset.placeholder).toBe('Press space to speak')
+    expect(prompt.dataset.placeholder).toBe('Ask AI or press space to speak')
     expect(prompt.style.left).toBe(`${100 + 4 + window.scrollX}px`)
     expect(prompt.style.width).toBe('390px')
     expect(prompt.style.top).toBe(`${200 + 20 + window.scrollY}px`)

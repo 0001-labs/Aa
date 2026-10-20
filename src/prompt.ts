@@ -108,7 +108,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   field.className = 'aa-prompt'
   field.setAttribute('role', 'textbox')
   field.setAttribute('aria-label', 'Ask AI')
-  field.dataset.placeholder = options.placeholder ?? 'Press space to speak'
+  field.dataset.placeholder = options.placeholder ?? 'Ask AI or press space to speak'
   field.spellcheck = false
   try { field.contentEditable = 'plaintext-only' } catch { field.contentEditable = 'true' }
   if (field.contentEditable !== 'plaintext-only') field.contentEditable = 'true'
