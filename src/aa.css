@@ -348,16 +348,17 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 /* Listening, the caret is a dot breathing where it stands; it is the caret again once listening stops. */
 .aa-prompt[data-listening] { caret-color: transparent; }
 .aa-prompt-caret {
-  position: fixed;
-  z-index: 1001;
+  display: inline-block;
   width: calc(6px * var(--aa-sf, 1));
   height: calc(6px * var(--aa-sf, 1));
-  margin: calc(-3px * var(--aa-sf, 1)) 0 0 calc(-3px * var(--aa-sf, 1));
+  margin-inline-start: 1px;
   border-radius: 50%;
   background: var(--aa-prompt, var(--ds-focus-ring, #594dff));
+  vertical-align: middle;
   pointer-events: none;
-  animation: aa-prompt-breathe 1.2s ease-in-out infinite;
+  animation: aa-prompt-wait 1.6s ease-in-out infinite;
 }
+@keyframes aa-prompt-wait { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .aa-prompt-caret { animation: none; } }
 .aa-prompt i { font-style: italic; }
 .aa-prompt .aa-prompt-heard { opacity: 0.6; }

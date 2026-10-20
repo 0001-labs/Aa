@@ -97,18 +97,46 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   let stopGlisten = () => {}
   let listening: SpeechRecognitionLike | null = null
   let heard: HTMLElement | null = null
-  /** While listening, the caret drawn as a dot where it stands. */
+  /**
+   * While listening, the caret is a dot after the words heard, where typing
+   * would go on: a mark in the line itself, so it follows the words as they
+   * come. Waiting, it pulses a very little; heard, it grows and shrinks a
+   * very little with the microphone's level.
+   */
   let dot: HTMLElement | null = null
-  const placeDot = () => {
+  let level: { stream: MediaStream; context: AudioContext; frame: number } | null = null
+  /** The caret just before the dot, so what is typed goes on from the words heard. */
+  const caretAtDot = () => {
     if (!dot) return
-    const selection = view.getSelection()
-    const range = selection?.rangeCount && field.contains(selection.anchorNode) ? selection.getRangeAt(0) : null
-    const rect = range?.getClientRects()[0] ?? range?.getBoundingClientRect()
-    const box = field.getBoundingClientRect()
-    const x = rect && rect.height ? rect.left : box.left, y = rect && rect.height ? rect.top + rect.height / 2 : box.top + box.height / 2
-    Object.assign(dot.style, { left: `${x}px`, top: `${y}px` })
+    const range = doc.createRange(); range.setStartBefore(dot); range.collapse(true)
+    const selection = view.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
   }
-  const stopDot = () => { dot?.remove(); dot = null; doc.removeEventListener('selectionchange', placeDot); view.removeEventListener('scroll', placeDot, true) }
+  const stopDot = () => {
+    dot?.remove(); dot = null
+    if (level) { cancelAnimationFrame(level.frame); level.stream.getTracks().forEach(track => track.stop()); void level.context.close(); level = null }
+  }
+  /** The microphone's level, eased, scaling the dot by transform alone; still where less motion is asked for. */
+  const followLevel = async () => {
+    if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') return
+    let stream: MediaStream
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }) } catch { return }
+    if (!dot) { stream.getTracks().forEach(track => track.stop()); return }
+    const context = new AudioContext()
+    const analyser = context.createAnalyser()
+    analyser.fftSize = 512
+    context.createMediaStreamSource(stream).connect(analyser)
+    const samples = new Float32Array(analyser.fftSize)
+    let eased = 0
+    const step = () => {
+      if (!dot || !level) return
+      analyser.getFloatTimeDomainData(samples)
+      const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length)
+      eased += (Math.min(1, rms * 8) - eased) * 0.2
+      dot.style.transform = `scale(${(1 + eased * 0.35).toFixed(3)})`
+      level.frame = requestAnimationFrame(step)
+    }
+    level = { stream, context, frame: requestAnimationFrame(step) }
+  }
 
   const text = () => (field.textContent ?? '').replace(/\s+/g, ' ').trim()
   const close = (sent = false) => {
@@ -130,12 +158,11 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     if (!speech) { field.dataset.placeholder = 'Speaking is not available in this browser'; return }
     listening = speech
     field.dataset.listening = ''
-    dot = Object.assign(doc.createElement('div'), { className: 'aa-prompt-caret' })
+    dot = Object.assign(doc.createElement('span'), { className: 'aa-prompt-caret', contentEditable: 'false' })
     dot.setAttribute('aria-hidden', 'true')
-    root.append(dot)
-    doc.addEventListener('selectionchange', placeDot)
-    view.addEventListener('scroll', placeDot, true)
-    placeDot()
+    field.append(dot)
+    caretAtDot()
+    void followLevel()
     field.dataset.placeholder = 'Listening…'
     speech.lang = doc.documentElement.lang || navigator.language
     speech.continuous = true
@@ -145,7 +172,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
         const result = event.results[index]
         const words = result[0]?.transcript ?? ''
         heard ??= Object.assign(doc.createElement('i'), { className: 'aa-prompt-heard' })
-        if (!heard.isConnected) field.append(heard)
+        if (!heard.isConnected) dot ? dot.before(heard) : field.append(heard)
         heard.textContent = words
         if (result.isFinal) {
           heard.removeAttribute('class')
@@ -153,10 +180,8 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
           heard = null
         }
       }
-      // The caret stays after what was heard, so typing goes on from there.
-      const range = doc.createRange(); range.selectNodeContents(field); range.collapse(false)
-      const selection = view.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
-      placeDot()
+      // The caret stays after what was heard, at the dot, so typing goes on from there.
+      caretAtDot()
     }
     speech.onend = () => { listening = null; stopDot(); delete field.dataset.listening; field.dataset.placeholder = options.placeholder ?? 'Ask AI to write' }
     speech.onerror = () => speech.onend?.()

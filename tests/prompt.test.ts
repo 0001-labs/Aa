@@ -78,8 +78,9 @@ describe('asking AI', () => {
     Speech.last.onresult!({ resultIndex: 0, results: [result('write a plan for Friday', true)] })
     expect(field()!.querySelector('i')!.textContent).toBe('write a plan for Friday')
     expect(field()!.querySelector('.aa-prompt-heard')).toBeNull()
-    // Listening, the caret is a dot; once it stops, the caret again.
-    expect(document.querySelector('.aa-prompt-caret')).not.toBeNull()
+    // Listening, the caret is a dot after the words heard; once it stops, the caret again.
+    expect(field()!.lastElementChild!.className).toBe('aa-prompt-caret')
+    expect(field()!.lastElementChild!.previousElementSibling!.textContent).toBe('write a plan for Friday')
     Speech.last.stop()
     expect(document.querySelector('.aa-prompt-caret')).toBeNull()
     expect(field()!.hasAttribute('data-listening')).toBe(false)
