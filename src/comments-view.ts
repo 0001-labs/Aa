@@ -13,7 +13,7 @@
 
 import { anchorThreads, applyEdit, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 import type { Decoration } from './render'
-import type { Prompter } from './prompt'
+import { canDictate, dictate, type Prompter } from './prompt'
 import { icons } from './icons'
 
 export type CommentsViewOptions = {
@@ -363,8 +363,10 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     form.setAttribute('aria-label', placeholder)
     if (store.me) form.append(avatar(store.me))
     const field = doc.createElement('textarea')
-    // As an empty block says it: Space asks AI where the product answers, about the commented words.
-    const offered = options.prompt ? `Press space for AI, or ${placeholder.charAt(0).toLowerCase()}${placeholder.slice(1)}` : placeholder
+    // Space in the empty field speaks the reply where the browser can listen; elsewhere it asks AI about the commented words, where the product answers.
+    const speaks = canDictate()
+    const lower = `${placeholder.charAt(0).toLowerCase()}${placeholder.slice(1)}`
+    const offered = speaks ? `Press space to speak, or ${lower}` : options.prompt ? `Press space for AI, or ${lower}` : placeholder
     field.rows = 1; field.placeholder = offered; field.setAttribute('aria-label', placeholder)
     field.value = drafts.get(key) ?? ''
     field.disabled = busy.has(key)
@@ -386,9 +388,30 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       } catch (error) { if (!signal.aborted) refused(key, error) }
       finally { field.readOnly = false; stopAsking(); grow(field); field.focus() }
     }
+    // Listening, the words heard go into the field as they come, after what was there; any key but Enter and Escape stops it and types on.
+    let speaking: { stop(): void; abort(): void } | null = null
+    const listen = () => {
+      const before = field.value
+      speaking = dictate({
+        lang: doc.documentElement.lang || navigator.language,
+        heard: words => {
+          if (!field.isConnected) { speaking?.abort(); return }
+          field.value = `${before}${before && words ? ' ' : ''}${words}`; drafts.set(key, field.value); grow(field)
+        },
+        end: failure => { speaking = null; delete field.dataset.listening; field.placeholder = failure ?? offered },
+      })
+      if (speaking) { field.dataset.listening = ''; field.placeholder = 'Listening…' }
+    }
+    field.addEventListener('blur', () => speaking?.stop())
     field.addEventListener('input', () => { drafts.set(key, field.value); grow(field); if (!asking) askPeople(field) })
     field.addEventListener('keydown', event => {
       if (menuKeys(event)) return
+      if (speaking && !event.isComposing) {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); speaking.abort(); return }
+        if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); speaking.abort(); send(key, field.value); return }
+        speaking.stop()
+      }
+      if (event.key === ' ' && !field.value && speaks && !event.isComposing) { event.preventDefault(); listen(); return }
       if (event.key === ' ' && !field.value && options.prompt && !asking && !event.isComposing) { event.preventDefault(); asking = new AbortController(); field.dataset.asking = ''; field.placeholder = 'Ask AI about these words'; return }
       if (asking) {
         if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void ask() }

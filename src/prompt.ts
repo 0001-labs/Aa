@@ -76,6 +76,33 @@ function recognition(): SpeechRecognitionLike | null {
   return Speech ? new Speech() : null
 }
 
+/** Whether the browser can listen at all. */
+export const canDictate = (): boolean => { const view = globalThis as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }; return !!(view.SpeechRecognition ?? view.webkitSpeechRecognition) }
+
+/**
+ * Listening for a plain field (a comment's reply): everything heard so far, as
+ * one run of words, each time more comes, and what went wrong when it ends.
+ * Started within the key's own press, so the browser asks for the microphone once.
+ */
+export function dictate(options: { lang: string; heard: (words: string) => void; end: (failure: string | null) => void }): { stop(): void; abort(): void } | null {
+  const speech = recognition()
+  if (!speech) return null
+  let failure: string | null = null, ended = false
+  speech.lang = options.lang
+  speech.continuous = true
+  speech.interimResults = true
+  speech.onresult = event => {
+    let words = ''
+    for (let index = 0; index < event.results.length; index++) words += event.results[index][0]?.transcript ?? ''
+    options.heard(words.replace(/\s+/g, ' ').trim())
+  }
+  const end = () => { if (ended) return; ended = true; options.end(failure) }
+  speech.onend = end
+  speech.onerror = event => { failure = listeningFailure(event.error) ?? failure; end() }
+  try { speech.start() } catch { failure = 'Speaking could not start here'; end(); return null }
+  return { stop: () => speech.stop(), abort: () => { speech.abort(); end() } }
+}
+
 export type PromptOptions = {
   /** Where the prompt stands: the empty block's place, or the board's. */
   place: () => DOMRect

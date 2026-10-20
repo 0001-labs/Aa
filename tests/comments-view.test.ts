@@ -270,6 +270,27 @@ describe('asking AI from the field', () => {
     expect(field.hasAttribute('data-asking')).toBe(false)
     expect(store!.threads[0].comments).toHaveLength(1)
   })
+  it('speaks the reply on Space where the browser can listen, and sends what was heard on Enter', async () => {
+    let speech: { onresult: ((event: unknown) => void) | null; onend: (() => void) | null; started: boolean } | null = null
+    class Speech { lang = ''; continuous = false; interimResults = false; onresult = null; onend = null; onerror = null; started = false
+      constructor() { speech = this as never }
+      start() { this.started = true } stop() { (this as never as { onend?: () => void }).onend?.() } abort() { this.stop() } }
+    vi.stubGlobal('webkitSpeechRecognition', Speech)
+    try {
+      setup()
+      marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      const field = popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!
+      expect(field.placeholder).toBe('Press space to speak, or reply')
+      field.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }))
+      expect(speech!.started).toBe(true)
+      expect(field.placeholder).toBe('Listening…')
+      speech!.onresult!({ resultIndex: 0, results: [Object.assign([{ transcript: 'Yes, two' }], { isFinal: true })] })
+      expect(field.value).toBe('Yes, two')
+      enter(field)
+      await tick()
+      expect(store!.threads[0].comments.at(-1)).toMatchObject({ body: 'Yes, two' })
+    } finally { vi.unstubAllGlobals() }
+  })
   it('says only the words without a prompt', () => {
     setup()
     marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
