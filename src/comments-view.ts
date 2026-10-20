@@ -454,6 +454,13 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     if (!expanded) return article
     const actions = doc.createElement('div')
     actions.className = 'aa-thread-actions'
+    // With more open threads in the text, a popover steps to the one before and the one after, in the order of the words.
+    const openOnes = sortThreads(placed).filter(each => !each.orphaned && !each.resolvedAt)
+    const at = openOnes.findIndex(each => each.id === thread.id)
+    if (!panel && openOnes.length > 1 && at >= 0) {
+      const step = (by: number) => { const next = openOnes[(at + by + openOnes.length) % openOnes.length]; options.selectRange(next.from); open(next.id) }
+      actions.append(iconButton('Previous comment', 'up', () => step(-1)), iconButton('Next comment', 'down', () => step(1)))
+    }
     if (canWrite()) {
       if (thread.resolvedAt) actions.append(textButton('Reopen', () => void write(`resolve:${thread.id}`, () => store.resolve(thread.id, false)), 'aa-thread-reopen'))
       else actions.append(iconButton('Resolve', 'check', () => void write(`resolve:${thread.id}`, () => store.resolve(thread.id, true), () => { if (!panel) close() })))

@@ -84,6 +84,23 @@ describe('the popover', () => {
     expect(open.querySelector('.aa-avatar')?.textContent).toBe('B')
     expect(marks()[0].classList.contains('aa-comment--open')).toBe(true)
   })
+  it('steps to the next and the previous open thread when there are more', () => {
+    setup({ threads: [...threads(), { ...threads()[0], id: 't3', from: 20, to: 24, quote: 'five', comments: [{ id: 'c3', author: bo, body: 'Five?', createdAt: 3000 }] }] })
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(popover()!.querySelector('.aa-comment-body')?.textContent).toBe('Why two?')
+    popover()!.querySelector<HTMLButtonElement>('[aria-label="Next comment"]')!.click()
+    expect(popover()!.querySelector('.aa-comment-body')?.textContent).toBe('Five?')
+    expect(editor!.selection()).toEqual({ start: 20, end: 20 })
+    popover()!.querySelector<HTMLButtonElement>('[aria-label="Next comment"]')!.click()
+    expect(popover()!.querySelector('.aa-comment-body')?.textContent).toBe('Why two?')
+    popover()!.querySelector<HTMLButtonElement>('[aria-label="Previous comment"]')!.click()
+    expect(popover()!.querySelector('.aa-comment-body')?.textContent).toBe('Five?')
+  })
+  it('offers no stepping with one open thread', () => {
+    setup()
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(popover()!.querySelector('[aria-label="Next comment"]')).toBeNull()
+  })
   it('opens when the caret comes into the words, and closes when it leaves', () => {
     const e = setup()
     e.selectRange(5); host!.dispatchEvent(new Event('aa-selectionchange'))
