@@ -17,20 +17,19 @@ const correct: Corrector = async (text, { before, after, signal }) => {
 }
 
 /**
- * Asking AI, as a concept: until the playground has a server to ask, a
- * stand-in answers after a moment, so the prompt, the glisten and the answer
- * coming in can be tried. A product hands Aa its own `prompt`.
+ * Asking AI the same way: Ezo's server answers the playground within one
+ * allowance everyone here shares (`aiPrompt:playground`), with Markdown for
+ * writing and the diagram written again for a diagram.
  */
-const prompt: Prompter = (said, { kind, text, signal }) => new Promise((resolve, reject) => {
-  const timer = setTimeout(() => {
-    if (kind === 'diagram') {
-      const name = said.replace(/[^\p{L}\p{N} ]/gu, '').trim().split(/\s+/).slice(0, 3).join(' ') || 'Idea'
-      const last = [...text.matchAll(/^\[([^\]]+)\]/gm)].pop()?.[1]
-      resolve(`${text}\n[${name}]${last ? `\n${last} -> ${name}` : ''}`)
-    } else resolve(`A stand-in answer to “${said}”: a product's own AI writes here, in Markdown, from the writing around it.`)
-  }, 1600)
-  signal.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('Stopped')) })
-})
+const prompt: Prompter = async (said, { kind, text, before = '', after = '', signal }) => {
+  const response = await fetch('https://first-impala-987.convex.cloud/api/action', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
+    body: JSON.stringify({ path: 'aiPrompt:playground', args: { kind, prompt: said, text: text.slice(0, 8000), before: before.slice(-4000), after: after.slice(0, 4000) }, format: 'json' }),
+  })
+  const result = await response.json() as { status?: string; value?: unknown }
+  if (result.status !== 'success' || typeof result.value !== 'string') throw new Error('Not answered')
+  return result.value
+}
 
 const editor = document.getElementById('editor') as AaEditorElement
 editor.options = {
@@ -71,7 +70,7 @@ const SAMPLE = `# Aa
 
 Aa is the text editor of 0001's products. Write formatted text using the toolbar or Markdown shortcuts. Aa stores it as **Markdown** while keeping its syntax out of your way. Press ⌘B, ⌘I, ⌘E or ⌘K.
 
-Press Space in an empty line to ask AI: the prompt is written in a live colour, Enter sends it, and what it is about glistens until the answer comes in. Press Space twice to say it instead: what you say appears in italics. On a diagram, Space asks AI to draw. (Here a stand-in answers.)\n\nYour spelling and grammar are corrected as you write, a moment after you pause or as you leave a block, never in the word you are still typing. ⌘Z takes a correction back.
+Press Space in an empty line to ask AI: the prompt is written in a live colour, Enter sends it, and what it is about glistens until the answer comes in. Press Space twice to say it instead: what you say appears in italics. On a diagram, Space asks AI to draw.\n\nYour spelling and grammar are corrected as you write, a moment after you pause or as you leave a block, never in the word you are still typing. ⌘Z takes a correction back.
 
 ## Blocks
 
