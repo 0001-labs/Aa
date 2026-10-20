@@ -323,33 +323,17 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
  * the accent blended onto the page, moved by transform alone. Gives back
  * what stops it.
  */
-export function glisten(elements: readonly Element[], root?: Element): () => void {
-  const pieces: HTMLElement[] = []
+export function glisten(elements: readonly Element[], _root?: Element): () => void {
+  // The band runs through the letters themselves (a gradient clipped to the
+  // text, aa.css), never over the block's box, so blank room stays as it is.
+  const marked: HTMLElement[] = []
   for (const element of elements) {
-    if (!element.isConnected) continue
-    const doc = element.ownerDocument, view = doc.defaultView
+    if (!(element instanceof HTMLElement) || !element.isConnected) continue
+    const view = element.ownerDocument.defaultView
     if (!view || view.matchMedia?.('(forced-colors: active)').matches) continue
-    const rect = element.getBoundingClientRect()
-    if (rect.width <= 0 || rect.height <= 0) continue
-    const style = view.getComputedStyle(element)
-    const piece = doc.createElement('div')
-    piece.className = 'aa-glisten'
-    piece.setAttribute('aria-hidden', 'true')
-    const light = lightness(style.color)
-    if (light !== null && light > 0.5) piece.dataset.dark = ''
-    Object.assign(piece.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px`, animationDelay: `${(pieces.length % 6) * 120}ms` })
-    ;(root ?? element.closest('dialog') ?? doc.body).append(piece)
-    pieces.push(piece)
+    element.setAttribute('data-aa-glisten', '')
+    element.style.setProperty('--aa-glisten-delay', `${(marked.length % 6) * 120}ms`)
+    marked.push(element)
   }
-  if (!pieces.length) return () => {}
-  const view = pieces[0].ownerDocument.defaultView!
-  // It is drawn where the words stood: a scroll or a new size moves them, so it goes.
-  const done = () => {
-    view.removeEventListener('scroll', done, true)
-    view.removeEventListener('resize', done)
-    for (const piece of pieces) piece.remove()
-  }
-  view.addEventListener('scroll', done, true)
-  view.addEventListener('resize', done)
-  return done
+  return () => { for (const element of marked) { element.removeAttribute('data-aa-glisten'); element.style.removeProperty('--aa-glisten-delay') } }
 }
