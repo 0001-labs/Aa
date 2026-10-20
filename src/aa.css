@@ -360,7 +360,10 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-block[data-fence] > .aa-atom > * { margin-inline-start: 0; }
 
 .aa-peer-caret { position: relative; display: inline; border-left: calc(1px * var(--aa-sf)) solid var(--aa-accent, var(--ds-sharp-blue, Highlight)); }
-.aa-peer-caret::after { content: attr(data-label); position: absolute; bottom: 100%; left: 0; font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf))); white-space: nowrap; background: var(--aa-accent, var(--ds-sharp-blue, Highlight)); color: var(--ds-white, HighlightText); }
+/* A collaborator's caret: a hairline in the accent, their avatar over it, 16px round with their
+   initial, as Design system 1 draws a person, filled so it reads over the line above. */
+.aa-peer-caret::after { content: attr(data-initial); position: absolute; bottom: 100%; left: 0; display: grid; place-items: center; box-sizing: border-box; width: calc(16px * var(--aa-sf, 1)); height: calc(16px * var(--aa-sf, 1)); border-radius: 50%; transform: translateX(-50%); background: var(--aa-accent, var(--ds-sharp-blue, Highlight)); color: var(--ds-white, HighlightText); font: var(--ds-type-weight-default, 400) var(--ds-type-size-small, calc(10px * var(--aa-sf, 1))) / 1 var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))); letter-spacing: normal; font-style: normal; text-decoration: none; white-space: nowrap; pointer-events: none; user-select: none; }
+.aa-peer-caret:not([data-initial])::after { content: none; }
 .aa-block[data-kind=callout][data-level] > span:not(.aa-syntax):not(.aa-callout-body) { font-family: "Inter Arrows", var(--ds-typeface-medium, var(--typeface-medium, inherit)), system-ui, sans-serif; font-weight: var(--ds-type-weight-bold, 500); }
 
 .aa-link-editor input { flex: 1; width: auto; }

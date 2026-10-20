@@ -79,6 +79,8 @@ function recognition(): SpeechRecognitionLike | null {
 export type PromptOptions = {
   /** Where the prompt stands: the empty block's place, or the board's. */
   place: () => DOMRect
+  /** How far in its first line starts: at the caret, in a paragraph, so the lines after it start at the paragraph's edge as its own lines do. */
+  indent?: number
   /** The element whose type the prompt is set in. */
   type: Element
   /** What to say before anything is written. */
@@ -106,7 +108,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   field.className = 'aa-prompt'
   field.setAttribute('role', 'textbox')
   field.setAttribute('aria-label', 'Ask AI')
-  field.dataset.placeholder = options.placeholder ?? 'Ask AI to write, or press Space again to speak'
+  field.dataset.placeholder = options.placeholder ?? 'Press space to speak'
   field.spellcheck = false
   try { field.contentEditable = 'plaintext-only' } catch { field.contentEditable = 'true' }
   if (field.contentEditable !== 'plaintext-only') field.contentEditable = 'true'
@@ -131,7 +133,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   }
   const place = () => {
     const rect = options.place(), at = origin()
-    Object.assign(field.style, { left: `${rect.left + at.x}px`, top: `${rect.top + at.y}px`, width: `${Math.max(rect.width, 80)}px`, minHeight: `${rect.height}px` })
+    Object.assign(field.style, { left: `${rect.left + at.x}px`, top: `${rect.top + at.y}px`, width: `${Math.max(rect.width, 80)}px`, minHeight: `${rect.height}px`, textIndent: options.indent ? `${options.indent}px` : '' })
   }
   place()
   field.focus({ preventScroll: true })

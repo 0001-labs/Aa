@@ -111,6 +111,26 @@ describe('asking AI', () => {
     expect(e.value).toBe('Hello. I am here. And here to stay.')
   })
 
+  it('goes on from the caret in a paragraph as its own words would: its width, on its lines, the first line at the caret', () => {
+    const value = 'Hello. I am here. '
+    const e = setup(value, async () => 'x')
+    e.selectRange(value.length)
+    document.dispatchEvent(new Event('selectionchange'))
+    const block = host!.children[0] as HTMLElement
+    Object.assign(block.style, { paddingLeft: '4px', paddingRight: '6px', lineHeight: '20px' })
+    block.getBoundingClientRect = () => new DOMRect(100, 200, 400, 40)
+    // The caret at the end of the paragraph's second line, its glyph box shorter than the line.
+    const rects = vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue([new DOMRect(330, 222, 0, 17)] as unknown as DOMRectList)
+    key(block, ' ')
+    rects.mockRestore()
+    const prompt = field()!
+    expect(prompt.dataset.placeholder).toBe('Press space to speak')
+    expect(prompt.style.left).toBe(`${100 + 4 + window.scrollX}px`)
+    expect(prompt.style.width).toBe('390px')
+    expect(prompt.style.top).toBe(`${200 + 20 + window.scrollY}px`)
+    expect(prompt.style.textIndent).toBe('226px')
+  })
+
   it('offers nothing mid-sentence, after two spaces, or without a product to ask', () => {
     for (const [value, prompt] of [['Hello. I am', true], ['Hello.  ', true], ['Hello. ', false]] as const) {
       const e = setup(value, prompt ? async () => 'x' : undefined)

@@ -8,6 +8,7 @@
 import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block } from './markdown'
 import { tableAlignments, tableRows } from './table'
 import { icons } from './icons'
+import { initialOf } from './comments'
 
 /** A run of a block's words drawn with a class (and a title, and attributes a layer reads back, `data-comment` say); `from === to` is a caret. */
 export type Decoration = { from: number; to: number; className: string; label?: string; attributes?: Record<string, string> }
@@ -170,7 +171,7 @@ function decorateNode(node: HTMLElement, offset: number, decorations: readonly D
 
 function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) {
   for (const caret of decorations.filter(range => range.from === range.to && range.from >= 0 && range.from <= readBlock(element).length)) {
-    const marker = document.createElement('span'); marker.className = `${caret.className} aa-peer-caret`; marker.contentEditable = 'false'; marker.dataset.label = caret.label ?? ''; marker.title = caret.label ?? ''
+    const marker = document.createElement('span'); marker.className = `${caret.className} aa-peer-caret`; marker.contentEditable = 'false'; marker.dataset.label = caret.label ?? ''; if (caret.label) marker.dataset.initial = initialOf(caret.label); marker.title = caret.label ?? ''
     const point = pointAt(element, caret.from)
     const range = document.createRange(); range.setStart(point.node, point.offset); range.collapse(true); range.insertNode(marker)
   }

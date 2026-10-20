@@ -280,6 +280,8 @@ it('peer carets at empty and final offsets do not change the source', () => {
   const ed = setup('Words')
   ed.decorate([{ from: 5, to: 5, className: 'aa-peer-selection', label: 'Peer' }])
   expect(host!.querySelector('.aa-peer-caret')?.getAttribute('data-label')).toBe('Peer')
+  // The caret wears the person's initial, drawn over it as an avatar, never as text in the line.
+  expect(host!.querySelector('.aa-peer-caret')?.getAttribute('data-initial')).toBe('P')
   expect(readBlock(host!.firstElementChild as HTMLElement)).toBe('Words')
   ed.value = ''; ed.decorate([{ from: 0, to: 0, className: 'aa-peer-selection', label: 'Peer' }])
   expect(host!.querySelector('.aa-peer-caret')).not.toBeNull()
