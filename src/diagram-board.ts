@@ -3,8 +3,8 @@
  * stands, by hand. Its words are never shown: the caret come into its block,
  * a press or Tab gives the board the keys, and it rules its squares under
  * the drawing. Its row of tools (Design system 1's Context bar) stands in the
- * middle of the board's last square for as long as the writing can be changed, with
- * one colour picker for the pale accents, a Select-faced menu in the top
+ * middle of the board's last square while the diagram is hovered or in use and
+ * the writing can be changed, with one colour picker for the pale accents, a Select-faced menu in the top
  * layer.
  *
  * Everything is carried on Drag's grid engine (`src/vendor/drag/grid.ts`), a

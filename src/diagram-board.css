@@ -200,6 +200,31 @@
 
 :host(:not([data-editable])) .tools { display: none; }
 
+/* The tools show only while the diagram is hovered or in use (chosen, or
+   the focus in it); otherwise their square stays free and empty. They fade
+   by opacity alone, and hidden they take neither presses nor the focus. */
+.tools {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease-out, visibility 0s linear 0.14s;
+}
+:host([data-active]) .tools,
+:host(:focus-within) .tools {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.14s ease-out, visibility 0s;
+}
+@media (hover: hover) {
+  :host(:hover) .tools {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.14s ease-out, visibility 0s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tools, :host(:hover) .tools, :host([data-active]) .tools, :host(:focus-within) .tools { transition: none; }
+}
+
 .tools button {
   display: inline-flex;
   align-items: flex-end;
