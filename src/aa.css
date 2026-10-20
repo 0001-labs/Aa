@@ -647,7 +647,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-thread[data-orphaned] .aa-thread-quote { font-style: italic; }
 .aa-thread[data-unread] .aa-thread-quote::before { content: ""; display: inline-block; width: calc(6px * var(--aa-sf, 1)); height: calc(6px * var(--aa-sf, 1)); margin-right: calc(4px * var(--aa-sf, 1)); border-radius: 50%; background: var(--ds-orange, var(--orange, #fec20d)); vertical-align: calc(2px * var(--aa-sf, 1)); }
 .aa-thread-count { flex: none; color: var(--aa-muted); font-variant-numeric: tabular-nums; }
-.aa-thread-actions { display: flex; flex: none; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); }
+.aa-thread-actions { display: flex; flex: none; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); margin-left: auto; }
 /* Icon buttons one control high; a word on a button on the light fill, danger in red. */
 .aa-comments-button { display: inline-flex; align-items: center; justify-content: center; width: calc(16px * var(--aa-sf, 1)); height: calc(16px * var(--aa-sf, 1)); margin: 0; padding: 0; border: 0; border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1))); background: none; color: inherit; cursor: pointer; }
 .aa-comments-button:hover { background: var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)); }
