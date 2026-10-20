@@ -1,6 +1,6 @@
 {
   "Design system 1": {
-    "commit": "9ce5883657586ffb5be806a0aed4ae9c5b5ddae3",
+    "commit": "63de89248703800615181c3380d9be8a976f60b2",
     "version": "0.3.0-alpha.28",
     "dirty": true,
     "files": {
@@ -27,6 +27,8 @@
       "src/ds1/context.css": "8792e1bf0b6a5e1a78a8241c5947b3295f0619d463b2cce08d836eb38b31e0b4",
       "src/ds1/overlay.css": "4ae1ba276c2626b2e89ceb9c6aa7b2bfb87b1fbf02b640f188bab7c79e3b2a79",
       "src/icons/box.svg": "915679ba8bc7ef80a7355336ff0521177b7752878166af00c17f589e34e6aa14",
+      "src/icons/chevron-down.svg": "7afc5673be7ca066cc20363c135067d6d4839e0a26d9ff6e472a45319b0ec3b2",
+      "src/icons/chevron-up.svg": "47a0faea62a63cff393150e5ac3c5023aa239fe8dbf5dcd9125e870be2856634",
       "src/icons/column.svg": "3f007b8e73ed6d80b5070db6ea5d95e515733d67c02574dd46dd4d9c5f8cd9a1",
       "src/icons/connect.svg": "5ec3b25d77d13a88d50abba9c6b15d9856798511c0bc4d6736237736598f2d95",
       "src/icons/cursor.svg": "7a204a31698b0454b366e569daff662c88f85983d3c526dfe084951436ddc2a3",

@@ -693,7 +693,8 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-composer { display: flex; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); margin: calc(var(--aa-unit) / 2) 0 0; min-height: var(--aa-unit); }
 .aa-thread-head + .aa-composer, .aa-thread > .aa-composer:first-child { margin-top: 0; }
 .aa-composer textarea, .aa-comment-editing { box-sizing: border-box; flex: 1 1 auto; width: 100%; min-width: 0; min-height: var(--aa-unit); max-height: calc(8 * var(--aa-unit)); margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; line-height: var(--aa-unit); resize: none; overflow: hidden; outline: none; }
-.aa-comment-editing { display: block; width: calc(100% - var(--aa-unit)); margin-left: var(--aa-unit); background: var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)); border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1))); padding: 0 calc(4px * var(--aa-sf, 1)); }
+/* Editing your own comment: the field stands where the words stood, flush with them, no face. */
+.aa-comment-editing { display: block; width: calc(100% - var(--aa-unit)); margin-left: var(--aa-unit); background: transparent; padding: 0; }
 .aa-composer textarea::placeholder, .aa-comment-editing::placeholder { color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
 .aa-composer-send { color: var(--aa-muted); }
 .aa-composer-send:hover { color: inherit; }

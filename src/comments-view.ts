@@ -514,7 +514,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const at = openOnes.findIndex(each => each.id === thread.id)
     if (!panel && openOnes.length > 1 && at >= 0) {
       const step = (by: number) => { const next = openOnes[(at + by + openOnes.length) % openOnes.length]; options.selectRange(next.from); open(next.id) }
-      actions.append(iconButton('Previous comment', 'up', () => step(-1)), iconButton('Next comment', 'down', () => step(1)))
+      actions.append(iconButton('Previous comment', 'chevron-up', () => step(-1)), iconButton('Next comment', 'chevron-down', () => step(1)))
     }
     if (canWrite()) {
       if (thread.resolvedAt) actions.append(textButton('Reopen', () => void write(`resolve:${thread.id}`, () => store.resolve(thread.id, false)), 'aa-thread-reopen'))
