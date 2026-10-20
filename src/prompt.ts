@@ -76,6 +76,46 @@ function recognition(): SpeechRecognitionLike | null {
   return Speech ? new Speech() : null
 }
 
+/**
+ * A listening dot's breath: a slow pulse of its opacity, never its size, and
+ * the voice's level over it once `followVoice` has the microphone (asked for
+ * only once dictation has it, never beside it in Safari, where the pulse is
+ * alone). Still where less motion is asked for.
+ */
+export function breatheDot(dot: HTMLElement, view: Window): { followVoice: (() => Promise<void>) | null; stop(): void } {
+  if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return { followVoice: null, stop: () => {} }
+  let frame = 0, stopped = false, eased = 0
+  let analyser: AnalyserNode | null = null, stream: MediaStream | undefined, context: AudioContext | undefined
+  const samples = new Float32Array(512)
+  const start = performance.now()
+  const step = (now: number) => {
+    if (stopped) return
+    if (analyser) {
+      analyser.getFloatTimeDomainData(samples)
+      eased += (Math.min(1, Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length) * 8) - eased) * 0.15
+    }
+    const pulse = 0.5 - 0.5 * Math.cos((now - start) / 2400 * 2 * Math.PI)
+    dot.style.opacity = Math.min(1, 0.55 + 0.3 * pulse + 0.3 * eased).toFixed(3)
+    frame = requestAnimationFrame(step)
+  }
+  frame = requestAnimationFrame(step)
+  return {
+    followVoice: async () => {
+      if (safari || !navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') return
+      try {
+        const heard = await navigator.mediaDevices.getUserMedia({ audio: true })
+        if (stopped) { heard.getTracks().forEach(track => track.stop()); return }
+        stream = heard
+        context = new AudioContext()
+        analyser = context.createAnalyser()
+        analyser.fftSize = samples.length
+        context.createMediaStreamSource(heard).connect(analyser)
+      } catch { /* the breath alone */ }
+    },
+    stop: () => { stopped = true; cancelAnimationFrame(frame); stream?.getTracks().forEach(track => track.stop()); void context?.close() },
+  }
+}
+
 /** Whether the browser can listen at all. */
 export const canDictate = (): boolean => { const view = globalThis as unknown as { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown }; return !!(view.SpeechRecognition ?? view.webkitSpeechRecognition) }
 
@@ -84,7 +124,7 @@ export const canDictate = (): boolean => { const view = globalThis as unknown as
  * one run of words, each time more comes, and what went wrong when it ends.
  * Started within the key's own press, so the browser asks for the microphone once.
  */
-export function dictate(options: { lang: string; heard: (words: string) => void; end: (failure: string | null) => void }): { stop(): void; abort(): void } | null {
+export function dictate(options: { lang: string; heard: (words: string) => void; end: (failure: string | null) => void; audio?: () => void }): { stop(): void; abort(): void } | null {
   const speech = recognition()
   if (!speech) return null
   let failure: string | null = null, ended = false
@@ -99,6 +139,7 @@ export function dictate(options: { lang: string; heard: (words: string) => void;
   const end = () => { if (ended) return; ended = true; options.end(failure) }
   speech.onend = end
   speech.onerror = event => { failure = listeningFailure(event.error) ?? failure; end() }
+  if (options.audio) speech.onaudiostart = options.audio
   try { speech.start() } catch { failure = 'Speaking could not start here'; end(); return null }
   return { stop: () => speech.stop(), abort: () => { speech.abort(); end() } }
 }
@@ -179,7 +220,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
    * does; still where less motion is asked for.
    */
   let dot: HTMLElement | null = null
-  let level: { stream?: MediaStream; context?: AudioContext; frame: number } | null = null
+  let level: { frame: number; stop: () => void } | null = null
   /** The caret just before the dot, so what is typed goes on from the words heard. */
   const caretAtDot = () => {
     if (!dot) return
@@ -190,41 +231,14 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   const worded = () => { if (dot) dot.toggleAttribute('data-after', !!text()) }
   const stopDot = () => {
     dot?.remove(); dot = null
-    if (level) { cancelAnimationFrame(level.frame); level.stream?.getTracks().forEach(track => track.stop()); void level.context?.close(); level = null }
+    if (level) { level.stop(); level = null }
   }
-  /** The resting dot's breath at once, and the voice's level once listening has the microphone. */
+  /** The dot's breath at once, and the voice's level once listening has the microphone. */
   const breathe = () => {
-    if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !dot) return null
-    level = { frame: 0 }
-    let analyser: AnalyserNode | null = null
-    const samples = new Float32Array(512)
-    let eased = 0
-    const start = performance.now()
-    const step = (now: number) => {
-      if (!dot || !level) return
-      if (analyser) {
-        analyser.getFloatTimeDomainData(samples)
-        eased += (Math.min(1, Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length) * 8) - eased) * 0.15
-      }
-      // A slow pulse, and the voice's level over it, in the dot's opacity alone: it never changes size.
-      const pulse = 0.5 - 0.5 * Math.cos((now - start) / 2400 * 2 * Math.PI)
-      dot.style.opacity = Math.min(1, 0.55 + 0.3 * pulse + 0.3 * eased).toFixed(3)
-      level.frame = requestAnimationFrame(step)
-    }
-    level.frame = requestAnimationFrame(step)
-    // Asked for only once dictation has the microphone, never beside it in Safari: a failure keeps the breath alone.
-    return async () => {
-      if (safari || !navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') return
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        if (!dot || !level) { stream.getTracks().forEach(track => track.stop()); return }
-        const context = new AudioContext()
-        analyser = context.createAnalyser()
-        analyser.fftSize = samples.length
-        context.createMediaStreamSource(stream).connect(analyser)
-        Object.assign(level, { stream, context })
-      } catch { /* the breath alone */ }
-    }
+    if (!dot) return null
+    const breath = breatheDot(dot, view)
+    level = { frame: 0, stop: breath.stop }
+    return breath.followVoice
   }
 
   const text = () => (field.textContent ?? '').replace(/\s+/g, ' ').trim()

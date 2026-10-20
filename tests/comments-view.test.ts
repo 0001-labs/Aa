@@ -324,9 +324,14 @@ describe('asking AI from the field', () => {
       expect(field.placeholder).toBe('Press space to speak, or reply')
       field.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }))
       expect(speech!.started).toBe(true)
-      expect(field.placeholder).toBe('Listening…')
+      // The prompt's breathing dot, with Listening… after it until words come.
+      const backdrop = () => popover()!.querySelector('.aa-composer-backdrop')!
+      expect(backdrop().querySelector('.aa-prompt-caret')).not.toBeNull()
+      expect(backdrop().querySelector('.aa-composer-listening')?.textContent).toBe('Listening…')
       speech!.onresult!({ resultIndex: 0, results: [Object.assign([{ transcript: 'Yes, two' }], { isFinal: true })] })
       expect(field.value).toBe('Yes, two')
+      expect(backdrop().textContent).toBe('Yes, two')
+      expect(backdrop().querySelector('.aa-prompt-caret[data-after]')).not.toBeNull()
       enter(field)
       await tick()
       expect(store!.threads[0].comments.at(-1)).toMatchObject({ body: 'Yes, two' })

@@ -13,7 +13,7 @@
 
 import { anchorThreads, applyEdit, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 import type { Decoration } from './render'
-import { canDictate, dictate, type Prompter } from './prompt'
+import { breatheDot, canDictate, dictate, type Prompter } from './prompt'
 import { icons } from './icons'
 
 export type CommentsViewOptions = {
@@ -392,11 +392,18 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const wrap = doc.createElement('span'); wrap.className = 'aa-composer-field'
     const backdrop = doc.createElement('span'); backdrop.className = 'aa-composer-backdrop'; backdrop.setAttribute('aria-hidden', 'true')
     wrap.append(backdrop, field)
+    // Listening, the caret is the prompt's breathing dot after the words heard, drawn on the same copy.
+    let dot: HTMLElement | null = null
     const paint = () => {
       const named = field.value.includes('@') ? mentionsIn(field.value, [...people.values()]) : []
       field.toggleAttribute('data-mentions', named.length > 0)
+      if (dot) {
+        dot.toggleAttribute('data-after', !!field.value)
+        const waiting = field.value ? [] : [Object.assign(doc.createElement('span'), { className: 'aa-composer-listening', textContent: 'Listening…' })]
+        backdrop.replaceChildren(...mentionPieces(field.value, named), dot, ...waiting)
       // A line break at the end takes room only with something after it.
-      if (named.length) backdrop.replaceChildren(...mentionPieces(field.value, named), '\u200b'); else backdrop.replaceChildren()
+      } else if (named.length) backdrop.replaceChildren(...mentionPieces(field.value, named), '\u200b')
+      else backdrop.replaceChildren()
     }
     paint()
     field.disabled = busy.has(key)
@@ -425,15 +432,21 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     let speaking: { stop(): void; abort(): void } | null = null
     const listen = () => {
       const before = field.value
+      let breath: ReturnType<typeof breatheDot> | null = null
       speaking = dictate({
         lang: doc.documentElement.lang || navigator.language,
         heard: words => {
           if (!field.isConnected) { speaking?.abort(); return }
           field.value = `${before}${before && words ? ' ' : ''}${words}`; drafts.set(key, field.value); paint(); grow(field)
         },
-        end: failure => { speaking = null; delete field.dataset.listening; field.placeholder = failure ?? offered },
+        audio: () => { void breath?.followVoice?.() },
+        end: failure => { speaking = null; breath?.stop(); dot = null; delete field.dataset.listening; field.placeholder = failure ?? offered; paint() },
       })
-      if (speaking) { field.dataset.listening = ''; field.placeholder = 'Listening…' }
+      if (!speaking) return
+      field.dataset.listening = ''; field.placeholder = ''
+      dot = Object.assign(doc.createElement('span'), { className: 'aa-prompt-caret' })
+      breath = breatheDot(dot, view)
+      paint()
     }
     field.addEventListener('blur', () => speaking?.stop())
     field.addEventListener('input', () => { drafts.set(key, field.value); paint(); grow(field); if (!asking) askPeople(field) })

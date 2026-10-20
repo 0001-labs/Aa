@@ -691,7 +691,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-comment-editing { display: block; width: calc(100% - var(--aa-unit)); margin-left: var(--aa-unit); background: transparent; padding: 0; }
 .aa-composer textarea::placeholder, .aa-comment-editing::placeholder { color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
 /* Asking AI from the field: what is asked in the prompt's live colour, as in a block. */
-.aa-composer textarea:is([data-asking], [data-listening]) { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); caret-color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); }
+.aa-composer textarea[data-asking] { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); caret-color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); }
 /* However many lines a reply takes, the avatar stands on its first line and the send on its last. */
 .aa-composer > .aa-avatar { align-self: flex-start; margin-top: calc((var(--aa-unit) - 16px * var(--aa-sf, 1)) / 2); }
 .aa-composer > .aa-composer-send { align-self: flex-end; }
@@ -702,8 +702,12 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-composer-backdrop { position: absolute; inset: 0; overflow: hidden; white-space: pre-wrap; overflow-wrap: break-word; line-height: var(--aa-unit); pointer-events: none; }
 .aa-composer textarea { position: relative; }
 .aa-composer textarea[data-mentions]:not([data-asking], [data-listening]) { color: transparent; caret-color: var(--ds-text-color, currentColor); }
+/* Listening, the words heard and the breathing dot are the copy's, in the prompt's colour; the field's own letters and caret are clear. */
+.aa-composer textarea[data-listening] { color: transparent; caret-color: transparent; }
+.aa-composer-field:has(textarea[data-listening]) .aa-composer-backdrop { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); }
+.aa-composer-listening { margin-inline-start: 0.25em; color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
 .aa-composer textarea[data-mentions]::selection { color: transparent; }
-.aa-composer-field:has(textarea:is([data-asking], [data-listening])) .aa-composer-backdrop { visibility: hidden; }
+.aa-composer-field:has(textarea[data-asking]) .aa-composer-backdrop { visibility: hidden; }
 .aa-composer-thinking { flex: 1 1 auto; min-width: 0; line-height: var(--aa-unit); }
 .aa-composer-send:hover { color: inherit; }
 /* The people menu under the composer: the Context face, a person a row. */
