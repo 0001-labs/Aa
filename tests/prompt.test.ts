@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createEditor, imageAtom, type Editor } from '../src/editor'
 import { diagramAtom, type AaDiagramBoardElement } from '../src/diagram'
-import type { PromptContext } from '../src/prompt'
+import type { PromptContext, Prompter } from '../src/prompt'
 
 let editor: Editor | undefined, host: HTMLElement | undefined
 afterEach(() => { editor?.destroy(); host?.remove(); editor = undefined; host = undefined; document.querySelectorAll('.aa-prompt, .aa-glisten').forEach(node => node.remove()); delete (globalThis as Record<string, unknown>).SpeechRecognition })
 
-function setup(value: string, prompt?: (said: string, context: PromptContext) => Promise<string>) {
+function setup(value: string, prompt?: Prompter) {
   host = document.createElement('div'); document.body.append(host)
   editor = createEditor(host, { value, prompt, atoms: [imageAtom, diagramAtom] })
   return editor
@@ -56,6 +56,42 @@ describe('asking AI', () => {
     expect(e.value).toBe('# Today\n\n- [ ] Milk\n- [ ] Bread\n- [ ] Eggs\n\nAfter')
     e.undo()
     expect(e.value).toBe(asking)
+  })
+
+  it('takes the whole document an answer writes: a title, boxes and a diagram changed or made where they stand, one step to undo, no room left', async () => {
+    const value = '# Notes\n\n- [x] Milk\n- [x] Bread\n\nEnd'
+    let sent: PromptContext | undefined
+    const e = setup(value, async (_said, context) => {
+      sent = context
+      return { document: '# A morning worth having\n\n- [ ] Milk\n- [ ] Bread\n\n```diagram\n[Shop]\n[Cook] @ 6 0\nShop -> Cook\n```\n\nEnd' }
+    })
+    e.selectRange(value.length)
+    key(host!.children[3], 'Enter')
+    const asking = e.value
+    const prompt = host!.children[4] as HTMLElement
+    key(prompt, ' ')
+    prompt.style.minHeight = '240px'
+    field()!.textContent = 'Make the title more captivating, uncheck the boxes and make a diagram of my morning'
+    key(field()!, 'Enter')
+    await settle()
+    // The whole document went, the prompt marked where it stands.
+    expect(sent!.document).toBe('# Notes\n\n- [x] Milk\n- [x] Bread\n\nEnd\n\n⟦here⟧')
+    expect(e.value).toBe('# A morning worth having\n\n- [ ] Milk\n- [ ] Bread\n\n```diagram\n[Shop]\n[Cook] @ 6 0\nShop -> Cook\n```\n\nEnd')
+    expect(host!.querySelector('aa-diagram-board')).not.toBeNull()
+    expect([...host!.children].every(child => !(child as HTMLElement).style.minHeight)).toBe(true)
+    e.undo()
+    expect(e.value).toBe(asking)
+  })
+
+  it('writes new writing where the prompt stands when the whole document puts it there', async () => {
+    const e = setup('One\n\nTwo', async (_said, { document }) => ({ document: document!.replace('⟦here⟧', 'Between') }))
+    e.selectRange(3)
+    key(host!.children[0], 'Enter')
+    key(host!.children[1], ' ')
+    field()!.textContent = 'Add a line'
+    key(field()!, 'Enter')
+    await settle()
+    expect(e.value).toBe('One\n\nBetween\n\nTwo')
   })
 
   it('both edits and inserts where an answer asks for both, and keeps nothing it cannot place exactly', async () => {

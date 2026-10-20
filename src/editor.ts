@@ -16,7 +16,7 @@ import { paintSelection } from './selection'
 import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
-import { openPrompt, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
+import { openPrompt, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -994,15 +994,20 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
           kind: 'writing', signal,
           text: toMarkdown(sectionOf(at).map(each => blocks[each])),
           before: toMarkdown(blocks.slice(0, at)), after: toMarkdown(blocks.slice(at + 1)),
+          // The whole document, so a request about any of it (a title, a box, a diagram) can be done where it stands.
+          document: toMarkdown(blocks.map(each => each === block ? { ...each, source: PROMPT_HERE } : each)),
         })
         const now = blocks.indexOf(block)
         if (destroyed || readOnly || now < 0 || block.source) throw new Error('Not answered')
+        // The room kept for the prompt goes before the answer is drawn, so no gap is left.
+        element.style.minHeight = ''
         const written = applyAnswer(now, answer)
         if (!written) throw new Error('Not answered')
         elements()[Math.min(written.caret, blocks.length - 1)]?.focus({ preventScroll: true })
       },
       close: sent => {
         asking = null
+        element.style.minHeight = ''
         const now = blocks.indexOf(block)
         if (sent || now < 0 || destroyed) return
         elements()[now].focus({ preventScroll: true })
@@ -1017,8 +1022,45 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
    * with nothing new, the empty block goes. What changed shimmers once, and
    * the caret stays where the prompt was.
    */
+  /**
+   * The whole document as an answer has it: what changed is drawn again, the
+   * rest stays the same blocks, as one change and one step to undo; the
+   * caret goes where the prompt stood, after anything written there.
+   */
+  const applyDocument = (at: number, document: string): { caret: number } | null => {
+    const text = document.replace(/\r\n?/g, '\n')
+    const here = text.indexOf(PROMPT_HERE)
+    const head = here < 0 ? null : text.slice(0, here).trimEnd()
+    const markdown = (here < 0 ? text : `${text.slice(0, here).trimEnd()}\n\n${text.slice(here + PROMPT_HERE.length).trimStart()}`).trim()
+    if (markdown === toMarkdown(blocks.filter((_, index) => index !== at)).trim()) return null
+    const lead = head === null ? at : head ? fromMarkdown(head).length : 0
+    return putIn(markdown, Math.max(0, lead - 1))
+  }
+
+  /** A document put in for the one there, keeping the blocks it leaves as they were; what changed shimmers once. */
+  const putIn = (markdown: string, caretBlock: number): { caret: number } => {
+    const old = blocks
+    const parsed = renumber(fromMarkdown(markdown))
+    const kept = new Set<Block>()
+    const next = parsed.map(each => {
+      const same = old.find(was => !kept.has(was) && was.source === each.source && was.kind === each.kind && (was.depth ?? 0) === (each.depth ?? 0) && was.number === each.number)
+      if (!same) return each
+      kept.add(same)
+      return same
+    })
+    const target = Math.min(caretBlock, next.length - 1)
+    const pos = { block: target, offset: next[target].source.length }
+    commit(next, pos, pos, 'edit')
+    blocks.forEach((each, index) => {
+      if (old.includes(each)) return
+      const stop = shimmer(elements()[index], [[0, each.source.length]]); shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000)
+    })
+    return { caret: target }
+  }
+
   const applyAnswer = (at: number, answer: PromptAnswer | string): { caret: number } | null => {
-    const { edits = [], insert = '' } = typeof answer === 'string' ? { insert: answer } : answer
+    const { edits = [], insert = '', document } = typeof answer === 'string' ? { insert: answer } : answer
+    if (typeof document === 'string' && document.trim()) return applyDocument(at, document)
     const once = (text: string, find: string) => { const index = text.indexOf(find); return index >= 0 && text.indexOf(find, index + 1) < 0 ? index : -1 }
     let before = toMarkdown(blocks.slice(0, at)), after = toMarkdown(blocks.slice(at + 1))
     let made = 0
@@ -1030,27 +1072,9 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     }
     const middle = insert.trim()
     if (!made && !middle) return null
-    const old = blocks
-    const parsed = renumber(fromMarkdown([before.trimEnd(), middle, after.trimStart()].filter(Boolean).join('\n\n')))
-    // Blocks the answer left as they were stay the same blocks, drawn as they were.
-    const kept = new Set<Block>()
-    const next = parsed.map(each => {
-      const same = old.find(was => !kept.has(was) && was.source === each.source && was.kind === each.kind && (was.depth ?? 0) === (each.depth ?? 0) && was.number === each.number)
-      if (!same) return each
-      kept.add(same)
-      return same
-    })
     // The caret goes after what was put in, or to the end of the block before the prompt.
     const lead = before.trim() ? fromMarkdown(before.trimEnd()).length : 0
-    const caretBlock = middle ? lead + fromMarkdown(middle).length - 1 : Math.max(0, lead - 1)
-    const target = Math.min(caretBlock, next.length - 1)
-    const pos = { block: target, offset: next[target].source.length }
-    commit(next, pos, pos, 'edit')
-    blocks.forEach((each, index) => {
-      if (old.includes(each)) return
-      const stop = shimmer(elements()[index], [[0, each.source.length]]); shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000)
-    })
-    return { caret: target }
+    return putIn([before.trimEnd(), middle, after.trimStart()].filter(Boolean).join('\n\n'), middle ? lead + fromMarkdown(middle).length - 1 : Math.max(0, lead - 1))
   }
 
   /** A diagram's board asking with its words: whether the editor can, and the answer. */

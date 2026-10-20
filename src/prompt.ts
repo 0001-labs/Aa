@@ -23,8 +23,15 @@ import { lightness } from './shimmer'
  */
 export type Prompter = (prompt: string, context: PromptContext) => Promise<string | PromptAnswer>
 
-/** What a prompt about writing does: `edits` in place, and `insert` where the prompt stood. */
-export type PromptAnswer = { edits?: { find: string; replace: string }[]; insert?: string }
+/**
+ * What a prompt about writing does: the whole `document` as it should be
+ * afterwards (`PROMPT_HERE` left where new writing would go, or taken out);
+ * or `edits` in place and `insert` where the prompt stood.
+ */
+export type PromptAnswer = { document?: string; edits?: { find: string; replace: string }[]; insert?: string }
+
+/** Where the prompt stands in the document sent with it. */
+export const PROMPT_HERE = '⟦here⟧'
 
 export type PromptContext = {
   /** Writing: the answer takes an empty block's place. Diagram: the answer is the diagram written again. */
@@ -34,6 +41,8 @@ export type PromptContext = {
   /** For writing: the Markdown before and after the prompt's block. */
   before?: string
   after?: string
+  /** For writing: the whole document, `PROMPT_HERE` standing on its own line where the prompt is. */
+  document?: string
   signal: AbortSignal
 }
 

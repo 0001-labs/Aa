@@ -18,13 +18,13 @@ const correct: Corrector = async (text, { before, after, signal }) => {
 
 /**
  * Asking AI the same way: Ezo's server answers the playground within one
- * allowance everyone here shares (`aiPrompt:playground`), with edits in place
- * and new writing for writing, and the diagram written again for a diagram.
+ * allowance everyone here shares (`aiPrompt:playground`), with the whole
+ * document as it should be for writing, and the diagram written again for a diagram.
  */
-const prompt: Prompter = async (said, { kind, text, before = '', after = '', signal }) => {
+const prompt: Prompter = async (said, { kind, text, before = '', after = '', document, signal }) => {
   const response = await fetch('https://first-impala-987.convex.cloud/api/action', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
-    body: JSON.stringify({ path: 'aiPrompt:playground', args: { kind, prompt: said, text: text.slice(0, 8000), before: before.slice(-4000), after: after.slice(0, 4000) }, format: 'json' }),
+    body: JSON.stringify({ path: 'aiPrompt:playground', args: { kind, prompt: said, text: text.slice(0, 8000), before: before.slice(-4000), after: after.slice(0, 4000), ...(document !== undefined && document.length <= 24000 ? { document } : {}) }, format: 'json' }),
   })
   const result = await response.json() as { status?: string; value?: unknown }
   if (result.status !== 'success' || !result.value || (typeof result.value !== 'string' && typeof result.value !== 'object')) throw new Error('Not answered')
