@@ -111,6 +111,25 @@ describe('asking AI', () => {
     expect(e.value).toBe('Hello. I am here. And here to stay.')
   })
 
+  it('offers AI at the end of a sentence in a bullet, and in a bullet with nothing written yet', async () => {
+    for (const [value, written] of [['- Milk. ', '- Milk. And bread.'], ['- One\n- ', '- One\n- And bread.']] as const) {
+      let sent: PromptContext | undefined
+      const e = setup(value, async (_said, context) => { sent = context; return { document: context.document!.replace('⟦here⟧', 'And bread.') } })
+      e.selectRange(value.length)
+      document.dispatchEvent(new Event('selectionchange'))
+      const block = host!.lastElementChild as HTMLElement
+      expect(block.dataset.hint).toBe('Press space for AI')
+      key(block, ' ')
+      expect(field()!.dataset.placeholder).toBe('Press space to speak')
+      field()!.textContent = 'Add bread'
+      key(field()!, 'Enter')
+      await settle()
+      expect(sent!.document).toBe(`${value}⟦here⟧`)
+      expect(e.value).toBe(written)
+      editor!.destroy(); host!.remove()
+    }
+  })
+
   it('goes on from the caret in a paragraph as its own words would: its width, on its lines, the first line at the caret', () => {
     const value = 'Hello. I am here. '
     const e = setup(value, async () => 'x')

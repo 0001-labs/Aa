@@ -232,14 +232,17 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   // function declared later in the same `let` to a same-named outer function,
   // and the editor throws as it draws.
   /**
-   * The caret at a sentence's end in a paragraph, as English sets one: after
-   * its full stop, question or exclamation mark and one space, nothing after
-   * it. There Space asks AI to go on, where the product answers prompts.
+   * The caret at a sentence's end in a paragraph or a bullet, as English sets
+   * one: after its full stop, question or exclamation mark and one space,
+   * nothing after it; or in a bullet with nothing written yet. There Space
+   * asks AI to go on, where the product answers prompts.
    */
   const atSentence = (selection: Selection2 | null): boolean => {
     if (!selection || !options.prompt || readOnly || selected || composing || comparePos(selection.anchor, selection.focus) !== 0) return false
     const block = blocks[selection.focus.block]
-    return !!block && block.kind === 'paragraph' && selection.focus.offset === block.source.length && /[^\s][.!?]["”’)]? $/.test(block.source)
+    if (!block || selection.focus.offset !== block.source.length) return false
+    if (block.kind === 'bullet' && block.source.length === block.prefix) return true
+    return (block.kind === 'paragraph' || block.kind === 'bullet') && /[^\s][.!?]["”’)]? $/.test(block.source)
   }
 
   const showPlaceholder = (selection?: Selection2 | null) => {
