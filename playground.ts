@@ -1,5 +1,5 @@
 import './src/aa.css'
-import { createEditor, defineAaEditor, imageAtom, type AaEditorElement, type Corrector, type Prompter } from './src/index'
+import { createEditor, defineAaEditor, imageAtom, type AaEditorElement, type Corrector, type PromptAnswer, type Prompter } from './src/index'
 import { diagramAtom } from './src/diagram'
 
 /**
@@ -18,8 +18,8 @@ const correct: Corrector = async (text, { before, after, signal }) => {
 
 /**
  * Asking AI the same way: Ezo's server answers the playground within one
- * allowance everyone here shares (`aiPrompt:playground`), with Markdown for
- * writing and the diagram written again for a diagram.
+ * allowance everyone here shares (`aiPrompt:playground`), with edits in place
+ * and new writing for writing, and the diagram written again for a diagram.
  */
 const prompt: Prompter = async (said, { kind, text, before = '', after = '', signal }) => {
   const response = await fetch('https://first-impala-987.convex.cloud/api/action', {
@@ -27,8 +27,8 @@ const prompt: Prompter = async (said, { kind, text, before = '', after = '', sig
     body: JSON.stringify({ path: 'aiPrompt:playground', args: { kind, prompt: said, text: text.slice(0, 8000), before: before.slice(-4000), after: after.slice(0, 4000) }, format: 'json' }),
   })
   const result = await response.json() as { status?: string; value?: unknown }
-  if (result.status !== 'success' || typeof result.value !== 'string') throw new Error('Not answered')
-  return result.value
+  if (result.status !== 'success' || !result.value || (typeof result.value !== 'string' && typeof result.value !== 'object')) throw new Error('Not answered')
+  return result.value as string | PromptAnswer
 }
 
 const editor = document.getElementById('editor') as AaEditorElement

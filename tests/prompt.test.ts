@@ -40,6 +40,35 @@ describe('asking AI', () => {
     expect(e.value).toBe(value)
   })
 
+  it('changes what is written in place when the answer edits it, and inserts nothing then', async () => {
+    const value = '# Today\n\n- [x] Milk\n- [x] Bread\n- [ ] Eggs\n\nAfter'
+    let asked: PromptContext | undefined
+    const e = setup(value, async (_said, context) => { asked = context; return { edits: [{ find: '- [x] Milk\n- [x] Bread', replace: '- [ ] Milk\n- [ ] Bread' }], insert: '' } })
+    e.selectRange(value.length)
+    key(host!.children[4], 'Enter')
+    const asking = e.value
+    key(host!.children[5], ' ')
+    field()!.textContent = 'Uncheck the boxes'
+    key(field()!, 'Enter')
+    await settle()
+    expect(asked!.before).toBe(value)
+    // The list changed where it stands, and the empty line the prompt stood on is gone: no copy.
+    expect(e.value).toBe('# Today\n\n- [ ] Milk\n- [ ] Bread\n- [ ] Eggs\n\nAfter')
+    e.undo()
+    expect(e.value).toBe(asking)
+  })
+
+  it('both edits and inserts where an answer asks for both, and keeps nothing it cannot place exactly', async () => {
+    const e = setup('One\n\nTwo', async () => ({ edits: [{ find: 'One', replace: 'First' }, { find: 'Nowhere', replace: 'x' }], insert: 'Between' }))
+    e.selectRange(3)
+    key(host!.children[0], 'Enter')
+    key(host!.children[1], ' ')
+    field()!.textContent = 'Name the first, and add a line'
+    key(field()!, 'Enter')
+    await settle()
+    expect(e.value).toBe('First\n\nBetween\n\nTwo')
+  })
+
   it('is a space as ever without a product to ask, and Escape puts a prompt away', () => {
     const e = setup('')
     e.selectRange(0)

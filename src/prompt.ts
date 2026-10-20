@@ -14,8 +14,17 @@
 
 import { lightness } from './shimmer'
 
-/** Asked with what the person said and what it is about; answers with Markdown for writing, or a diagram's words for a diagram. */
-export type Prompter = (prompt: string, context: PromptContext) => Promise<string>
+/**
+ * Asked with what the person said and what it is about. For writing it
+ * answers with edits to what is already written (each an exact passage and
+ * what it becomes) and new writing to stand where the prompt is, either or
+ * both, or with Markdown alone to put there; for a diagram, with the
+ * diagram written again.
+ */
+export type Prompter = (prompt: string, context: PromptContext) => Promise<string | PromptAnswer>
+
+/** What a prompt about writing does: `edits` in place, and `insert` where the prompt stood. */
+export type PromptAnswer = { edits?: { find: string; replace: string }[]; insert?: string }
 
 export type PromptContext = {
   /** Writing: the answer takes an empty block's place. Diagram: the answer is the diagram written again. */

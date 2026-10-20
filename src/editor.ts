@@ -16,7 +16,7 @@ import { paintSelection } from './selection'
 import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
-import { openPrompt, type OpenPrompt, type Prompter } from './prompt'
+import { openPrompt, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -996,13 +996,10 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
           before: toMarkdown(blocks.slice(0, at)), after: toMarkdown(blocks.slice(at + 1)),
         })
         const now = blocks.indexOf(block)
-        if (destroyed || readOnly || now < 0 || block.source || !answer.trim()) throw new Error('Not answered')
-        const { blocks: next, caret } = replaceRange(blocks, { block: now, offset: 0 }, { block: now, offset: 0 }, answer.trim())
-        elements()[now].focus({ preventScroll: true })
-        commit(next, caret, caret, 'edit')
-        // What came in shimmers once, as a correction does.
-        const end = caret.block
-        for (let each = now; each <= end; each++) { const stop = shimmer(elements()[each], [[0, blocks[each].source.length]]); shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000) }
+        if (destroyed || readOnly || now < 0 || block.source) throw new Error('Not answered')
+        const written = applyAnswer(now, answer)
+        if (!written) throw new Error('Not answered')
+        elements()[Math.min(written.caret, blocks.length - 1)]?.focus({ preventScroll: true })
       },
       close: sent => {
         asking = null
@@ -1013,13 +1010,56 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       },
     })
   }
+  /**
+   * An answer put in as one change, one step to undo: its edits made where
+   * the passages they name stand (each found once, before or after the
+   * prompt's empty block), and its new writing in the empty block's place;
+   * with nothing new, the empty block goes. What changed shimmers once, and
+   * the caret stays where the prompt was.
+   */
+  const applyAnswer = (at: number, answer: PromptAnswer | string): { caret: number } | null => {
+    const { edits = [], insert = '' } = typeof answer === 'string' ? { insert: answer } : answer
+    const once = (text: string, find: string) => { const index = text.indexOf(find); return index >= 0 && text.indexOf(find, index + 1) < 0 ? index : -1 }
+    let before = toMarkdown(blocks.slice(0, at)), after = toMarkdown(blocks.slice(at + 1))
+    let made = 0
+    for (const { find, replace } of edits) {
+      if (!find) continue
+      const inBefore = once(before, find), inAfter = once(after, find)
+      if (inBefore >= 0 && after.indexOf(find) < 0) { before = before.slice(0, inBefore) + replace + before.slice(inBefore + find.length); made++ }
+      else if (inAfter >= 0 && before.indexOf(find) < 0) { after = after.slice(0, inAfter) + replace + after.slice(inAfter + find.length); made++ }
+    }
+    const middle = insert.trim()
+    if (!made && !middle) return null
+    const old = blocks
+    const parsed = renumber(fromMarkdown([before.trimEnd(), middle, after.trimStart()].filter(Boolean).join('\n\n')))
+    // Blocks the answer left as they were stay the same blocks, drawn as they were.
+    const kept = new Set<Block>()
+    const next = parsed.map(each => {
+      const same = old.find(was => !kept.has(was) && was.source === each.source && was.kind === each.kind && (was.depth ?? 0) === (each.depth ?? 0) && was.number === each.number)
+      if (!same) return each
+      kept.add(same)
+      return same
+    })
+    // The caret goes after what was put in, or to the end of the block before the prompt.
+    const lead = before.trim() ? fromMarkdown(before.trimEnd()).length : 0
+    const caretBlock = middle ? lead + fromMarkdown(middle).length - 1 : Math.max(0, lead - 1)
+    const target = Math.min(caretBlock, next.length - 1)
+    const pos = { block: target, offset: next[target].source.length }
+    commit(next, pos, pos, 'edit')
+    blocks.forEach((each, index) => {
+      if (old.includes(each)) return
+      const stop = shimmer(elements()[index], [[0, each.source.length]]); shimmers.add(stop); setTimeout(() => shimmers.delete(stop), 2000)
+    })
+    return { caret: target }
+  }
+
   /** A diagram's board asking with its words: whether the editor can, and the answer. */
   const onAtomPrompt = (event: Event) => {
     const detail = (event as CustomEvent<{ prompt?: string; text?: string; signal?: AbortSignal; available?: boolean; answer?: Promise<string> }>).detail
     if (!detail || destroyed || readOnly) return
     event.stopPropagation()
     detail.available = !!options.prompt
-    if (options.prompt && detail.prompt && detail.signal) detail.answer = options.prompt(detail.prompt, { kind: 'diagram', text: detail.text ?? '', signal: detail.signal })
+    if (options.prompt && detail.prompt && detail.signal) detail.answer = options.prompt(detail.prompt, { kind: 'diagram', text: detail.text ?? '', signal: detail.signal }).then(answer => typeof answer === 'string' ? answer : answer.insert ?? '')
   }
   const onPointerDown = () => clearBlocks()
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
