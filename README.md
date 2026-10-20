@@ -15,7 +15,7 @@ const editor = createEditor(host, {
 })
 ```
 
-Menus are enabled by default. `commands`, `blockCommands` and toolbar actions accept `{ id, label, icon, run(editor) }`; icons name Aa's copied Design system 1 icons. `blockPlaceholder` is what an empty block with the caret says, `Type / for styles` unless set, `''` for nothing. Uploads and product actions belong to the host application.
+Menus are enabled by default. `commands`, `blockCommands` and toolbar actions accept `{ id, label, icon, run(editor) }`; icons name Aa's copied Design system 1 icons. `blockPlaceholder` is what an empty block with the caret says, “Press ‘space’ for AI or ‘/’ for commands” where `prompt` is given and “Type / for commands” otherwise, unless set, `''` for nothing. Uploads and product actions belong to the host application.
 
 The toolbar is Design system 1's context bar, drawn by its own `context.css`, which `aa.css` imports from `ds1/` beside it (in the package and in the Sync 1 copy). Its black fill is `light-dark()`: a build that lowers `light-dark()` for older browsers needs a `color-scheme` declared in that same build, or Design system 1's theme script, or the fill draws nothing.
 

@@ -54,7 +54,7 @@ export type EditorOptions = {
   placeholder?: string
   /**
    * What an empty block shows while the caret is in it, so the slash menu is
-   * found without a button beside the block: "Type / for styles" unless set,
+   * found without a button beside the block: "Press ‘space’ for AI or ‘/’ for commands" where the product answers prompts, "Type / for commands" otherwise, unless set,
    * nothing for ''. Never without menus or in a read-only editor.
    */
   blockPlaceholder?: string
@@ -130,7 +130,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let blocks: Block[] = fromMarkdown(options.value ?? '')
   let readOnly = !!options.readOnly
   let placeholder = options.placeholder ?? ''
-  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? 'Type / for styles'
+  // As Notion says it: Space asks AI where the product answers, / opens the commands.
+  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? (options.prompt ? 'Press ‘space’ for AI or ‘/’ for commands' : 'Type / for commands')
   let composing = false
   let destroyed = false
   let selected: BlockSelection | null = null

@@ -323,7 +323,7 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 
 /* Asking AI: a prompt stands over the empty block (or the board) in a live
    colour, so it reads as said to the AI, not written into the page; words
-   heard are in italics, the ones still being heard fainter. Sent, it
+   heard are in italics, the ones still being heard fainter, and nothing more marks that it listens. Sent, it
    glistens until the answer takes its place, and so does what it is about. */
 .aa-prompt {
   --aa-prompt-color: var(--aa-prompt, var(--ds-focus-ring, #594dff));
@@ -345,18 +345,20 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   opacity: 0.55;
   pointer-events: none;
 }
-/* Listening, the colour breathes. */
-.aa-prompt[data-listening]::after {
-  content: '';
-  display: inline-block;
+/* Listening, the caret is a dot breathing where it stands; it is the caret again once listening stops. */
+.aa-prompt[data-listening] { caret-color: transparent; }
+.aa-prompt-caret {
+  position: fixed;
+  z-index: 1001;
   width: calc(6px * var(--aa-sf, 1));
   height: calc(6px * var(--aa-sf, 1));
-  margin-inline-start: calc(4px * var(--aa-sf, 1));
+  margin: calc(-3px * var(--aa-sf, 1)) 0 0 calc(-3px * var(--aa-sf, 1));
   border-radius: 50%;
-  background: var(--aa-prompt-color);
-  vertical-align: middle;
+  background: var(--aa-prompt, var(--ds-focus-ring, #594dff));
+  pointer-events: none;
   animation: aa-prompt-breathe 1.2s ease-in-out infinite;
 }
+@media (prefers-reduced-motion: reduce) { .aa-prompt-caret { animation: none; } }
 .aa-prompt i { font-style: italic; }
 .aa-prompt .aa-prompt-heard { opacity: 0.6; }
 .aa-prompt[data-loading] { cursor: progress; }
@@ -383,7 +385,6 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 @keyframes aa-glisten-pass { to { transform: translateX(100%); } }
 @media (prefers-reduced-motion: reduce) {
   .aa-glisten::after { transform: none; animation: aa-prompt-breathe 1.8s ease-in-out infinite; opacity: 0.4; }
-  .aa-prompt[data-listening]::after { animation: none; }
 }
 @media (forced-colors: active) {
   .aa-glisten { display: none; }

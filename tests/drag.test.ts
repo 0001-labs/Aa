@@ -258,7 +258,7 @@ describe('writing without a plus', () => {
   it('says how to reach the styles in the empty block the caret is in', () => {
     const e = setup('One')
     e.selectRange(3); key('Enter')
-    expect(block(1).dataset.placeholder).toBe('Type / for styles')
+    expect(block(1).dataset.placeholder).toBe('Type / for commands')
     e.replace(5, 5, 'T')
     expect(block(1).dataset.placeholder).toBeUndefined()
     e.destroy(); host!.remove()

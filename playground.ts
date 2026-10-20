@@ -93,7 +93,7 @@ Drag a block up or down to move it; dragging along a line selects words. Rest th
 | Capability | Try it |
 | --- | --- |
 | Tables | Tab moves between cells; Enter leaves the table |
-| Menus | Type / for styles, ⌘/ for the block's commands |
+| Menus | Space for AI, / for commands, ⌘/ for the block's commands |
 
 ==Highlight a thought==, or write an equation: $E = mc^2$.
 

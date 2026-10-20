@@ -43,11 +43,15 @@ describe('asking AI', () => {
   it('is a space as ever without a product to ask, and Escape puts a prompt away', () => {
     const e = setup('')
     e.selectRange(0)
+    document.dispatchEvent(new Event('selectionchange'))
+    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBe('Type / for commands')
     expect(key(host!.children[0], ' ')).toBe(true)
     expect(field()).toBeNull()
     editor!.destroy(); host!.remove()
     const f = setup('', async () => 'never')
     f.selectRange(0)
+    document.dispatchEvent(new Event('selectionchange'))
+    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBe('Press ‘space’ for AI or ‘/’ for commands')
     key(host!.children[0], ' ')
     key(field()!, 'Escape')
     expect(field()).toBeNull()
@@ -74,6 +78,11 @@ describe('asking AI', () => {
     Speech.last.onresult!({ resultIndex: 0, results: [result('write a plan for Friday', true)] })
     expect(field()!.querySelector('i')!.textContent).toBe('write a plan for Friday')
     expect(field()!.querySelector('.aa-prompt-heard')).toBeNull()
+    // Listening, the caret is a dot; once it stops, the caret again.
+    expect(document.querySelector('.aa-prompt-caret')).not.toBeNull()
+    Speech.last.stop()
+    expect(document.querySelector('.aa-prompt-caret')).toBeNull()
+    expect(field()!.hasAttribute('data-listening')).toBe(false)
   })
 
   it('draws on a diagram from its board, the answer the diagram written again', async () => {

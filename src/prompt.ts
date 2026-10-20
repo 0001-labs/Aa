@@ -97,6 +97,18 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   let stopGlisten = () => {}
   let listening: SpeechRecognitionLike | null = null
   let heard: HTMLElement | null = null
+  /** While listening, the caret drawn as a dot where it stands. */
+  let dot: HTMLElement | null = null
+  const placeDot = () => {
+    if (!dot) return
+    const selection = view.getSelection()
+    const range = selection?.rangeCount && field.contains(selection.anchorNode) ? selection.getRangeAt(0) : null
+    const rect = range?.getClientRects()[0] ?? range?.getBoundingClientRect()
+    const box = field.getBoundingClientRect()
+    const x = rect && rect.height ? rect.left : box.left, y = rect && rect.height ? rect.top + rect.height / 2 : box.top + box.height / 2
+    Object.assign(dot.style, { left: `${x}px`, top: `${y}px` })
+  }
+  const stopDot = () => { dot?.remove(); dot = null; doc.removeEventListener('selectionchange', placeDot); view.removeEventListener('scroll', placeDot, true) }
 
   const text = () => (field.textContent ?? '').replace(/\s+/g, ' ').trim()
   const close = (sent = false) => {
@@ -104,6 +116,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     closed = true
     sending?.abort()
     listening?.abort()
+    stopDot()
     stopGlisten()
     field.remove()
     view.removeEventListener('scroll', place, true)
@@ -117,6 +130,12 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     if (!speech) { field.dataset.placeholder = 'Speaking is not available in this browser'; return }
     listening = speech
     field.dataset.listening = ''
+    dot = Object.assign(doc.createElement('div'), { className: 'aa-prompt-caret' })
+    dot.setAttribute('aria-hidden', 'true')
+    root.append(dot)
+    doc.addEventListener('selectionchange', placeDot)
+    view.addEventListener('scroll', placeDot, true)
+    placeDot()
     field.dataset.placeholder = 'Listening…'
     speech.lang = doc.documentElement.lang || navigator.language
     speech.continuous = true
@@ -137,8 +156,9 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
       // The caret stays after what was heard, so typing goes on from there.
       const range = doc.createRange(); range.selectNodeContents(field); range.collapse(false)
       const selection = view.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
+      placeDot()
     }
-    speech.onend = () => { listening = null; delete field.dataset.listening; field.dataset.placeholder = options.placeholder ?? 'Ask AI to write' }
+    speech.onend = () => { listening = null; stopDot(); delete field.dataset.listening; field.dataset.placeholder = options.placeholder ?? 'Ask AI to write' }
     speech.onerror = () => speech.onend?.()
     try { speech.start() } catch { speech.onend?.() }
   }
