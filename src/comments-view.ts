@@ -463,7 +463,6 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
         actions.append(remove)
       }
     }
-    if (!panel) actions.append(iconButton('Close', 'close', () => close()))
     if (named) head.append(actions)
     thread.comments.forEach((comment, index) => {
       const row = commentRow(thread, comment)
@@ -491,15 +490,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     if (panel) {
       const head = doc.createElement('div'); head.className = 'aa-thread-head'
       const quote = doc.createElement('span'); quote.className = 'aa-thread-quote'; quote.textContent = draft!.quote.replace(/\s+/g, ' ')
-      const actions = doc.createElement('div'); actions.className = 'aa-thread-actions'
-      actions.append(iconButton('Close', 'close', () => close()))
-      head.append(quote, actions)
+      head.append(quote)
       article.append(head, field)
-    } else {
-      // The selected words stand right over it: one row, the close after the send.
-      field.append(iconButton('Close', 'close', () => close()))
-      article.append(field)
-    }
+    } else article.append(field) // The selected words stand right over it: one row; a press outside or Escape puts it away.
     const error = errors.get('draft')
     if (error) { const line = doc.createElement('p'); line.className = 'aa-comments-error'; line.setAttribute('role', 'alert'); line.textContent = error; article.append(line) }
     return article

@@ -125,7 +125,7 @@ describe('the popover', () => {
     expect(e.comments!.start()).toBe(true)
     expect(marks().some(span => span.getAttribute('data-comment') === 'draft')).toBe(true)
     expect(popover()!.querySelector('.aa-thread-quote')).toBeNull()
-    expect(popover()!.querySelector('.aa-composer [aria-label="Close"]')).not.toBeNull()
+    expect(popover()!.querySelector('[aria-label="Close"]')).toBeNull()
     const field = popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!
     expect(field.placeholder).toBe('Add a comment')
     field.value = 'Five what?'; field.dispatchEvent(new Event('input', { bubbles: true }))
