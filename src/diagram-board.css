@@ -1,6 +1,6 @@
-/* A diagram's board: the drawing on Design system 1's squares, and, while it
-   has the keys, the squares themselves ruled under it and a Context row of
-   tools over it, in the square the writing above leaves free. Nothing moves
+/* A diagram's board: the drawing on Design system 1's squares, ruled under
+   it, and, while it has the keys, more of them, its Context row of tools
+   in the middle under it. Nothing moves
    in the drawing for the board: it stands where it stood. */
 :host {
   --board-unit: var(--aa-diagram-unit, var(--ds-grid-unit, calc(20px * var(--sf, 1))));
@@ -42,6 +42,17 @@
 
 /* Chosen, the board shows its squares: room for the next box beside and
    under the drawing, every line one pixel on the grid's line. */
+/* The squares are always ruled under the drawing; while it is drawn on,
+   the paper also runs on past it, with room for what comes next. */
+.paper {
+  background-image:
+    linear-gradient(to right, var(--board-rule) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--board-rule) 1px, transparent 1px);
+  background-size: var(--board-unit) var(--board-unit);
+  background-position: -0.5px -0.5px;
+  background-attachment: local;
+}
+
 :host([data-active]) .paper {
   height: calc(var(--board-rows) * var(--board-unit));
   background-image:
@@ -180,6 +191,9 @@
   scrollbar-width: none;
   clip-path: inset(0 round var(--ds-radius, calc(4px * var(--board-sf))));
 }
+
+/* While the diagram is drawn on, its tools stand in the middle under it. */
+:host([data-active]) .tools { margin-inline: auto; }
 
 .tools button { flex: 0 0 auto; }
 
