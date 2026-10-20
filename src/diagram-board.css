@@ -79,11 +79,26 @@
 .ghost-box,
 .grip {
   position: absolute;
-  left: calc(var(--x) * var(--board-unit));
-  top: calc(var(--y) * var(--board-unit));
+  left: 0;
+  top: 0;
   width: calc(var(--w) * var(--board-unit));
   height: calc(var(--h) * var(--board-unit));
   box-sizing: border-box;
+  transform: translate(calc(var(--x) * var(--board-unit)), calc(var(--y) * var(--board-unit)));
+}
+
+/* A group carried follows the pointer exactly; its ring is where it will
+   land, and glides from square to square as Music's tiles snap. */
+:host([data-moving]) .ring,
+.ghost-box {
+  transition: transform 0.14s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+:host([data-moving]) .grip { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  :host([data-moving]) .ring,
+  .ghost-box { transition: none; }
 }
 
 .ring { box-shadow: inset 0 0 0 2px var(--board-ring); }
@@ -95,8 +110,7 @@
 /* The grip of what is chosen sizes it: a range's thumb, one control high and
    half a control wide, astride the box's end; a post-it's sits on its corner. */
 .grip {
-  left: calc((var(--x) + var(--w)) * var(--board-unit) - 4px * var(--board-sf));
-  top: calc(var(--y) * var(--board-unit) + (var(--h) * var(--board-unit) - 16px * var(--board-sf)) / 2);
+  transform: translate(calc((var(--x) + var(--w)) * var(--board-unit) - 4px * var(--board-sf)), calc(var(--y) * var(--board-unit) + (var(--h) * var(--board-unit) - 16px * var(--board-sf)) / 2));
   width: calc(8px * var(--board-sf));
   height: calc(16px * var(--board-sf));
   border-radius: calc(2px * var(--board-sf));
@@ -107,7 +121,7 @@
 }
 
 .grip[data-corner] {
-  top: calc((var(--y) + var(--h)) * var(--board-unit) - 4px * var(--board-sf));
+  transform: translate(calc((var(--x) + var(--w)) * var(--board-unit) - 4px * var(--board-sf)), calc((var(--y) + var(--h)) * var(--board-unit) - 4px * var(--board-sf)));
   height: calc(8px * var(--board-sf));
   cursor: nwse-resize;
 }

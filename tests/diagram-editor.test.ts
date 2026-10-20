@@ -116,9 +116,20 @@ describe('drawing on a diagram\'s board', () => {
   const tool = (label: string) => part<HTMLButtonElement>(`.tools button[aria-label^="${label}"]`)
   const nextTask = () => new Promise(resolve => setTimeout(resolve))
 
-  it('moves a group a square at a time and writes its place, as one step to undo', async () => {
+  it('carries a group with the pointer, settles it on whole squares and writes its place, as one step to undo', async () => {
     const e = setup(SOURCE)
-    await drag([1, 0], [5, 0])
+    await drawingIn(blockElements()[1])!.updateComplete
+    pointer('pointerdown', 1, 0)
+    pointer('pointermove', 5.25, 0.25)
+    // Carried, the box follows the pointer by transform alone, and its ring stands where it will land.
+    const box = drawingIn(blockElements()[1])!.shadowRoot!.querySelector<HTMLElement>('.box')!
+    expect(box.style.transform).toBe('translate(85px, 5px)')
+    expect(part<HTMLElement>('.ring').style.getPropertyValue('--x')).toBe('4')
+    pointer('pointerup', 5.25, 0.25)
+    // It settles onto its squares, then is written there.
+    expect(box.style.transform).toBe('translate(80px, 0px)')
+    expect(e.value).toBe(SOURCE)
+    await new Promise(resolve => setTimeout(resolve, 400))
     expect(e.value).toBe(SOURCE.replace('[A]', '[A] @ 4 0'))
     expect(board().hasAttribute('data-active')).toBe(true)
     expect(document.activeElement).toBe(board())

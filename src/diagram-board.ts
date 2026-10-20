@@ -57,6 +57,8 @@ const CHIPS: Record<DiagramColor, string> = {
 const KIND_NAMES: Record<DiagramGroup['kind'], string> = { box: 'box', stack: 'group', 'post-it': 'post-it', month: 'month', grid: 'grid', chart: 'chart' }
 /** How near a line a press takes it, in squares. */
 const NEAR_LINE = 0.3
+/** How long a group let go takes to settle onto its squares, in milliseconds: Drag's shortest drop. */
+const SETTLE = 330
 /** A box added stands an item across and a square down; a post-it two items a side. */
 const SIZES = { box: { w: 4, h: 1 }, 'post-it': { w: 8, h: 8 } } as const
 const HELP = 'Tab chooses each box and line. Arrows move what is chosen, Alt and arrows size it, Enter names it, L or A joins it to another, B adds a box, P a post-it, Delete takes it away.'
@@ -495,15 +497,82 @@ export class AaDiagramBoardElement extends Base {
     }
   }
 
-  /** A group carried a whole square at a time, written `@ x y` where it is let go. */
+  /**
+   * A group carried as Music carries a clip on Drag: it follows the pointer
+   * exactly, by transform alone, while its ring glides from square to square
+   * to where it will land; let go, it settles onto those squares and is
+   * written `@ x y` there. Taken back, it glides home.
+   */
   #moving(target: DiagramTarget & { group: number }): GridGesture {
     const group = this.#layout.groups[target.group]
-    return this.#redrawing(
-      ({ moved }) => moved.x || moved.y ? moveGroup(this.#source, this.#layout, target.group, group.x + moved.x, group.y + moved.y) : this.#source,
-      target,
-      `Moved ${this.#nameOf(target) ?? ''}`.trim(),
-      'data-moving',
-    )
+    let working = this.#source
+    let landing = { x: 0, y: 0 }
+    let pieces: { element: HTMLElement; transform: string }[] = []
+    const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    /** Every piece of the group as drawn, carried by the same offset in pixels. */
+    const carry = (x: number, y: number, settle: boolean) => {
+      for (const { element, transform } of pieces) {
+        element.style.transition = settle && !reduced() ? `transform ${SETTLE}ms cubic-bezier(.2, 1, .1, 1)` : 'none'
+        element.style.transform = `translate(${x}px, ${y}px) ${transform}`.trim()
+      }
+    }
+    /** Once it has settled (or at once, with less motion), the pieces are drawn where they stand by the drawing itself. */
+    const after = (then: () => void) => {
+      const done = () => {
+        this.removeAttribute('data-moving')
+        for (const { element } of pieces) { element.style.transition = ''; element.style.transform = ''; element.style.zIndex = '' }
+        pieces = []
+        then()
+      }
+      if (reduced()) done(); else setTimeout(done, SETTLE)
+    }
+    return {
+      onStart: () => {
+        this.setAttribute('data-moving', '')
+        pieces = this.#piecesOf(group).map(element => {
+          const transform = getComputedStyle(element).transform
+          element.style.zIndex = '3'
+          return { element, transform: transform === 'none' ? '' : transform }
+        })
+      },
+      onMove: ({ point, origin, moved }) => {
+        const unit = this.#unit()
+        // Never past the paper's first square.
+        carry(Math.max(-group.x, point.x - origin.x) * unit, Math.max(-group.y, point.y - origin.y) * unit, false)
+        const next = moved.x || moved.y ? moveGroup(this.#source, this.#layout, target.group, group.x + moved.x, group.y + moved.y) : this.#source
+        if (next === working) return
+        working = next
+        const layout = layoutDiagram(next)
+        const landed = layout.groups[target.group]
+        landing = landed ? { x: landed.x - group.x, y: landed.y - group.y } : { x: 0, y: 0 }
+        this.#size(layout)
+        this.#drawChoice(layout)
+      },
+      onDrop: () => {
+        const written = working, unit = this.#unit()
+        carry(landing.x * unit, landing.y * unit, true)
+        after(() => {
+          if (written === this.#source) { this.#drawChoice(); return }
+          this.#commit(written, { target }, `Moved ${this.#nameOf(target) ?? ''}`.trim())
+        })
+      },
+      onCancel: () => {
+        carry(0, 0, true)
+        after(() => { this.#size(this.#layout); this.#drawChoice() })
+      },
+    }
+  }
+
+  /** A group's pieces as the drawing draws them: its boxes and name, or a post-it and its name; never the groups placed on a post-it. */
+  #piecesOf(group: DiagramGroup): HTMLElement[] {
+    const root = this.#drawing?.shadowRoot
+    if (!root) return []
+    const at = (element: HTMLElement, name: string) => parseFloat(element.style.getPropertyValue(`--${name}`))
+    return [...root.querySelectorAll<HTMLElement>('.post-it, .label, .box, .day, .chart-name')].filter(element => {
+      const x = at(element, 'x'), y = at(element, 'y')
+      if (group.kind === 'post-it') return element.classList.contains('post-it') ? x === group.x && y === group.y : element.classList.contains('label') && x === group.x + 1 && y === group.y + 1
+      return !element.classList.contains('post-it') && x >= group.x && x < group.x + group.w && y >= group.y && y < group.y + group.h
+    })
   }
 
   /** A box sized by its grip in whole items, a post-it by its corner in whole columns. */
