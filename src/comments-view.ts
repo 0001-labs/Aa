@@ -417,7 +417,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     meta.className = 'aa-comment-meta'
     const name = doc.createElement('span'); name.className = 'aa-comment-author'; name.textContent = comment.author.name
     const time = doc.createElement('time'); time.className = 'aa-comment-time'; time.dateTime = new Date(comment.createdAt).toISOString()
-    time.textContent = `${relativeTime(comment.createdAt)}${comment.editedAt ? ' · Edited' : ''}`
+    time.textContent = `${relativeTime(comment.createdAt)}${editing === comment.id ? ' · Editing' : comment.editedAt ? ' · Edited' : ''}`
     time.title = new Date(comment.createdAt).toLocaleString()
     meta.append(avatar(comment.author), name, time)
     const own = !!store.me && comment.author.id === store.me.id

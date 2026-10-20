@@ -202,6 +202,7 @@ describe('the popover', () => {
     marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
     popover()!.querySelector<HTMLButtonElement>('.aa-comment-edit')!.click()
     const field = popover()!.querySelector<HTMLTextAreaElement>('[data-edit="c1"]')!
+    expect(popover()!.querySelector('.aa-comment-time')?.textContent).toContain('Editing')
     field.value = 'Mine, changed'; enter(field)
     await tick()
     expect(store!.threads[0].comments[0]).toMatchObject({ body: 'Mine, changed' })
