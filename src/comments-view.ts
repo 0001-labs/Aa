@@ -67,10 +67,10 @@ const textButton = (label: string, action: () => void, className = ''): HTMLButt
   return node
 }
 
-/** A person's mark: a round 16px avatar with their initial, in their colour. */
+/** A person's mark: Design system 1's avatar, round and one control high, the initial lettered in their ink inside a ring of it. */
 export const avatar = (person: CommentPerson): HTMLSpanElement => {
   const mark = document.createElement('span')
-  mark.className = 'aa-avatar'
+  mark.className = 'aa-avatar ds-avatar ds-avatar--outlined'
   mark.textContent = initialOf(person.name)
   mark.style.setProperty('--aa-person', personColour(person))
   mark.setAttribute('aria-hidden', 'true')

@@ -666,15 +666,16 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-comment-mention { color: var(--aa-person, inherit); }
 .aa-thread-resolved { margin: 0 0 0 var(--aa-unit); min-height: var(--aa-unit); color: var(--aa-muted); }
 .aa-comments-error { margin: 0 0 0 var(--aa-unit); min-height: var(--aa-unit); color: var(--ds-tuned-red, var(--tuned-red, #ff5f5f)); }
-/* The avatar: round, one control, the initial in small type on the person's colour. */
-.aa-avatar { display: inline-flex; flex: none; align-items: center; justify-content: center; width: calc(16px * var(--aa-sf, 1)); height: calc(16px * var(--aa-sf, 1)); border-radius: 50%; background: var(--aa-person, var(--ds-slate-light, #e6e6e6)); color: var(--ds-white, #fff); font-family: "Inter Arrows", var(--aa-typeface-bold, var(--ds-typeface-medium, var(--typeface-medium, inherit))), system-ui, sans-serif; font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf, 1))); font-weight: var(--ds-type-weight-bold, 500); letter-spacing: 0; line-height: 1; user-select: none; }
+/* The avatar is Design system 1's `.ds-avatar` mark, as Ezo draws a person: round, one control
+   high, the initial in small type lettered in the person's ink inside a ring of it, no fill.
+   The same rules as DS1's sheet, so a page without it draws the same. */
+.aa-avatar { --ds-avatar-background: transparent; --ds-avatar-color: var(--aa-person, var(--ds-text-color-muted, #797979)); box-sizing: border-box; position: relative; display: inline-grid; place-items: center; flex: 0 0 auto; width: calc(16px * var(--aa-sf, 1)); height: calc(16px * var(--aa-sf, 1)); overflow: hidden; border-radius: 50%; background: transparent; color: var(--aa-person, var(--ds-text-color-muted, #797979)); box-shadow: inset 0 0 0 1px currentColor; font: var(--ds-type-weight-default, 400) var(--ds-type-size-small, calc(10px * var(--aa-sf, 1))) / 1 var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))); letter-spacing: normal; text-align: center; white-space: nowrap; user-select: none; }
 /* The composer: one square high, growing a square a line; Enter sends. */
 .aa-composer { display: flex; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); margin: calc(var(--aa-unit) / 2) 0 0; min-height: var(--aa-unit); }
 .aa-thread-head + .aa-composer, .aa-thread > .aa-composer:first-child { margin-top: 0; }
 .aa-composer textarea, .aa-comment-editing { box-sizing: border-box; flex: 1 1 auto; width: 100%; min-width: 0; min-height: var(--aa-unit); max-height: calc(8 * var(--aa-unit)); margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; line-height: var(--aa-unit); resize: none; overflow: hidden; outline: none; }
 .aa-comment-editing { display: block; width: calc(100% - var(--aa-unit)); margin-left: var(--aa-unit); background: var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)); border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1))); padding: 0 calc(4px * var(--aa-sf, 1)); }
 .aa-composer textarea::placeholder, .aa-comment-editing::placeholder { color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
-.aa-composer textarea:focus-visible { box-shadow: inset 0 -1px var(--ds-focus-ring, #594dff); }
 .aa-composer-send { color: var(--aa-muted); }
 .aa-composer-send:hover { color: inherit; }
 /* The people menu under the composer: the Context face, a person a row. */
