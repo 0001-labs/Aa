@@ -58,7 +58,7 @@ export type EditorOptions = {
   placeholder?: string
   /**
    * What an empty block shows while the caret is in it, so the slash menu is
-   * found without a button beside the block: "Press ‘space’ for AI or ‘/’ for commands" where the product answers prompts, "Type / for commands" otherwise, unless set,
+   * found without a button beside the block: "Press space for AI or / for commands" where the product answers prompts, "Type / for commands" otherwise, unless set,
    * nothing for ''. Never without menus or in a read-only editor.
    */
   blockPlaceholder?: string
@@ -152,7 +152,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let readOnly = !!options.readOnly
   let placeholder = options.placeholder ?? ''
   // As Notion says it: Space asks AI where the product answers, / opens the commands.
-  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? (options.prompt ? 'Press ‘space’ for AI or ‘/’ for commands' : 'Type / for commands')
+  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? (options.prompt ? 'Press space for AI or / for commands' : 'Type / for commands')
   let composing = false
   let destroyed = false
   let selected: BlockSelection | null = null
@@ -242,7 +242,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       if (text) element.dataset.placeholder = text
       else if (element.dataset.placeholder !== undefined) delete element.dataset.placeholder
       // At a sentence's end, only the AI is offered, never the commands.
-      if (index === sentence) element.dataset.hint = 'Press ‘space’ for AI'
+      if (index === sentence) element.dataset.hint = 'Press space for AI'
       else if (element.dataset.hint !== undefined) delete element.dataset.hint
     })
   }
@@ -1454,6 +1454,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     decorate: ranges => editor.decorate(ranges, 'comments'),
     selectRange: (start, end) => editor.selectRange(start, end),
     readOnly: () => readOnly,
+    prompt: options.prompt,
   })
   stopControls = createControls(editor, options)
   return editor

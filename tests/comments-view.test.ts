@@ -250,6 +250,32 @@ describe('reactions', () => {
   })
 })
 
+describe('asking AI from the field', () => {
+  it('offers AI in the empty field where the product answers, and puts the answer in as the draft', async () => {
+    host = document.createElement('div'); document.body.append(host)
+    store = memoryCommentStore({ me: ann, people: [ann, bo], threads: threads() })
+    const asked: { said: string; text: string; before: string }[] = []
+    editor = createEditor(host, { value: TEXT, comments: store, prompt: async (said, context) => { asked.push({ said, text: context.text, before: context.before ?? '' }); return 'Two is the count of the words.' } })
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    const field = popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!
+    expect(field.placeholder).toBe('Press space for AI, or reply')
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }))
+    expect(field.hasAttribute('data-asking')).toBe(true)
+    expect(field.placeholder).toBe('Ask AI about these words')
+    field.value = 'Why two?'; enter(field)
+    await tick()
+    expect(asked).toEqual([{ said: 'Why two?', text: 'two', before: 'Bo: Why two?' }])
+    expect(field.value).toBe('Two is the count of the words.')
+    expect(field.hasAttribute('data-asking')).toBe(false)
+    expect(store!.threads[0].comments).toHaveLength(1)
+  })
+  it('says only the words without a prompt', () => {
+    setup()
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(popover()!.querySelector<HTMLTextAreaElement>('.aa-composer textarea')!.placeholder).toBe('Reply')
+  })
+})
+
 describe('the panel', () => {
   it('lists every thread, open ones first, the resolved under their heading, and counts them', () => {
     const panel = document.createElement('aside'); document.body.append(panel)

@@ -13,6 +13,7 @@
 
 import { anchorThreads, applyEdit, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 import type { Decoration } from './render'
+import type { Prompter } from './prompt'
 import { icons } from './icons'
 
 export type CommentsViewOptions = {
@@ -25,6 +26,8 @@ export type CommentsViewOptions = {
   decorate: (ranges: readonly Decoration[]) => void
   selectRange: (start: number, end?: number) => void
   readOnly: () => boolean
+  /** Answers AI, where the product does: Space in an empty comment field asks about the commented words. */
+  prompt?: Prompter
   root?: Element
 }
 
@@ -360,12 +363,38 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     form.setAttribute('aria-label', placeholder)
     if (store.me) form.append(avatar(store.me))
     const field = doc.createElement('textarea')
-    field.rows = 1; field.placeholder = placeholder; field.setAttribute('aria-label', placeholder)
+    // As an empty block says it: Space asks AI where the product answers, about the commented words.
+    const offered = options.prompt ? `Press space for AI, or ${placeholder.charAt(0).toLowerCase()}${placeholder.slice(1)}` : placeholder
+    field.rows = 1; field.placeholder = offered; field.setAttribute('aria-label', placeholder)
     field.value = drafts.get(key) ?? ''
     field.disabled = busy.has(key)
-    field.addEventListener('input', () => { drafts.set(key, field.value); grow(field); askPeople(field) })
+    let asking: AbortController | null = null
+    const stopAsking = () => { asking?.abort(); asking = null; delete field.dataset.asking; field.removeAttribute('data-aa-glisten'); field.placeholder = offered }
+    const ask = async () => {
+      const said = field.value.trim()
+      if (!said || !options.prompt || !asking) return
+      const thread = key === 'draft' ? null : placed.find(each => each.id === key)
+      const quote = key === 'draft' ? draft?.quote ?? '' : thread?.quote ?? ''
+      const sofar = thread ? thread.comments.map(comment => `${comment.author.name}: ${comment.body}`).join('\n\n') : ''
+      const { signal } = asking
+      field.setAttribute('data-aa-glisten', ''); field.readOnly = true
+      try {
+        const answer = await options.prompt(said, { kind: 'writing', signal, text: quote, before: sofar, after: '' })
+        if (signal.aborted) return
+        const words = typeof answer === 'string' ? answer : answer.insert ?? answer.document ?? ''
+        field.value = words.trim(); drafts.set(key, field.value)
+      } catch (error) { if (!signal.aborted) refused(key, error) }
+      finally { field.readOnly = false; stopAsking(); grow(field); field.focus() }
+    }
+    field.addEventListener('input', () => { drafts.set(key, field.value); grow(field); if (!asking) askPeople(field) })
     field.addEventListener('keydown', event => {
       if (menuKeys(event)) return
+      if (event.key === ' ' && !field.value && options.prompt && !asking && !event.isComposing) { event.preventDefault(); asking = new AbortController(); field.dataset.asking = ''; field.placeholder = 'Ask AI about these words'; return }
+      if (asking) {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void ask() }
+        if (event.key === 'Escape' || (event.key === 'Backspace' && !field.value)) { event.preventDefault(); stopAsking(); field.value = ''; drafts.delete(key) }
+        return
+      }
       if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(key, field.value) }
       if (event.key === 'Escape') { event.preventDefault(); close() }
     })

@@ -101,7 +101,7 @@ describe('asking AI', () => {
     e.selectRange(value.length)
     document.dispatchEvent(new Event('selectionchange'))
     const block = host!.children[0] as HTMLElement
-    expect(block.dataset.hint).toBe('Press ‘space’ for AI')
+    expect(block.dataset.hint).toBe('Press space for AI')
     expect(block.dataset.placeholder).toBeUndefined()
     key(block, ' ')
     field()!.textContent = 'Say I stay'
@@ -251,7 +251,7 @@ describe('asking AI', () => {
     const f = setup('', async () => 'never')
     f.selectRange(0)
     document.dispatchEvent(new Event('selectionchange'))
-    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBe('Press ‘space’ for AI or ‘/’ for commands')
+    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBe('Press space for AI or / for commands')
     key(host!.children[0], ' ')
     key(field()!, 'Escape')
     expect(field()).toBeNull()

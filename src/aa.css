@@ -700,6 +700,8 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 /* Editing your own comment: the field stands where the words stood, flush with them, no face. */
 .aa-comment-editing { display: block; width: calc(100% - var(--aa-unit)); margin-left: var(--aa-unit); background: transparent; padding: 0; }
 .aa-composer textarea::placeholder, .aa-comment-editing::placeholder { color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
+/* Asking AI from the field: what is asked in the prompt's live colour, as in a block. */
+.aa-composer textarea[data-asking] { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); caret-color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); }
 .aa-composer-send { color: var(--aa-muted); }
 .aa-composer-send:hover { color: inherit; }
 /* The people menu under the composer: the Context face, a person a row. */
