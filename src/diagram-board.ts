@@ -775,11 +775,27 @@ export class AaDiagramBoardElement extends Base {
     this.#state.renaming = target
     this.#state.target = target
     this.#place(this.#rename, rect)
+    this.#dress(rect)
     this.#rename.value = name
     this.#drawTools()
     this.#drawChoice()
     this.#rename.focus({ preventScroll: true })
     this.#rename.select()
+  }
+
+  /** The field takes the colour, ink and corners of the box or post-it it names, so writing never turns it black. */
+  #dress(rect: Rect) {
+    const field = this.#rename
+    for (const property of ['background-color', 'color', 'border-radius']) field.style.removeProperty(property)
+    const unit = this.#unit(), paper = this.#paper.getBoundingClientRect()
+    const x = paper.left + (rect.x + 0.5) * unit, y = paper.top + (rect.y + 0.5) * unit
+    // Boxes take no pointer, so they are found by where they stand; the last drawn is on top.
+    const under = [...(this.#drawing?.shadowRoot?.querySelectorAll<HTMLElement>('.box, .post-it') ?? [])].reverse().find(node => { const box = node.getBoundingClientRect(); return x >= box.left && x < box.right && y >= box.top && y < box.bottom })
+    if (!under) return
+    const style = getComputedStyle(under)
+    field.style.backgroundColor = style.backgroundColor
+    field.style.color = style.color
+    if (under.matches('.box')) field.style.borderRadius = style.borderRadius
   }
 
   #finishRename(keep: boolean) {
