@@ -201,14 +201,29 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   // bundling the built aa.js with Rolldown (Vite+) binds a default that calls a
   // function declared later in the same `let` to a same-named outer function,
   // and the editor throws as it draws.
+  /**
+   * The caret at a sentence's end in a paragraph, as English sets one: after
+   * its full stop, question or exclamation mark and one space, nothing after
+   * it. There Space asks AI to go on, where the product answers prompts.
+   */
+  const atSentence = (selection: Selection2 | null): boolean => {
+    if (!selection || !options.prompt || readOnly || selected || composing || comparePos(selection.anchor, selection.focus) !== 0) return false
+    const block = blocks[selection.focus.block]
+    return !!block && block.kind === 'paragraph' && selection.focus.offset === block.source.length && /[^\s][.!?]["”’)]? $/.test(block.source)
+  }
+
   const showPlaceholder = (selection?: Selection2 | null) => {
     if (selection === undefined) selection = readSelection()
+    const sentence = atSentence(selection) ? selection!.focus.block : -1
     const caret = selection && !selected && !readOnly && comparePos(selection.anchor, selection.focus) === 0 ? selection.focus.block : -1
     elements().forEach((element, index) => {
       const block = blocks[index]
       const text = blocks.length === 1 && !block.source && placeholder ? placeholder : index === caret && !block.source && block.kind === 'paragraph' ? blockPlaceholder : ''
       if (text) element.dataset.placeholder = text
       else if (element.dataset.placeholder !== undefined) delete element.dataset.placeholder
+      // At a sentence's end, only the AI is offered, never the commands.
+      if (index === sentence) element.dataset.hint = 'Press ‘space’ for AI'
+      else if (element.dataset.hint !== undefined) delete element.dataset.hint
     })
   }
 
@@ -724,6 +739,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
       const block = blocks[selection.focus.block]
       if (block.kind === 'paragraph' && !block.source) { event.preventDefault(); ask(selection.focus.block); return }
+      if (atSentence(selection)) { event.preventDefault(); ask(selection.focus.block, true); return }
     }
     // Safari sends no beforeinput for Backspace or Delete with nothing to
     // delete inside the block (at the start of an empty block, say), so the
@@ -979,14 +995,32 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     return Array.from({ length: last - first + 1 }, (_, at) => first + at).filter(at => at !== index && blocks[at].source.trim())
   }
   /** A prompt over an empty block; its answer takes the block's place. */
-  const ask = (index: number) => {
-    const element = elements()[index], block = blocks[index]
+  /** Where the caret is drawn: its own box, or, where a browser gives none at a line's end, just after the last character. */
+  const caretBox = (): DOMRect | undefined => {
+    const selection = window.getSelection()
+    if (!selection?.rangeCount) return undefined
+    const range = selection.getRangeAt(0)
+    const own = range.getClientRects()[0]
+    if (own && own.height) return own
+    const node = range.startContainer, at = range.startOffset
+    if (node.nodeType !== Node.TEXT_NODE || !at) return undefined
+    const last = document.createRange(); last.setStart(node, at - 1); last.setEnd(node, at)
+    const box = last.getClientRects()[0]
+    return box ? new DOMRect(box.right, box.top, 0, box.height) : undefined
+  }
+  const ask = (index: number, inline = false) => {
+    const element = elements()[index], block = blocks[index], written = block.source
+    // Within a paragraph the prompt stands at the caret, after the sentence's end, and runs on to the line's end.
+    const caret = inline ? caretBox() : undefined
+    const box = element.getBoundingClientRect()
+    const dx = caret ? caret.left - box.left : 0, dy = caret ? caret.top - box.top : 0
     asking?.close()
     asking = openPrompt({
-      place: () => element.getBoundingClientRect(),
+      place: () => { const now = element.getBoundingClientRect(); return caret ? new DOMRect(now.left + dx, now.top + dy, Math.max(now.width - dx, 80), caret.height) : now },
       type: element,
-      // The empty block is as tall as the prompt over it, so the blocks under it move down as it grows.
-      grow: height => { element.style.minHeight = height ? `${height}px` : '' },
+      placeholder: inline ? 'Ask AI to go on, or press Space again to speak' : undefined,
+      // The block is as tall as the prompt in it, so the blocks under it move down as it grows.
+      grow: height => { element.style.minHeight = height ? `${dy + height}px` : '' },
       about: () => sectionOf(blocks.indexOf(block)).map(at => elements()[at]),
       send: async (prompt, signal) => {
         const at = blocks.indexOf(block)
@@ -995,15 +1029,15 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
           text: toMarkdown(sectionOf(at).map(each => blocks[each])),
           before: toMarkdown(blocks.slice(0, at)), after: toMarkdown(blocks.slice(at + 1)),
           // The whole document, so a request about any of it (a title, a box, a diagram) can be done where it stands.
-          document: toMarkdown(blocks.map(each => each === block ? { ...each, source: PROMPT_HERE } : each)),
+          document: toMarkdown(blocks.map(each => each === block ? { ...each, source: inline ? `${each.source}${PROMPT_HERE}` : PROMPT_HERE } : each)),
         })
         const now = blocks.indexOf(block)
-        if (destroyed || readOnly || now < 0 || block.source) throw new Error('Not answered')
+        if (destroyed || readOnly || now < 0 || block.source !== (inline ? written : '')) throw new Error('Not answered')
         // The room kept for the prompt goes before the answer is drawn, so no gap is left.
         element.style.minHeight = ''
-        const written = applyAnswer(now, answer)
-        if (!written) throw new Error('Not answered')
-        elements()[Math.min(written.caret, blocks.length - 1)]?.focus({ preventScroll: true })
+        const done = applyAnswer(now, answer, inline)
+        if (!done) throw new Error('Not answered')
+        elements()[Math.min(done.caret, blocks.length - 1)]?.focus({ preventScroll: true })
       },
       close: sent => {
         asking = null
@@ -1011,28 +1045,23 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         const now = blocks.indexOf(block)
         if (sent || now < 0 || destroyed) return
         elements()[now].focus({ preventScroll: true })
-        setSelection({ block: now, offset: 0 })
+        setSelection({ block: now, offset: inline ? blocks[now].source.length : 0 })
       },
     })
   }
-  /**
-   * An answer put in as one change, one step to undo: its edits made where
-   * the passages they name stand (each found once, before or after the
-   * prompt's empty block), and its new writing in the empty block's place;
-   * with nothing new, the empty block goes. What changed shimmers once, and
-   * the caret stays where the prompt was.
-   */
   /**
    * The whole document as an answer has it: what changed is drawn again, the
    * rest stays the same blocks, as one change and one step to undo; the
    * caret goes where the prompt stood, after anything written there.
    */
-  const applyDocument = (at: number, document: string): { caret: number } | null => {
+  const applyDocument = (at: number, document: string, inline = false): { caret: number } | null => {
     const text = document.replace(/\r\n?/g, '\n')
     const here = text.indexOf(PROMPT_HERE)
     const head = here < 0 ? null : text.slice(0, here).trimEnd()
-    const markdown = (here < 0 ? text : `${text.slice(0, here).trimEnd()}\n\n${text.slice(here + PROMPT_HERE.length).trimStart()}`).trim()
-    if (markdown === toMarkdown(blocks.filter((_, index) => index !== at)).trim()) return null
+    // Within a line the marker is only taken out; on a line of its own, its line goes.
+    const markdown = (here < 0 ? text : inline ? text.slice(0, here) + text.slice(here + PROMPT_HERE.length) : `${text.slice(0, here).trimEnd()}\n\n${text.slice(here + PROMPT_HERE.length).trimStart()}`).trim()
+    if (markdown === toMarkdown(inline ? blocks : blocks.filter((_, index) => index !== at)).trim()) return null
+    if (inline) return putIn(markdown, Math.max(0, head ? fromMarkdown(text.slice(0, here)).length - 1 : at))
     const lead = head === null ? at : head ? fromMarkdown(head).length : 0
     return putIn(markdown, Math.max(0, lead - 1))
   }
@@ -1058,9 +1087,17 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     return { caret: target }
   }
 
-  const applyAnswer = (at: number, answer: PromptAnswer | string): { caret: number } | null => {
+  /**
+   * An answer put in as one change, one step to undo: its edits made where
+   * the passages they name stand (each found once, before or after the
+   * prompt's empty block), and its new writing in the empty block's place;
+   * with nothing new, the empty block goes. What changed shimmers once, and
+   * the caret stays where the prompt was.
+   */
+  const applyAnswer = (at: number, answer: PromptAnswer | string, inline = false): { caret: number } | null => {
     const { edits = [], insert = '', document } = typeof answer === 'string' ? { insert: answer } : answer
-    if (typeof document === 'string' && document.trim()) return applyDocument(at, document)
+    if (typeof document === 'string' && document.trim()) return applyDocument(at, document, inline)
+    if (inline) return null
     const once = (text: string, find: string) => { const index = text.indexOf(find); return index >= 0 && text.indexOf(find, index + 1) < 0 ? index : -1 }
     let before = toMarkdown(blocks.slice(0, at)), after = toMarkdown(blocks.slice(at + 1))
     let made = 0

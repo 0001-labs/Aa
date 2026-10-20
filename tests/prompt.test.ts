@@ -94,6 +94,36 @@ describe('asking AI', () => {
     expect(e.value).toBe('One\n\nBetween\n\nTwo')
   })
 
+  it('offers AI at the end of a sentence in a paragraph, and goes on from there', async () => {
+    const value = 'Hello. I am here. '
+    let sent: PromptContext | undefined
+    const e = setup(value, async (_said, context) => { sent = context; return { document: context.document!.replace('⟦here⟧', 'And here to stay.') } })
+    e.selectRange(value.length)
+    document.dispatchEvent(new Event('selectionchange'))
+    const block = host!.children[0] as HTMLElement
+    expect(block.dataset.hint).toBe('Press ‘space’ for AI')
+    expect(block.dataset.placeholder).toBeUndefined()
+    key(block, ' ')
+    field()!.textContent = 'Say I stay'
+    key(field()!, 'Enter')
+    await settle()
+    expect(sent!.document).toBe('Hello. I am here. ⟦here⟧')
+    expect(e.value).toBe('Hello. I am here. And here to stay.')
+  })
+
+  it('offers nothing mid-sentence, after two spaces, or without a product to ask', () => {
+    for (const [value, prompt] of [['Hello. I am', true], ['Hello.  ', true], ['Hello. ', false]] as const) {
+      const e = setup(value, prompt ? async () => 'x' : undefined)
+      e.selectRange(value.length)
+      document.dispatchEvent(new Event('selectionchange'))
+      expect((host!.children[0] as HTMLElement).dataset.hint).toBeUndefined()
+      expect(key(host!.children[0], ' ')).toBe(true)
+      expect(field()).toBeNull()
+      editor!.destroy(); host!.remove()
+    }
+    editor = undefined; host = undefined
+  })
+
   it('both edits and inserts where an answer asks for both, and keeps nothing it cannot place exactly', async () => {
     const e = setup('One\n\nTwo', async () => ({ edits: [{ find: 'One', replace: 'First' }, { find: 'Nowhere', replace: 'x' }], insert: 'Between' }))
     e.selectRange(3)

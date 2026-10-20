@@ -175,6 +175,12 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
    level, since its # is never shown. */
 .aa-block[data-placeholder]::before { content: attr(data-placeholder); }
 .aa-block[data-kind="heading"][data-empty]::before { content: "Heading " attr(data-level); }
+/* At a sentence's end, the AI offered in the placeholder's grey, after the caret. */
+.aa-block[data-hint]::after {
+  content: attr(data-hint);
+  color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab)));
+  pointer-events: none;
+}
 .aa-block[data-placeholder]::before,
 .aa-block[data-kind="heading"][data-empty]::before {
   position: absolute;
