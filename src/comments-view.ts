@@ -379,14 +379,17 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       const quote = key === 'draft' ? draft?.quote ?? '' : thread?.quote ?? ''
       const sofar = thread ? thread.comments.map(comment => `${comment.author.name}: ${comment.body}`).join('\n\n') : ''
       const { signal } = asking
-      field.setAttribute('data-aa-glisten', ''); field.readOnly = true
+      // While AI thinks, the field gives way to Thinking…, glistening as the prompt does: a textarea's own letters cannot.
+      const thinking = Object.assign(doc.createElement('span'), { className: 'aa-composer-thinking', textContent: 'Thinking…' })
+      thinking.setAttribute('data-aa-glisten', ''); thinking.setAttribute('role', 'status')
+      field.before(thinking); field.hidden = true; field.readOnly = true
       try {
         const answer = await options.prompt(said, { kind: 'writing', signal, text: quote, before: sofar, after: '' })
         if (signal.aborted) return
         const words = typeof answer === 'string' ? answer : answer.insert ?? answer.document ?? ''
         field.value = words.trim(); drafts.set(key, field.value)
       } catch (error) { if (!signal.aborted) refused(key, error) }
-      finally { field.readOnly = false; stopAsking(); grow(field); field.focus() }
+      finally { thinking.remove(); field.hidden = false; field.readOnly = false; stopAsking(); grow(field); field.focus() }
     }
     // Listening, the words heard go into the field as they come, after what was there; any key but Enter and Escape stops it and types on.
     let speaking: { stop(): void; abort(): void } | null = null

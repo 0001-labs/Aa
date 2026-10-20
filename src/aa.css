@@ -699,6 +699,8 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-composer > .aa-avatar { align-self: flex-start; margin-top: calc((var(--aa-unit) - 16px * var(--aa-sf, 1)) / 2); }
 .aa-composer > .aa-composer-send { align-self: flex-end; }
 .aa-composer-send { color: var(--aa-muted); }
+.aa-composer textarea[hidden] { display: none; }
+.aa-composer-thinking { flex: 1 1 auto; min-width: 0; line-height: var(--aa-unit); }
 .aa-composer-send:hover { color: inherit; }
 /* The people menu under the composer: the Context face, a person a row. */
 .aa-comments-people { width: calc(8 * var(--aa-square)); }
