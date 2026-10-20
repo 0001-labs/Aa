@@ -11,7 +11,7 @@
  * opacity alone.
  */
 
-import { anchorThreads, applyEdit, commentsLabel, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
+import { anchorThreads, applyEdit, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 import type { Decoration } from './render'
 import { icons } from './icons'
 
@@ -103,6 +103,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   const drafts = new Map<string, string>()
   let editing: string | null = null
   let confirming: string | null = null
+  /** Which threads a panel shows and marks: the open ones, or the resolved. */
+  let filter: 'open' | 'resolved' = 'open'
+  const shown = (thread: AnchoredThread) => panel && filter === 'resolved' ? !!thread.resolvedAt : !thread.resolvedAt
 
   const canWrite = () => !!store.me && !options.readOnly()
   const openThread = () => placed.find(thread => thread.id === openId) ?? null
@@ -112,8 +115,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   const decorate = () => {
     const ranges: Decoration[] = []
     for (const thread of placed) {
-      if (thread.orphaned || thread.resolvedAt) continue
-      const classes = ['aa-comment', thread.id === openId ? 'aa-comment--open' : '', thread.unread ? 'aa-comment--unread' : ''].filter(Boolean).join(' ')
+      // Over a popover the open threads are marked; a panel marks the threads of its chosen tab.
+      if (thread.orphaned || !shown(thread)) continue
+      const classes = ['aa-comment', thread.id === openId ? 'aa-comment--open' : '', thread.unread ? 'aa-comment--unread' : '', thread.resolvedAt ? 'aa-comment--resolved' : ''].filter(Boolean).join(' ')
       ranges.push({ from: thread.from, to: thread.to, className: classes, attributes: { 'data-comment': thread.id } })
     }
     if (draft) ranges.push({ from: draft.from, to: draft.to, className: 'aa-comment aa-comment--open aa-comment--draft', attributes: { 'data-comment': 'draft' } })
@@ -203,6 +207,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   const open = (id: string) => {
     const thread = placed.find(each => each.id === id)
     if (!thread) return
+    if (panel) filter = thread.resolvedAt ? 'resolved' : 'open'
     if (draft) { draft = null; drafts.delete('draft') }
     openId = id
     dismissed = null
@@ -572,19 +577,25 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const focusedKey = focused?.closest<HTMLElement>('[data-thread]')?.dataset.thread, focusedField = focused instanceof HTMLTextAreaElement ? { start: focused.selectionStart, end: focused.selectionEnd, edit: focused.dataset.edit } : null
     if (panel) {
       const element = ensurePopover()
-      const sorted = sortThreads(placed)
       const counts = countThreads(placed)
-      const title = doc.createElement('h2')
-      title.className = 'aa-comments-title'
-      title.textContent = commentsLabel(counts.open, counts.resolved)
-      const children: HTMLElement[] = [title]
-      if (draft) children.push(draftElement())
-      let heading = false
-      for (const thread of sorted) {
-        if (thread.resolvedAt && !heading) { heading = true; const group = doc.createElement('h3'); group.className = 'aa-comments-group'; group.textContent = 'Resolved'; children.push(group) }
-        children.push(threadElement(thread, thread.id === openId))
+      // Design system 1's text tabs: the words alone, 4px between tabs, the chosen one in the ink; each state seen on its own.
+      const tabs = doc.createElement('div')
+      tabs.className = 'aa-comments-tabs'
+      tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Comments')
+      for (const [key, label, count] of [['open', 'Open', counts.open], ['resolved', 'Resolved', counts.resolved]] as const) {
+        const tab = doc.createElement('button')
+        tab.type = 'button'; tab.setAttribute('role', 'tab'); tab.dataset.tab = key
+        tab.setAttribute('aria-selected', String(filter === key)); tab.tabIndex = filter === key ? 0 : -1
+        tab.append(label, Object.assign(doc.createElement('span'), { className: 'aa-comments-tab-count', textContent: ` ${count}` }))
+        tab.addEventListener('click', () => { if (filter === key) return; filter = key; if (openId && !shown(openThread()!)) openId = null; decorate(); render() })
+        tab.addEventListener('keydown', event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const other = tabs.querySelector<HTMLButtonElement>(`[data-tab="${key === 'open' ? 'resolved' : 'open'}"]`); other?.click(); render(); popover?.querySelector<HTMLButtonElement>(`[data-tab="${key === 'open' ? 'resolved' : 'open'}"]`)?.focus() } })
+        tabs.append(tab)
       }
-      if (!sorted.length && !draft) { const empty = doc.createElement('p'); empty.className = 'aa-comments-empty'; empty.textContent = canWrite() ? 'Select words and press Comment to start a thread.' : 'No comments yet.'; children.push(empty) }
+      const sorted = sortThreads(placed).filter(shown)
+      const children: HTMLElement[] = [tabs]
+      if (draft && filter === 'open') children.push(draftElement())
+      for (const thread of sorted) children.push(threadElement(thread, thread.id === openId))
+      if (!sorted.length && !(draft && filter === 'open')) { const empty = doc.createElement('p'); empty.className = 'aa-comments-empty'; empty.textContent = filter === 'resolved' ? 'Nothing resolved yet.' : canWrite() ? 'Select words and press Comment to start a thread.' : 'No comments yet.'; children.push(empty) }
       element.replaceChildren(...children)
     } else {
       const thread = openThread()
