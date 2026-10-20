@@ -3,6 +3,11 @@
   "version": "0.5.0",
   "description": "Aa, the text editor of 0001's products: Markdown, drawn as you write",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0001-labs/Aa.git"
+  },
+  "homepage": "https://aa.0001.dev",
   "files": [
     "dist/*.js",
     "dist/*.js.map",

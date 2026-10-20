@@ -2,7 +2,7 @@
 
 > **Read first:** `/Users/joachim/.agents/harness-instructions.md` (harness instructions), `/Users/joachim/0001/AGENTS.md` (0001). This file wins where they differ.
 
-Aa is the text editor of 0001's products: Ezo's notes and writing blocks, Link's comments and messages, and whatever comes next. It is Markdown drawn as you write it, Notion's architecture on 0001's own terms. Local only, no remote.
+Aa is the text editor of 0001's products: Ezo's notes and writing blocks, Link's comments and messages, and whatever comes next. It is Markdown drawn as you write it, Notion's architecture on 0001's own terms. Public at https://github.com/0001-labs/Aa (`origin`, `main` pushed with its tags), linked at the foot of the playground.
 
 ## System parts
 

@@ -21,12 +21,15 @@
   .comments { margin-bottom: calc(2 * var(--ds-unit)); color: var(--ds-text-color); }
   .comments[hidden] { display: none; }
   pre { margin: 0; font-family: var(--typeface-mono); font-size: calc(13px * var(--ds-sf)); line-height: var(--ds-unit); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* The foot, across both columns, as Design system 1's site ends its rail. */
+  footer { grid-column: 1 / -1; }
   /* A row of one square, its words and buttons on the lower sixteen. */
   .bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 var(--ds-unit); min-height: var(--ds-unit); margin-bottom: var(--ds-unit); line-height: calc(16px * var(--ds-sf)); white-space: nowrap; }
-  button { height: var(--ds-control-height); padding: 0 calc(4px * var(--ds-sf)); border: 0; border-radius: var(--ds-radius); background: var(--ds-fill); color: inherit; font: inherit; line-height: var(--ds-control-height); cursor: pointer; }
-  button:hover { background: var(--ds-fill-hover); }
+  button, .link-button { display: inline-block; height: var(--ds-control-height); padding: 0 calc(4px * var(--ds-sf)); border: 0; border-radius: var(--ds-radius); background: var(--ds-fill); color: inherit; font: inherit; line-height: var(--ds-control-height); cursor: pointer; }
+  .link-button { text-decoration: none; }
+  button:hover, .link-button:hover { background: var(--ds-fill-hover); }
   button[aria-pressed="true"] { background: var(--ds-accent-color); color: var(--ds-button-text-color-on-accent); }
-  button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 1px; }
+  button:focus-visible, .link-button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 1px; }
 </style>
 </head>
 <body>
@@ -46,6 +49,7 @@
     <div id="shared-first"></div>
   </section>
   <section><div class="bar"><h1>Second editor</h1></div><div id="shared-second"></div></section>
+  <footer class="bar"><a class="link-button" href="https://github.com/0001-labs/Aa">GitHub</a></footer>
 </main>
 <script type="module" src="/playground.ts"></script>
 </body>
