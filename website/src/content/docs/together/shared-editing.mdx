@@ -1,0 +1,170 @@
+---
+title: Shared editing
+description: Several people in one document at once, on Yjs, through a transport your app gives, with a Convex component for the backend.
+---
+
+Shared editing keeps one document in step between editors, on Yjs, through a transport your app gives.
+
+The [playground](/playground/) has two editors sharing one document: write in either, and undo in one.
+
+## Use it
+
+```ts
+import { createEditor } from '@0001-labs/aa'
+import { connectCollaboration } from '@0001-labs/aa/collaboration'
+
+const editor = createEditor(host, { value: markdown, toolbar: true })
+const connection = connectCollaboration(editor, transport, { id: sessionId, label: name, onError })
+await connection.ready
+```
+
+The editor stays an ordinary editor: its `value` is still the Markdown, and `onChange` still reports each change. Underneath, the Markdown is one Yjs text, and each change is mirrored into it as the smallest replacement that makes it (`textChange`, the same diff [comments](/together/comments/) follow).
+
+| Option | What it does |
+| --- | --- |
+| `id` | This editor's session, so its own selection is not drawn back to it |
+| `label` | The name its selection is shown with to others; the `id` otherwise |
+| `onError` | Receives every failure: a send, a received state, a selection |
+
+## What happens
+
+- **It waits for the document.** The editor is read only until the transport gives the shared document; then it shows that document, whatever it held before, and is writable again. If initializing fails, `ready` rejects and the editor is given back as it was.
+- **Remote edits keep the caret.** The selection is held as Yjs relative positions while another person's edit comes in, so the caret stays among the same words.
+- **Undo is your own.** ⌘Z takes back only what was written here, never another person's edits, and ⌘⇧Z gives it back. Typing within a moment is one step. A [correction while writing](/ai/correction/) is a step of its own.
+- **Nothing is lost on a bad connection.** Updates are sent in order. One that fails stays pending, counted in `pending`, until `retry()` or `flush()` sends it.
+
+| Member | What it does |
+| --- | --- |
+| `ready` | Settles once the shared document has arrived and the editor is writable |
+| `flush()` | Sends every pending update, in order |
+| `retry()` | The same, after a failure |
+| `pending` | How many updates have not been sent yet |
+| `destroy()` | Stops sharing, takes the others' selections away and gives the editor back its own undo |
+
+Destroy the connection before the editor.
+
+## The transport
+
+The transport is how your app reaches its one copy of the document. Aa knows nothing of the server behind it.
+
+| Member | What it does |
+| --- | --- |
+| `initialize(markdown)` | Creates the document from this Markdown if it does not exist yet, atomically, and returns its state either way |
+| `subscribe(receive)` | Gives the persisted state as it changes, until the returned function is called |
+| `send(update)` | Appends one update |
+| `savePending(updates)` | Optional. Keeps unsent updates somewhere that survives a reload |
+| `loadPending()` | Optional. Gives them back when the next connection starts |
+| `publishSelection(selection)` | Optional. Tells the others where this editor's selection is, or `null` when it has none |
+| `subscribeSelections(receive)` | Optional. Gives the others' selections as they change |
+
+States and updates are Yjs's, as `Uint8Array`. A transport that must survive navigation or the tab closing implements `savePending` and `loadPending`; without them, unsent updates live as long as the page.
+
+A transport in memory, as the playground's two editors share theirs:
+
+```ts
+import * as Y from 'yjs'
+
+const doc = new Y.Doc(), listeners = new Set<(state: Uint8Array) => void>()
+let initialized = false
+const transport = {
+  initialize: async (markdown: string) => {
+    if (!initialized) { doc.getText('markdown').insert(0, markdown); initialized = true }
+    return Y.encodeStateAsUpdate(doc)
+  },
+  subscribe: (receive: (state: Uint8Array) => void) => { listeners.add(receive); return () => { listeners.delete(receive) } },
+  send: async (update: Uint8Array) => {
+    Y.applyUpdate(doc, update)
+    const state = Y.encodeStateAsUpdate(doc)
+    listeners.forEach(receive => receive(state))
+  },
+}
+```
+
+## Selections
+
+With `publishSelection` and `subscribeSelections`, each editor sees where the others are. A selection is `{ id, label, anchor, focus }`, its two ends encoded Yjs relative positions, so they stay on the same words as the text changes. They are drawn on the `presence` [decoration](/building/decorations/) layer. A caret is a line in the accent with the person's initial in a circle over it. A run of selected words carries the class `aa-peer-selection` and the label as its title; `aa.css` gives it no fill, so your stylesheet colours it. An editor never draws its own `id`. Destroying a connection publishes `null`.
+
+## Convex
+
+Aa carries a Convex component that keeps each document as Yjs state, and a transport that talks to it.
+
+```ts
+// convex/convex.config.ts
+import { defineApp } from 'convex/server'
+import aa from '@0001-labs/aa/convex.config'
+
+const app = defineApp()
+app.use(aa)
+export default app
+```
+
+The component has one table, `documents`, a key and a state each, and three functions:
+
+| Function | What it does |
+| --- | --- |
+| `collaboration.get({ key })` | The document's state, or `null` |
+| `collaboration.initialize({ key, markdown })` | Creates the document from the Markdown once; afterwards returns the state already kept |
+| `collaboration.append({ key, update })` | Applies one update and returns the document's Markdown, for your app to store on its note in the same transaction |
+
+| Limit | |
+| --- | --- |
+| A key | At most 200 characters |
+| The Markdown a document starts from | At most 256 KiB |
+| An update, and a document's state | At most 512 KiB each |
+
+An update that cannot be read, or one too large, is refused and changes nothing.
+
+### The permission rules
+
+The component's functions check nobody. They are called only from your app's own functions, which decide who may do what:
+
+- **Wrap all three.** Expose your own `get`, `initialize` and `append`, with the same arguments, and never the component's functions to clients.
+- **Check every call.** Reading needs read access to the note; `initialize` and `append` need write access, and whatever entitlement your app requires.
+- **Store the Markdown.** `append` returns the document as Markdown: write it on your note in the same mutation, so the note and the shared state never disagree.
+- **Reconcile other writers.** Where something else changes the note's Markdown (an import, an API, another app), that change must be written into the shared state too.
+
+```ts
+// convex/notes.ts, a sketch: canRead and canWrite are your app's own checks.
+import { v } from 'convex/values'
+import { mutation, query } from './_generated/server'
+import { components } from './_generated/api'
+
+export const get = query({
+  args: { key: v.string() },
+  handler: async (ctx, { key }) => {
+    await canRead(ctx, key)
+    return await ctx.runQuery(components.aa.collaboration.get, { key })
+  },
+})
+
+export const append = mutation({
+  args: { key: v.string(), update: v.bytes() },
+  handler: async (ctx, { key, update }) => {
+    await canWrite(ctx, key)
+    const markdown = await ctx.runMutation(components.aa.collaboration.append, { key, update })
+    await saveNote(ctx, key, markdown)
+    return markdown
+  },
+})
+```
+
+`initialize` is wrapped the same way, with write access checked.
+
+### The transport
+
+`convexTransport` from `@0001-labs/aa/convex` is a transport for a `ConvexClient`, given your three wrappers and the document's key:
+
+```ts
+import { ConvexClient } from 'convex/browser'
+import { connectCollaboration } from '@0001-labs/aa/collaboration'
+import { convexTransport } from '@0001-labs/aa/convex'
+import { api } from '../convex/_generated/api'
+
+const client = new ConvexClient(url)
+const transport = convexTransport(client, { get: api.notes.get, initialize: api.notes.initialize, append: api.notes.append }, noteId)
+const connection = connectCollaboration(editor, transport, { id: sessionId, label: name })
+```
+
+It carries the document alone: selections and pending updates kept across reloads are your app's to add, beside it, with the optional members above. An app on `ConvexReactClient` implements the same transport with `watchQuery` and `mutation`. Convex is an optional peer dependency, and the core imports neither React nor Yjs.
+
+[Comments](/together/comments/) · [Undo](/editing/undo/) · [Decorations](/building/decorations/) · [Methods and events](/building/methods/)

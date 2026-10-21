@@ -1,0 +1,47 @@
+---
+title: Headings and paragraphs
+description: Paragraphs, line breaks and three sizes of heading, each a block of its own, with no # shown.
+---
+
+import Example from "../../../components/Example.astro";
+
+Every paragraph and heading is a block of its own, and a heading is drawn at its size, never with its `#`.
+
+<Example name="headings" />
+
+## Try it
+
+Type `#`, `##` or `###` and a space at the start of a paragraph and it becomes a heading of that level. Backspace at the start of a heading takes the level off, and it is a paragraph again. A heading with no words yet says "Heading 1", "Heading 2" or "Heading 3", since its `#` is not there to say it.
+
+Enter ends a block where the caret is and starts the next; after a heading, the next block is a paragraph. ⌘⌥0 to ⌘⌥3 turn the caret's block into a paragraph or a heading, and so do Text and Heading 1 to 3 in the [slash menu](/editing/menus/).
+
+## The Markdown
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| A title, 20px on two squares | `#` and a space, or ⌘⌥1 | `# Title` |
+| A section, 17px | `##` and a space, or ⌘⌥2 | `## Section` |
+| A part, 15px | `###` and a space, or ⌘⌥3 | `### Part` |
+| A paragraph | Enter, or ⌘⌥0 | The words, with an empty line between blocks |
+
+Levels 4 to 6, `####` to `######`, are read and kept, drawn at the text's size in the headings' medium face. Headings are drawn as Design system 1's prose draws them: a line a square, a square between blocks and two before a heading. `--aa-heading-gap` changes the room before a heading; see [Styling](/building/styling/).
+
+## Lines in a paragraph
+
+<Example name="paragraphs-lines" />
+
+Shift-Enter breaks a line within a paragraph. The break is stored as one line break, and the lines stay one block: an empty line is what separates two blocks. Lines that follow each other in the Markdown, with no empty line between them, are one paragraph, drawn on lines of their own.
+
+An empty block with the caret in it says "Type / for commands", so the slash menu is found without a button beside the block. `blockPlaceholder` changes it, and `''` leaves it out; see [Options](/building/options/).
+
+## Keys
+
+| Keys | What they do |
+| --- | --- |
+| Enter | Ends the block at the caret and starts the next |
+| Shift-Enter | A line break within the block |
+| Backspace at a heading's start | Makes it a paragraph |
+| Backspace at a paragraph's start | Joins it to the block before |
+| Delete at a block's end | Joins the next block to it |
+| ⌘⌥0 | Text |
+| ⌘⌥1, ⌘⌥2, ⌘⌥3 | Heading 1, 2 and 3 |

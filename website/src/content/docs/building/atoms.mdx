@@ -1,0 +1,134 @@
+---
+title: Atoms
+description: Pieces of the text drawn as one thing, a picture, a mention, a diagram, while the Markdown keeps their words.
+---
+
+import Example from "../../../components/Example.astro";
+
+An atom is a piece of the text drawn as one thing rather than letter by letter: a picture, an equation, a mention, a link shown as its title. The Markdown keeps the atom's words exactly as written; only the drawing changes, and the caret steps over it whole.
+
+<Example name="atoms-inline" />
+
+A picture, `![name](address)`, is an atom out of the box, and so is an equation. A product names its own in `atoms`.
+
+## An atom
+
+```ts
+type Atom = {
+  /** The atom's kind: `data-atom` on its element. */
+  name: string
+  /** How many characters an atom of this kind takes at `at` in a line, or 0 when none starts there. */
+  match(line: string, at: number): number
+  /** A fenced code block in this language is drawn whole as this atom: `diagram` for a diagram block. */
+  fence?: string
+  /** Fills the element Aa gives it; what it returns is called once the atom leaves the page. */
+  draw?(element: HTMLElement, source: string): void | (() => void)
+  /** A block that starts one, offered in the slash menu. */
+  insert?: { label: string; icon: string; source: string; keywords?: string }
+}
+```
+
+| Field | What it does |
+| --- | --- |
+| `name` | Names the kind, and is written on its element as `data-atom`. |
+| `match` | Finds the atom in a line of a block's Markdown. Atoms are tried in the order given, the product's before the equation, and the first that matches takes the characters. Nothing is matched inside a link or code. |
+| `fence` | Draws a whole closed fenced block as this atom when the first word after its opening fence is this, ignoring case. Such an atom's `match` returns `0`. |
+| `draw` | Fills the element with the drawing. Without it, the atom shows its own words. |
+| `insert` | Adds the atom to the slash menu, and on touch to the toolbar, as `label` with `icon` (see [Icons](/building/commands/#icons)), found by its label or `keywords`. It writes `source` in place of an empty block or after the caret's block, and puts the caret at the start of its second line (of a one-line `source`, at its start). |
+
+```ts
+import { createEditor, imageAtom, atomPattern, type Atom } from '@0001-labs/aa'
+
+// @[Ann Lund] in the Markdown, drawn as the name alone.
+const mention: Atom = {
+  ...atomPattern('mention', /@\[[^\]\n]+\]/),
+  draw(element, source) {
+    element.classList.add('mention')
+    element.textContent = source.slice(2, -1)
+  },
+}
+
+createEditor(host, { atoms: [imageAtom, mention] })
+```
+
+`atoms` replaces the default, `[imageAtom]`: keep `imageAtom` in the array to keep pictures.
+
+## The element
+
+Aa makes each atom's element, an uneditable `span.aa-atom`, and hands it to `draw`:
+
+| Attribute | What it is |
+| --- | --- |
+| `class="aa-atom"` | Every atom. |
+| `data-atom` | The atom's `name`. |
+| `data-source` | The atom's words, exactly as written. This is what reads back into the Markdown. |
+| `contenteditable="false"` | The caret stands beside the atom, never in it. |
+
+An atom drawn once is kept when its block is drawn again for the same words, so a picture does not load again as the caret moves past it. When it leaves the page, what `draw` returned is called: stop a timer, an observer or a request there.
+
+```ts
+const clock: Atom = {
+  ...atomPattern('clock', /\{now\}/),
+  draw(element) {
+    const tick = () => { element.textContent = new Date().toLocaleTimeString() }
+    tick()
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  },
+}
+```
+
+`atomElement(name, source)` makes the same element, for a product drawing an atom outside the editor.
+
+## Patterns
+
+`atomPattern(name, pattern, accept?)` makes `name` and `match` from a regular expression, matched where the line is being read. `accept` can refuse a match:
+
+```ts
+// A ticket number, of three digits or more.
+const ticket = atomPattern('ticket', /#\d+/, found => /^#\d{3,}$/.test(found[0]))
+```
+
+`IMAGE` is the picture's own pattern, and `DEFAULT_ATOMS` the patterns a reader of the Markdown uses unless it is given others: the picture and the equation.
+
+## Pictures
+
+`imageAtom` draws `![name](address)` as the picture, with its name as an editable caption under it ("Add a caption" while it is empty). An address ending in `mp4`, `webm` or `mov`, or a `data:video/` address, is drawn as a video with its controls; `mp3`, `wav`, `ogg` or `m4a`, or a `data:audio/` address, as audio. See [Pictures and media](/writing/media/).
+
+## Atoms that edit themselves
+
+An atom can be changed where it is drawn, as a diagram is on its board. Mark the element inside it that takes the keys and presses with `data-aa-interactive`:
+
+- The editor leaves the selection there alone, and the block drag and the selection across blocks do not start from it.
+- For an atom with a `fence`, the caret coming into its block hands the focus to its first `[data-aa-interactive]` element, which must be focusable (a `tabindex`).
+- While the focus is in it, undo and redo draw the change again without opening the atom as words.
+
+Captions (`.aa-caption`) are left alone the same way.
+
+## Events
+
+An atom talks to the editor with events dispatched from inside its element, bubbling:
+
+| Event | `detail` | What the editor does |
+| --- | --- | --- |
+| `aa-atom-change` | `{ source: string }` | Writes `source` as the atom's whole block, one step to undo, and calls `onChange`. The caret stays where it was, so the atom is not opened as words. Refused in a read-only editor. |
+| `aa-atom-leave` | `{ forward?: boolean }` | Gives the keys back: the caret goes to the start of the next block, or with `forward: false` to the end of the one before. |
+| `aa-atom-prompt` | `{ prompt, text, signal }` | Sets `detail.available` to whether the editor has `prompt`, and `detail.answer` to the answer, a promise of Markdown, asked with `kind: 'diagram'`. |
+
+```ts
+draw(element, source) {
+  const board = document.createElement('div')
+  board.tabIndex = 0
+  board.setAttribute('data-aa-interactive', '')
+  board.addEventListener('keydown', event => {
+    if (event.key === 'Escape') board.dispatchEvent(new CustomEvent('aa-atom-leave', { bubbles: true, detail: { forward: true } }))
+  })
+  // A change made on the board, handed back as the block's new Markdown.
+  const write = (next: string) => board.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, detail: { source: next } }))
+  element.append(board)
+}
+```
+
+`source` in `aa-atom-change` is the whole block's Markdown, fences included: for a fenced atom that is the atom itself.
+
+[Diagrams](/diagrams/diagrams/) · [Pictures and media](/writing/media/) · [Equations](/writing/equations/)

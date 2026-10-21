@@ -1,0 +1,39 @@
+---
+title: Equations
+description: TeX between dollar signs, in a line or as a block of its own, drawn by the renderer your app gives.
+---
+
+import Example from "../../../components/Example.astro";
+
+An equation is TeX written between dollar signs. Aa keeps the TeX in the Markdown and asks your app to draw it.
+
+<Example name="equations-inline" />
+
+## The Markdown
+
+| What you see | How you write it |
+| --- | --- |
+| An equation in a line | `$\pi r^2$` |
+| An equation of its own | `$$` on a line, the TeX, then `$$` on a line |
+
+A `$` with another `$` straight after it does not start an equation in a line, so `$$` stays a block.
+
+<Example name="equations-block" />
+
+Equation on the [toolbar](/editing/toolbar/) turns the selected words into an equation, and the [slash menu](/editing/menus/) has Equation among its kinds.
+
+## Drawing them
+
+Aa does not carry a TeX renderer. Give it `drawEquation`, and it calls it for each equation with the element to draw into, the TeX, and whether it is a block. Return a function to stop, for a renderer that loads late:
+
+```ts
+import katex from 'katex'
+
+createEditor(host, {
+  drawEquation: (element, tex, displayMode) => {
+    katex.render(tex, element, { displayMode, throwOnError: false })
+  },
+})
+```
+
+Without `drawEquation`, an equation is shown as its TeX. These pages draw them with KaTeX, loaded only when a page has one.

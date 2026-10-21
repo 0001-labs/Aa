@@ -1,0 +1,72 @@
+---
+title: Install
+description: Add Aa to a page as an element, or create an editor from code.
+---
+
+import Example from "../../../components/Example.astro";
+
+Aa is one package, `@0001-labs/aa`, with a stylesheet beside it.
+
+```bash
+npm install @0001-labs/aa
+```
+
+## The element
+
+Import the stylesheet, define `<aa-editor>` once, and put it on the page:
+
+```ts
+import '@0001-labs/aa/aa.css'
+import { defineAaEditor } from '@0001-labs/aa'
+
+defineAaEditor()
+```
+
+```html
+<aa-editor placeholder="Write" toolbar></aa-editor>
+```
+
+<Example name="install" />
+
+`value` is the Markdown, and `input` fires on each change a person makes:
+
+```ts
+const editor = document.querySelector('aa-editor')!
+editor.value = '# A note'
+editor.addEventListener('input', () => save(editor.value))
+```
+
+| Attribute | What it does |
+| --- | --- |
+| `toolbar` | Shows the toolbar over selected words |
+| `placeholder` | What an empty editor says |
+| `readonly` | The text can be read and selected, not changed |
+| `correct="off"` | Turns [correction while writing](/ai/correction/) off |
+
+Set `options` before the element is connected for everything else: [atoms](/building/atoms/), [commands](/building/commands/), files, AI and comments. See [Methods and events](/building/methods/).
+
+## From code
+
+`createEditor(host, options)` is the same editor without an element. It draws into `host` and returns the editor:
+
+```ts
+import '@0001-labs/aa/aa.css'
+import { createEditor } from '@0001-labs/aa'
+
+const editor = createEditor(host, {
+  value: '# A note',
+  toolbar: true,
+  onChange: markdown => save(markdown),
+  onFiles: files => upload(files),
+})
+```
+
+Call `editor.destroy()` when the editor leaves the page, to release its listeners, menus and atoms. Every option is on [Options](/building/options/).
+
+## Light DOM
+
+The editor is drawn in the page's own DOM, never a shadow root, so the page's rules reach it. Its look comes from `aa.css`, drawn from Design system 1's `--ds-*` tokens with their values as fallbacks: a page without Design system 1 still gets every measure. See [Styling](/building/styling/).
+
+## Fonts
+
+The package carries two fonts in `src/fonts/`: Inter Arrows, so arrows are always Inter's, and Aa Mono for code. `aa.css` loads them; a bundler that handles CSS `url()` copies them with it.

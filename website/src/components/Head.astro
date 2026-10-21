@@ -1,0 +1,15 @@
+---
+// Starlight's head, then Design system 1's root stylesheet, faces and prose sheet (copied with
+// Sync 1 into public/ds1) and Aa's own stylesheet, so the docs and the editor draw as one.
+import Default from '@astrojs/starlight/components/Head.astro';
+---
+
+<Default><slot /></Default>
+<link rel="stylesheet" href="/ds1/one.css" />
+<link rel="stylesheet" href="/ds1/prose.css" />
+<script>
+  import '../../../src/aa.css';
+  import { startScaling } from '../../../src/ds1/0-face/scaling';
+  // Design system 1's scale, on before anything is drawn: a phone's first paint is already to scale.
+  startScaling({ snap: 'layout' });
+</script>

@@ -1,0 +1,109 @@
+---
+title: Options
+description: Every field of EditorOptions, what it takes and what it does when left out.
+---
+
+import Example from "../../../components/Example.astro";
+
+`createEditor(host, options)` takes one object, `EditorOptions`. Every field can be left out: an editor given nothing is an empty document that can be written in, with the menus on and the toolbar off.
+
+```ts
+import { createEditor, imageAtom } from '@0001-labs/aa'
+
+const editor = createEditor(host, {
+  value: '# A note',
+  placeholder: 'Write',
+  toolbar: true,
+  atoms: [imageAtom],
+  onChange: markdown => save(markdown),
+  onFiles: files => upload(files),
+})
+```
+
+The options are read once, when the editor is made. `value`, `readOnly`, `placeholder` and `correcting` can be changed afterwards on the editor itself (see [Methods and events](/building/methods/)); for the rest, destroy the editor and make another.
+
+## The document
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `value` | `string` | `''` | The Markdown the editor starts with. |
+| `readOnly` | `boolean` | `false` | The text can be read, selected and copied, not changed. The toolbar and the slash menu stay closed, commands do not run, captions cannot be written in, and `undo()` and `redo()` do nothing. |
+| `placeholder` | `string` | `''` | What an empty document says: one block with nothing in it. It is also given to screen readers as `aria-placeholder`. |
+| `onChange` | `(value: string) => void` | none | Called with the whole document as Markdown after every change a person makes, every correction, every undo and redo, and every change an atom hands back. A `value` set from outside does not call it. |
+
+<Example name="options-readonly" />
+
+## Toolbar and menus
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `toolbar` | `boolean \| readonly ToolbarAction[]` | `false` | The bar over selected words. `true` shows it with Aa's own buttons; an array shows it with these actions after them. On touch it is docked above the keyboard. See [Toolbar](/editing/toolbar/). |
+| `commands` | `readonly Command[]` | none | The product's commands in the slash menu, after the block kinds and what the atoms insert. On touch they are under More in Insert block. |
+| `blockCommands` | `readonly Command[]` | none | The product's commands in the block menu (⌘/), after Aa's own and before the counts. |
+| `menus` | `boolean` | `true` | `false` turns off the slash menu, the line an empty block says, a table's menu on a right click, and moving blocks by dragging them. |
+| `blockPlaceholder` | `string` | “Type / for commands”, or “Press space for AI or / for commands” with `prompt` | What an empty line with the caret in it says. `''` says nothing. Never shown with `menus: false` or in a read-only editor. |
+
+Actions and commands are `{ id, label, icon, run(editor) }`; see [Commands](/building/commands/).
+
+<Example name="options-placeholder" />
+
+## Atoms, files and equations
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `atoms` | `readonly Atom[]` | `[imageAtom]` | The pieces of text drawn as one thing. The array replaces the default, so keep `imageAtom` in it to keep pictures. Equations and columns are always read. See [Atoms](/building/atoms/). |
+| `onFiles` | `(files: File[]) => void` | none | Receives the files pasted or dropped into the editor, and those chosen with Image or file in the slash menu, which is only offered with it. Without it, files are ignored. Aa never keeps a file itself. |
+| `drawEquation` | `(element: HTMLElement, source: string, display: boolean) => void \| (() => void)` | none | Draws an equation into `element`: `source` is the TeX without its `$` signs, and `display` is `true` for a `$$` block. What it returns is called when the equation leaves the page. Without it, the TeX is shown as written. |
+
+```ts
+import katex from 'katex'
+
+createEditor(host, {
+  drawEquation: (element, tex, display) => katex.render(tex, element, { displayMode: display, throwOnError: false }),
+})
+```
+
+## AI
+
+The product makes every call; Aa holds no model and no key.
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `prompt` | `Prompter` | none | Asks AI where the words are: Space in an empty block opens a prompt, Enter sends it. A diagram's board asks it too. Without it, Space is a space. See [Asking AI](/ai/asking/). |
+| `correct` | `Corrector` | none | Corrects a block's words in place once they rest, one step to undo. Without it, nothing is corrected. See [Correction while writing](/ai/correction/). |
+| `correcting` | `boolean` | `true` | Whether `correct` starts on. `editor.correcting` turns it on and off later. |
+
+```ts
+type Prompter = (prompt: string, context: PromptContext) => Promise<string | PromptAnswer>
+type Corrector = (text: string, context: CorrectionContext) => Promise<string>
+```
+
+## Comments
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `comments` | `CommentStore` | none | The product's store of threads, people and permissions. Aa marks the commented words, keeps the anchors right as the text changes, and draws the threads. It adds Comment to the toolbar and `editor.comments`. Without it, nothing is commented. See [Comments](/together/comments/). |
+
+## On the element
+
+`<aa-editor>` takes the same object as its `options` property, set before the element is connected. Its attributes win over three of the fields:
+
+| Field | On the element |
+| --- | --- |
+| `value` | The `value` property, or the `value` attribute when it is connected |
+| `readOnly` | The `readonly` attribute |
+| `placeholder` | The `placeholder` attribute |
+| `toolbar` | `options.toolbar`, or the `toolbar` attribute when that is left out |
+| `correcting` | Off when `options.correcting` is `false` or the element has `correct="off"` |
+
+`onChange` is still called, and the element fires `input` beside it.
+
+```ts
+import { defineAaEditor, imageAtom, type AaEditorElement } from '@0001-labs/aa'
+
+defineAaEditor()
+const element = document.createElement('aa-editor') as AaEditorElement
+element.options = { atoms: [imageAtom], onFiles: files => upload(files) }
+element.setAttribute('toolbar', '')
+document.body.append(element)
+```

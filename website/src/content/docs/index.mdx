@@ -1,0 +1,49 @@
+---
+title: Aa
+description: A text editor for apps. Formatted text as you write it, stored as Markdown, drawn as Design system 1's prose.
+next:
+  label: Install
+  link: /start-here/install/
+---
+
+import Example from "../../components/Example.astro";
+
+Aa is a text editor for apps. People write formatted text; the app stores Markdown. Nothing is converted on the way and nothing is lost, so what is written in Aa reads the same anywhere Markdown is read.
+
+<Example name="overview" />
+
+## How it works
+
+- **The document is Markdown.** The editor's `value` is a Markdown text, and every change is reported as one. A heading, a bold word or a ticked box is written into the text as Markdown writes it.
+- **No syntax is shown.** A heading is its size, never its `#`. Typed shortcuts such as `## ` or `**` turn into formatting, and the toolbar and the keys format without writing syntax at all.
+- **One editable block at a time.** Each paragraph, heading or bullet is its own editable element, as in Notion. The browser types, spells and composes; Aa decides what Enter, Backspace, paste and undo do.
+- **Drawn as Design system 1's prose.** A line a square, a square between blocks, two before a heading: writing in Aa and reading it on a page look the same. See [Design system 1](/start-here/design-system-1/).
+- **A library, not a service.** Uploads, people, permissions and AI calls stay with your app. Aa asks for them through its options.
+
+## What it does
+
+| Group | Pages |
+| --- | --- |
+| Writing | [Formatting](/writing/formatting/), [Links](/writing/links/), [Headings and paragraphs](/writing/headings/), [Lists and boxes](/writing/lists/), [Quotes and code](/writing/quotes-and-code/), [Callouts and toggles](/writing/callouts/), [Tables](/writing/tables/), [Columns](/writing/columns/), [Equations](/writing/equations/), [Pictures and media](/writing/media/) |
+| Editing | [Toolbar](/editing/toolbar/), [Slash and block menus](/editing/menus/), [Selecting and moving](/editing/selecting/), [Undo](/editing/undo/), [Find and replace](/editing/find/), [Keyboard](/editing/keyboard/), [On a phone](/editing/phone/) |
+| AI | [Asking AI](/ai/asking/), [Correction while writing](/ai/correction/) |
+| Together | [Comments](/together/comments/), [Shared editing](/together/shared-editing/) |
+| Diagrams | [Diagrams](/diagrams/diagrams/), [Drawing on the board](/diagrams/board/), [The language](/diagrams/language/) |
+| Building | [Options](/building/options/), [Methods and events](/building/methods/), [Atoms](/building/atoms/), [Commands](/building/commands/), [Decorations](/building/decorations/), [Styling](/building/styling/), [Plain text](/building/plain-text/) |
+
+The [playground](/playground/) has every feature on one page, with two editors sharing one document.
+
+## Entries
+
+The core imports neither React nor Yjs. Each optional part is its own entry, loaded only by the apps that use it.
+
+| Entry | What it holds |
+| --- | --- |
+| `@0001-labs/aa` | The editor, `<aa-editor>`, the Markdown model and comments |
+| `@0001-labs/aa/aa.css` | The editor's stylesheet |
+| `@0001-labs/aa/react` | `AaEditor`, for React |
+| `@0001-labs/aa/collaboration` | `connectCollaboration`, shared editing on Yjs |
+| `@0001-labs/aa/convex` and `/convex.config` | A Convex transport and component for shared editing |
+| `@0001-labs/aa/diagram` | Diagrams drawn in the editor, and `<aa-diagram>` |
+| `@0001-labs/aa/diagram-language` | The diagram language alone, for a page or a server that only reads diagrams |
+| `@0001-labs/aa/marker` | Charts in diagrams, loaded only when a diagram has one |

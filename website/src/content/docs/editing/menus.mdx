@@ -1,0 +1,95 @@
+---
+title: Slash and block menus
+description: The slash menu for the kinds of block, and the block menu, ⌘/, for what can be done to one.
+---
+
+import Example from "../../../components/Example.astro";
+
+Nothing is drawn beside a block: `/` opens the kinds of block, and ⌘/ the commands of the block the caret is in.
+
+<Example name="menus-slash" />
+
+## The slash menu
+
+Type `/` at the start of a block, or after a space, and the menu opens under the block. The letters typed after it narrow the commands to those whose name or keywords hold them; when none do, it says No matching commands. A command run takes the slash and its letters out of the text and does its work, one step to undo. Deleting the slash closes the menu.
+
+The menu does not open in code or in a table. An empty paragraph with the caret in it says Type / for commands, or Press space for AI or / for commands where the product answers prompts (see [Asking AI](/ai/asking/)).
+
+| Command | Makes |
+| --- | --- |
+| Text | A paragraph. |
+| Heading 1, Heading 2, Heading 3 | `#`, `##`, `###` |
+| To-do | `- [ ]` |
+| Bulleted list, Numbered list | `-`, `1.` |
+| Quote | `>` |
+| Code | A fenced code block. |
+| Divider | `---` |
+| Callout | `> [!note]` |
+| Toggle, Toggle heading 1, 2 and 3 | A folded callout, `> [!note]-`, with or without a heading. |
+| Table | A table of two columns. |
+| Equation | A `$$` block. |
+| Diagram | With the diagram atom: see [Diagrams](/diagrams/diagrams/). |
+| Image or file | With `onFiles`: the browser's file picker. |
+
+The product's own `commands` follow these.
+
+## The block menu
+
+<Example name="menus-block" />
+
+⌘/ opens the commands of the block the caret is in, over the block, and selects it. A right click in a table opens them at the pointer.
+
+| Command | What it does |
+| --- | --- |
+| The kinds above | Turn the block into another kind. Its words stay, except in a divider, which has none. |
+| Duplicate | A copy after it, ⌘D. |
+| Delete | Takes it away. |
+| Move up, Move down | ⌘⇧↑ and ⌘⇧↓. |
+| Indent, Outdent | In a list only, as Tab and Shift-Tab. |
+| Add row, Delete row, Add column, Delete column | In a table only. |
+| The product's `blockCommands` | After the editor's own. |
+| Words | The number of words in the document, last; a screen reader also hears the characters. |
+
+Commands that do not apply to the block are left out. To act on several blocks at once, select them and use the keys: see [Selecting and moving](/editing/selecting/).
+
+## Keys
+
+| Key | In a menu |
+| --- | --- |
+| ↓, ↑ | The next or the previous command, round from the last to the first. |
+| Enter | Runs the command. |
+| Escape | Closes the menu. |
+| ⌘⌥0 to ⌘⌥8 | Turn the block into Text, Heading 1, 2 or 3, To-do, Bulleted list, Numbered list, Quote or Code, without the menu. |
+
+A press outside the menu closes it too.
+
+## Measures
+
+The menu is Design system 1's Context menu, four squares wide whatever its words: words too long fade over their last square. Each row is one square high, its words on the lower sixteen and its icon at the row's end. Its commands scroll within eight squares, and Close, with esc beside it, stays under them. It stands under its block, or over it when the window or a phone's keyboard leaves no room under it.
+
+## Options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `menus` | `true` | `false` turns off the slash menu, the empty block's placeholder and moving blocks by hand. |
+| `commands` | None | More commands for the slash menu, after the kinds. |
+| `blockCommands` | None | More commands for the block menu. |
+| `blockPlaceholder` | Type / for commands, or Press space for AI or / for commands with `prompt` | What an empty paragraph with the caret says; `''` for nothing. |
+
+```ts
+createEditor(host, {
+  commands: [
+    { id: 'today', label: 'Today’s date', icon: 'text', keywords: 'date now', run: editor => {
+      const at = editor.selection()
+      if (at) editor.replace(at.start, at.end, new Date().toLocaleDateString())
+    } },
+  ],
+  blockCommands: [
+    { id: 'share', label: 'Copy link to block', icon: 'link', run: editor => copyBlockLink(editor.activeBlock()) },
+  ],
+})
+```
+
+A command is `{ id, label, icon, keywords?, ink?, enabled?, run(editor) }`: `keywords` are found by the slash menu as the label is, `ink` draws the icon in one of the text colours, and `enabled(editor)` returning `false` leaves the command out. See [Commands](/building/commands/).
+
+[Toolbar](/editing/toolbar/) · [Selecting and moving](/editing/selecting/) · [Keyboard](/editing/keyboard/)

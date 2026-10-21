@@ -1,0 +1,202 @@
+@import "./component-metrics.css";
+
+/*
+ * Prose: long-form and marketing writing on the grid.
+ *
+ * Mark the element that holds the writing with `data-ds-prose`. Its headings,
+ * paragraphs, lists, links, quotes, code, rules and simple tables stay native
+ * elements and take Design system 1's type: every line is one square, one
+ * square stands between two blocks and two before a heading, and a title (h1)
+ * takes two squares. These count as Design system 1's styles.
+ *
+ * Nothing outside a marked element is touched: no rule here reaches the page,
+ * its body or its controls. Mark a part inside the writing that draws itself
+ * (an example, a widget) with `data-ds-not-prose` to leave its contents out.
+ *
+ * Every rule is one attribute strong ([data-ds-prose] with :where()), so one
+ * class in a page's own stylesheet overrides it. The sheet reads the component
+ * tokens (component-tokens.css) and the faces the page loads, as controls.css
+ * does; it imports no fonts of its own.
+ *
+ *   h1                          20 on two squares, medium
+ *   h2, h3                      17 and 15 on one square, medium
+ *   h4, h5, h6, p, li, td, th   14 on one square
+ *   code, pre                   13 in the code face, on one square
+ *   small                       10
+ */
+
+[data-ds-prose] {
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  overflow-wrap: break-word;
+}
+
+/* Blocks start flush; the spacing below puts them on the grid. */
+[data-ds-prose] :where(h1, h2, h3, h4, h5, h6, p, ul, ol, dl, dd, blockquote, pre, table, figure, hr, details):not(:where([data-ds-not-prose] *)) {
+  margin-block: 0;
+}
+
+[data-ds-prose] :where(p, li, dt, dd, td, th, blockquote, summary, figcaption):not(:where([data-ds-not-prose] *)) {
+  font-size: var(--ds-type-size-default);
+  line-height: var(--ds-unit);
+}
+
+/* One square between two blocks, two before a heading. */
+[data-ds-prose] :where(:not(a, abbr, b, bdi, bdo, br, button, cite, code, data, del, dfn, ds-icon, em, i, img, input, ins, kbd, label, mark, q, s, samp, select, small, span, strong, sub, sup, svg, textarea, time, u, var, wbr)) + :where(:not(a, abbr, b, bdi, bdo, br, button, cite, code, data, del, dfn, ds-icon, em, i, img, input, ins, kbd, label, mark, q, s, samp, select, small, span, strong, sub, sup, svg, textarea, time, u, var, wbr, [data-ds-not-prose] *)) {
+  margin-top: var(--ds-unit);
+}
+
+[data-ds-prose] :where(:not(h1, h2, h3, h4, h5, h6)) + :where(h1, h2, h3, h4, h5, h6):not(:where([data-ds-not-prose] *)) {
+  margin-top: calc(2 * var(--ds-unit));
+}
+
+/* Headings */
+
+[data-ds-prose] :where(h1, h2, h3, h4, h5, h6):not(:where([data-ds-not-prose] *)) {
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-medium);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-bold);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+
+[data-ds-prose] :where(h1):not(:where([data-ds-not-prose] *)) {
+  font-size: var(--ds-type-size-display);
+  line-height: calc(2 * var(--ds-unit));
+  letter-spacing: calc(var(--ds-display-text-tracking, -0.4px) * var(--ds-sf, 1));
+}
+
+[data-ds-prose] :where(h2):not(:where([data-ds-not-prose] *)) {
+  font-size: calc(var(--ds-prose-h2-size, 17px) * var(--ds-sf, 1));
+  letter-spacing: calc(var(--ds-prose-h2-tracking, -0.34px) * var(--ds-sf, 1));
+}
+
+[data-ds-prose] :where(h3):not(:where([data-ds-not-prose] *)) {
+  font-size: calc(var(--ds-prose-h3-size, 15px) * var(--ds-sf, 1));
+}
+
+/* Lists: items stand edge to edge, indented one square. */
+
+[data-ds-prose] :where(ul, ol):not(:where([data-ds-not-prose] *)) {
+  padding-inline-start: var(--ds-unit);
+}
+
+[data-ds-prose] :where(li + li, li > ul, li > ol, dt + dt, dt + dd, dd + dd):not(:where([data-ds-not-prose] *)) {
+  margin-top: 0;
+}
+
+[data-ds-prose] :where(dt):not(:where([data-ds-not-prose] *)) {
+  font-family: var(--ds-typeface-medium);
+  font-weight: var(--ds-type-weight-bold);
+}
+
+[data-ds-prose] :where(dd):not(:where([data-ds-not-prose] *)) {
+  margin-inline-start: var(--ds-unit);
+}
+
+/* Words */
+
+[data-ds-prose] :where(a):not(:where([data-ds-not-prose] *)) {
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: calc(3px * var(--ds-sf, 1));
+}
+
+[data-ds-prose] :where(a:focus-visible):not(:where([data-ds-not-prose] *)) {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 1px;
+}
+
+[data-ds-prose] :where(strong, b, th):not(:where([data-ds-not-prose] *)) {
+  font-family: var(--ds-typeface-medium);
+  font-weight: var(--ds-type-weight-bold);
+}
+
+[data-ds-prose] :where(small):not(:where([data-ds-not-prose] *)) {
+  font-size: var(--ds-type-size-small);
+}
+
+[data-ds-prose] :where(blockquote):not(:where([data-ds-not-prose] *)) {
+  margin-inline: 0;
+  padding-inline-start: var(--ds-unit);
+  border: 0;
+  box-shadow: inset 1px 0 var(--ds-text-color-muted);
+}
+
+/* Code: thirteen on the same one-square lines, in the code face. */
+
+[data-ds-prose] :where(code, kbd, samp, pre):not(:where([data-ds-not-prose] *)) {
+  font-family: var(--ds-typeface-mono);
+  font-size: calc(var(--ds-code-text-size, 13px) * var(--ds-sf, 1));
+  line-height: var(--ds-unit);
+  letter-spacing: 0;
+}
+
+[data-ds-prose] :where(:not(pre) > code, kbd, samp):not(:where([data-ds-not-prose] *)) {
+  margin: 0;
+  padding: 0 calc(4px * var(--ds-sf, 1));
+  border-radius: var(--ds-radius);
+  background: var(--ds-fill);
+}
+
+/* A block of code: a square of room around it, its frame a hairline. */
+[data-ds-prose] :where(pre):not(:where([data-ds-not-prose] *)) {
+  overflow-x: auto;
+  padding: var(--ds-unit);
+  border: 0;
+  border-radius: var(--ds-radius);
+  box-shadow: inset 0 0 0 1px var(--ds-border-color);
+  background: transparent;
+  color: inherit;
+}
+
+[data-ds-prose] :where(pre > code):not(:where([data-ds-not-prose] *)) {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+/* A rule takes no room: it is a hairline under the space above it. */
+[data-ds-prose] :where(hr):not(:where([data-ds-not-prose] *)) {
+  height: 0;
+  margin-inline: 0;
+  border: 0;
+  box-shadow: 0 1px var(--ds-border-color);
+}
+
+/* A table's row is two squares, ruled by a hairline under it. A wide table
+   scrolls on its own rather than widening the page. */
+[data-ds-prose] :where(table):not(:where([data-ds-not-prose] *)) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+  border-radius: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-ds-prose] :where(th, td):not(:where([data-ds-not-prose] *)) {
+  padding: calc(var(--ds-unit) / 2);
+  border: 0;
+  box-shadow: inset 0 -1px var(--ds-border-color);
+  text-align: start;
+  vertical-align: top;
+}
+
+[data-ds-prose] :where(img, video):not(:where([data-ds-not-prose] *)) {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--ds-radius);
+}
+
+[data-ds-prose] :where(figcaption):not(:where([data-ds-not-prose] *)) {
+  color: var(--ds-text-color-muted);
+}

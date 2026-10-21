@@ -1,0 +1,107 @@
+---
+title: Asking AI
+description: Space in an empty block opens a prompt; the answer is written into the document, marked, and taken back as one step.
+---
+
+import Example from "../../../components/Example.astro";
+
+Give the editor a `prompt` call and Space in an empty block asks AI: the answer is written where the prompt stood, or changes what is already written, where it stands.
+
+<Example name="ai-ask" />
+
+The examples on these pages are answered within one small allowance that everyone reading them shares. A product makes the call with its own backend: Aa holds no model and no key.
+
+## The prompt
+
+Space in an empty paragraph opens a prompt over it, written in a live colour, the focus ring's blue, so it reads as something said to the AI rather than written into the page. It is never part of the document. It says Ask AI or press space to speak until something is written in it.
+
+At a sentence's end in a paragraph or a list item (its full stop, question or exclamation mark and one space, the caret after it), and in a list item with nothing written yet, the block says Press space for AI after the caret. Space there opens the prompt at the caret, and the answer goes on from there in the same block.
+
+| Key | In the prompt |
+| --- | --- |
+| Enter | Sends it. |
+| Space, before anything is written | Listens instead. |
+| Escape | Puts it away. |
+| Backspace in an empty prompt | Puts it away. |
+
+## Listening
+
+Space twice listens, with the browser's speech recognition. The words heard come in italics, the last ones still being heard fainter, and the caret is a dot after them that breathes very slightly the whole time it listens: a slow pulse of its opacity, mixed with the microphone's level, never its size, and still where less motion is asked for. What was heard can be changed before it is sent. When listening fails, the prompt says why where the words would be: the microphone is blocked, none was found, nothing was heard.
+
+## Sending
+
+Enter sends the prompt with what it is about: its section, from the heading over it to the next heading, and the whole document. The prompt and that section glisten until the answer comes, a band of the accent passing through the letters alone, never over the block's box. When no answer comes, the prompt stays, marked, to send again or put away.
+
+<Example name="ai-ask-edits" />
+
+## The answer
+
+The answer can say what to write, or what the whole document should be afterwards.
+
+| Answer | What Aa does |
+| --- | --- |
+| A string of Markdown | Writes it where the prompt stood. |
+| `{ insert }` | The same. |
+| `{ edits: [{ find, replace }] }` | Changes what is written, in place: each `find` an exact passage that occurs once, before or after the prompt, and what it becomes. Ticks a box, renames, fixes, moves, deletes. |
+| `{ edits, insert }` | Both, as one change. |
+| `{ document }` | The whole document as it should be afterwards. `PROMPT_HERE` in it stands where new writing goes, and is taken out. |
+
+Aa takes the answer in as one change, one step to undo, keeping the blocks it left as they were: only what changed is drawn again. With nothing to insert, the prompt's empty block goes. What changed shimmers once, and the caret goes after what was written, or to where the prompt stood. A prompt opened at a sentence's end, or in an empty list item, takes only a `document` answer.
+
+## Marks and Revert
+
+What an answer changed stays marked until it is put away.
+
+| Mark | Where |
+| --- | --- |
+| A Sharp blue dot | After each block changed on its own: a box ticked, a title reworded. |
+| A Zenith blue hold | Round a run the answer wrote or rewrote: several blocks, a code block, a diagram. |
+| The blue on a box | A box the answer ticked or unticked. |
+
+A dot grows into Design system 1's button, Revert, on hover or focus. Revert puts back that change alone, as one step to undo, the answer's other changes left as they are and the caret where it is. The words an answer changed or wrote are named on a decoration layer of their own, `ai`, for a product that wants to colour them.
+
+| To | Do |
+| --- | --- |
+| Put the marks away, keeping the changes | Escape. |
+| Take the whole answer back | ⌘Z. |
+| Take one change back | Revert on its mark. |
+
+Marks also go when their block is changed by hand, when they are reverted, and when another answer comes. Nothing else says what the answer did.
+
+## Options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `prompt` | None | Asks AI: Space in an empty block, the Ask AI row on the [toolbar](/editing/toolbar/#ask-ai), and Space on a [diagram's board](/diagrams/board/). Without it, Space is a space. |
+| `blockPlaceholder` | Press space for AI or / for commands | What an empty paragraph with the caret says, where `prompt` is given. |
+
+```ts
+import { createEditor, PROMPT_HERE, type Prompter } from '@0001-labs/aa'
+
+const prompt: Prompter = async (said, { kind, text, before, after, document, signal }) => {
+  const response = await fetch('/api/ask', {
+    method: 'POST', signal,
+    body: JSON.stringify({ said, kind, text, before, after, document }),
+  })
+  if (!response.ok) throw new Error('Not answered')
+  return await response.json() // Markdown, or { edits, insert }, or { document }
+}
+
+createEditor(host, { prompt, toolbar: true })
+```
+
+A thrown error, or an answer that changes nothing, leaves the prompt where it was, to send again. `signal` is aborted when the prompt closes before the answer comes, as it does when the editor is destroyed.
+
+## The context
+
+| Field | What it holds |
+| --- | --- |
+| `kind` | `'writing'`, or `'diagram'` on a diagram's board. |
+| `text` | What the prompt is about: its section as Markdown, the prompt's own block left out; the selected words from the toolbar; a diagram's words on its board. |
+| `before`, `after` | For writing: the Markdown before and after the prompt's block, or the selected words. |
+| `document` | For a prompt in the writing: the whole document, `PROMPT_HERE` on its own line where the prompt is, or after the sentence it goes on from. |
+| `signal` | An `AbortSignal`. |
+
+`PROMPT_HERE` is exported, so a server can tell the model where the prompt stands. A prompt from the toolbar has no `document`, and its answer, a string or `{ insert }`, takes the selected words' place. On a diagram's board the answer is the diagram written again. See [Drawing on the board](/diagrams/board/).
+
+[Correction while writing](/ai/correction/) · [Toolbar](/editing/toolbar/) · [Undo](/editing/undo/)

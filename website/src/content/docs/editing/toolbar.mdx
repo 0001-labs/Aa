@@ -1,0 +1,89 @@
+---
+title: Toolbar
+description: The bar over selected words, which formats them without writing syntax.
+---
+
+import Example from "../../../components/Example.astro";
+
+Select words and a bar stands over them: their colour, the marks, a link, code, an equation and, where the product keeps them, a comment.
+
+<Example name="toolbar-bar" />
+
+## The cells
+
+The bar is Design system 1's context bar, a grid five squares wide, each cell an icon one square. Every cell is named by Design system 1's tooltip, with its shortcut where it has one.
+
+| Cell | Key | What it writes |
+| --- | --- | --- |
+| Text colour | | Opens the colours: Default, Grey, Red, Orange, Green, Blue and Purple. A colour is written `<span color="red">words</span>`; Default takes it off. |
+| Bold | ⌘B | `**words**` |
+| Italic | ⌘I | `*words*` |
+| Underline | ⌘U | `<u>words</u>` |
+| Strikethrough | ⌘⇧S | `~~words~~`. ⌘⇧X does the same. |
+| Link | ⌘K | Opens the link field: see [A link](#a-link). |
+| Code | ⌘E | `` `words` `` |
+| Equation | | `$words$` |
+| Comment | ⌘⇧M | Starts a thread on the words, where the editor has a `comments` store. See [Comments](/together/comments/). |
+
+Pressed again over the same words, a mark comes off. Words selected across several blocks are formatted in each of them. The kinds of block, pictures and what the product inserts are in the [slash menu](/editing/menus/), not on the bar; on touch the bar holds them too (see [On a phone](/editing/phone/)).
+
+## When it shows
+
+The bar shows a moment after the selection settles, half a square above the selected words, or below them when there is no room above. It stays over them while its own field has the focus, and goes when no words are selected, when a press lands outside the editor and the bar, or when the editor is made read only. It opens without taking the focus: it is a toolbar, `role="toolbar"`, and Tab reaches its buttons.
+
+## Text colour
+
+<Example name="toolbar-colour" />
+
+Markdown has no colour, so a colour is written as Notion writes it, in one of `TEXT_COLORS`: gray, red, orange, green, blue and purple. Each is a dark ink of Design system 1's palette on light paper and a light one on dark. See [Formatting](/writing/formatting/).
+
+## A link
+
+<Example name="toolbar-link" />
+
+Link, or ⌘K, opens a field for the address: at the editor's top with a pointer, and in the bar's place above the keyboard on touch.
+
+| Key | In the link field |
+| --- | --- |
+| Enter | Apply: the words become `[words](address)`. With no words selected, the address is written as the words too. |
+| Escape | Cancel: the words are selected again, unchanged. |
+
+With the caret or the selection inside a link, the field opens on that link's address, and Apply changes it. A link is made within one block. Pasting an address over selected words links them as well; ⌘⇧V pastes it as plain text instead. See [Links](/writing/links/).
+
+## Ask AI
+
+Where the product answers prompts (`prompt` in the options), a second row under the cells asks AI about the selected words.
+
+<Example name="ai-ask-words" />
+
+Write what to do with the words and press Enter. They glisten while the answer is awaited, then the answer takes their place, still selected, as one step to undo. Escape empties the field and gives the selection back. When no answer comes, what was written stays in the field, to send again. See [Asking AI](/ai/asking/).
+
+## Options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `toolbar` | `false` | `true` shows the bar over selected words. An array of actions shows it with those cells after the built-in ones. On the element, the `toolbar` attribute turns it on. |
+| `comments` | None | Adds Comment to the bar. |
+| `prompt` | None | Adds the Ask AI row under the cells. |
+
+An action of the product's own:
+
+```ts
+createEditor(host, {
+  toolbar: [
+    { id: 'mention', label: 'Mention', icon: 'mention', shortcut: '⌘⇧2', run: editor => openPeoplePicker(editor) },
+  ],
+})
+```
+
+| Field | What it is |
+| --- | --- |
+| `id` | Names the cell (`data-action`). |
+| `label` | Its name, in the tooltip and to a screen reader. |
+| `icon` | One of Aa's copied Design system 1 icons, by name. |
+| `shortcut` | Optional. Shown in the tooltip after the label; Aa does not bind the key. |
+| `run(editor)` | Called with the editor, the words selected again. |
+
+The bar is drawn by Design system 1's `context.css`, which `aa.css` imports. See [Styling](/building/styling/) and [Commands](/building/commands/).
+
+[Slash and block menus](/editing/menus/) · [Formatting](/writing/formatting/) · [Keyboard](/editing/keyboard/)

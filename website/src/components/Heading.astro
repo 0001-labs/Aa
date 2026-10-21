@@ -1,0 +1,7 @@
+---
+// The page's title, in place of Starlight's PageTitle: Design system 1's display text, 20px on
+// two squares. Starlight's "On this page" links to it as #_top.
+const { title } = Astro.locals.starlightRoute.entry.data;
+---
+
+<h1 id="_top" class="ds-text ds-text--display">{title}</h1>

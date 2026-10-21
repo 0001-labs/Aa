@@ -1,0 +1,86 @@
+---
+title: Selecting and moving
+description: Words selected across blocks, whole blocks selected with Escape, and blocks dragged, duplicated, moved and deleted.
+---
+
+import Example from "../../../components/Example.astro";
+
+Words are selected along the lines and on across blocks; whole blocks are selected with Escape and moved by hand or from the keys.
+
+<Example name="selecting-words" />
+
+## Words across blocks
+
+Each block is its own editable element, and a browser keeps a selection dragged in one inside it. Aa carries it on: once a mouse press that is selecting words reaches another block, the selection runs from where the press began to the pointer, over every block between. It is one selection, and typing, Backspace and Delete, the marks (⌘B, ⌘I, ⌘U, ⌘E, ⌘⇧S), copy and cut act on all of it.
+
+- A press that first moves along a line selects words. One that first moves up or down lifts its block instead: see [Moving blocks by hand](#moving-blocks-by-hand).
+- A double or triple press and a drag go on from the start of the word or the line it selected.
+- Shift and a click in another block extend the selection to it.
+- Near the window's top or bottom edge the page scrolls on, and the selection with it.
+- ⌘A selects the words of the block the caret is in (a table cell's first), and pressed again, all the writing.
+- Copy puts the selected Markdown on the clipboard, syntax and all.
+
+On touch the selection is the system's own, by a long press. See [On a phone](/editing/phone/).
+
+## Blocks selected
+
+<Example name="selecting-blocks" />
+
+Escape selects the block the caret is in, drawn as a whole. Shift-↑ and Shift-↓ select whole blocks too: from the caret's block to the one above or below, and further with each press.
+
+| Key | With blocks selected |
+| --- | --- |
+| ↑, ↓ | Select the block above or below instead. |
+| Shift-↑, Shift-↓ | Take in one more block, or one fewer. |
+| ←, Enter | Back to writing, at the start of the block. |
+| → | Back to writing, at the end of the block. |
+| Backspace, Delete | Delete the blocks. |
+| ⌘D | Duplicate them: the copies stand after them, selected. |
+| ⌘⇧↑, ⌘⇧↓ | Move them up or down; they stay selected. |
+| ⌘⌥0 to ⌘⌥8 | Turn them into another kind. |
+| ⌘C, ⌘X | Copy them as Markdown; cut takes them away. |
+| Typing | Writes in their place. |
+
+A click in the writing puts the caret back and lets the blocks go. Where a comment's thread is open, Escape closes it first, and after an AI answer, Escape first puts its marks away.
+
+## Moving blocks by hand
+
+<Example name="selecting-drag" />
+
+There is no handle. A block is moved with the mouse, on the Drag library's sortable engine: it lifts, the blocks it passes step aside by its whole height, and it lands where the press is let go.
+
+| Press | What it does |
+| --- | --- |
+| Held still for a moment | Lifts the block. |
+| Moving up or down first | Lifts the block at once. |
+| Moving along the line first | Selects words, as it always has. |
+| On a block the pointer rested on | The cursor has turned into a hand: the press lifts the block whichever way it moves. |
+| On selected blocks | Drags them at once. The one pressed is carried, the others wait dimmed in their places, and they land together. |
+| A second or third press | Selects a word or a line; it never lifts. |
+
+Let go where it began, a lifted block stays and the caret goes where the press was. A block carried to another block's side, its first or last fifth and four squares at most, shows a line down that side; let go there, the two stand side by side as [columns](/writing/columns/). Moved blocks stay selected, so ⌘⇧↑, Backspace or another drag act on them next.
+
+Touch keeps its long press for selecting words: there the block menu's Move up and Move down move blocks. Files dropped from outside land between blocks, on a line drawn where they will go.
+
+## Duplicating and deleting
+
+⌘D duplicates the block the caret is in, or the blocks selected, and selects the copies. Backspace or Delete deletes selected blocks, and the [block menu](/editing/menus/#the-block-menu), ⌘/, holds Duplicate, Delete, Move up and Move down for the block the caret is in. Each is one step to undo. A document with every block deleted keeps one empty paragraph.
+
+## From code
+
+```ts
+editor.selectBlocks(2, 4)            // blocks 2 to 4, selected as blocks
+editor.selectRange(120, 168)         // words, as offsets into the Markdown
+editor.blockAction('duplicate')      // 'delete', 'duplicate', 'up' or 'down', on the selected blocks or the caret's
+editor.moveBlock(5, 1, 2)            // two blocks from 5 to 1; they stay selected
+editor.selection()                   // { start, end } in the Markdown, or null
+```
+
+See [Methods and events](/building/methods/).
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `menus` | `true` | `false` also turns off moving blocks by hand. |
+| `readOnly` | `false` | Nothing is moved, duplicated or deleted. |
+
+[Slash and block menus](/editing/menus/) · [Undo](/editing/undo/) · [Keyboard](/editing/keyboard/)

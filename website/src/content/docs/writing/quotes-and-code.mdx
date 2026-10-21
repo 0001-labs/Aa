@@ -1,0 +1,53 @@
+---
+title: Quotes and code
+description: Quotes on a hairline, fenced code in Aa Mono, and dividers, each a block stored as Markdown.
+---
+
+import Example from "../../../components/Example.astro";
+
+Quotes, fenced code and dividers are blocks of their own, written as Markdown writes them and drawn as Design system 1's prose draws them.
+
+<Example name="quotes" />
+
+## Quotes
+
+Type `>` and a space at the start of a block for a quote, or press ⌘⌥7. Enter goes on quoting on a new line; Enter on an empty last line ends the quote and starts a paragraph after it. Backspace at the start of a quote takes its `>` off.
+
+A quote stands a square in, on a hairline in the muted ink. Its words are formatted as any others. `--aa-quote-rule` changes the hairline's colour; see [Styling](/building/styling/).
+
+## Code
+
+<Example name="code" />
+
+Choose Code in the [slash menu](/editing/menus/), press ⌘⌥8, or type three backticks at the start of a block. Inside code, Enter is a new line and nothing is formatted: stars and backticks are kept as written. At the end of a block whose closing fence is written, Enter starts a paragraph after it. Backspace at the start of the block after code puts the caret at the end of the code rather than joining the two.
+
+The fences are kept in the Markdown and never shown. A language written after the opening fence, as in ` ```ts `, is kept with it. Code is drawn in Aa Mono at 13px, on the same lines as the writing, in a hairline frame a square from its words, with no spelling marks and nothing capitalised or corrected by a phone's keyboard.
+
+A block turned into code is given a fence longer than any run of backticks in it, so the code can hold backticks of its own. A fence in the `diagram` language is drawn as a diagram where the editor has the diagram atom; see [Diagrams](/diagrams/diagrams/).
+
+## Dividers
+
+<Example name="dividers" />
+
+Type `---` in an empty block, or choose Divider in the slash menu. A divider takes no room of its own: it is a hairline under the square above it, so the writing either side stands two squares apart. Backspace at the start of the block after it, or Delete at the end of the block before it, takes it away.
+
+## The Markdown
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| A quote | `>` and a space, or ⌘⌥7 | `> The words`, a `>` on every line |
+| Code | Three backticks, or ⌘⌥8 | The lines between two fences of three backticks or more (`~~~` fences read too) |
+| Code in a language | Write it after the opening fence | ` ```ts ` on the first line |
+| A divider | `---` in an empty block | `---` (`***` and `___` read as dividers too) |
+
+Inline code, a word or two in backticks, is on [Formatting](/writing/formatting/).
+
+## Keys
+
+| Keys | What they do |
+| --- | --- |
+| Enter in a quote | A new quoted line, or the end of the quote on an empty one |
+| Enter in code | A new line, or a paragraph after a closed block's end |
+| ⌘⌥7 | Quote |
+| ⌘⌥8 | Code |
+| Backspace after a divider | Takes the divider away |

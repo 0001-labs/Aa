@@ -1,0 +1,42 @@
+---
+title: Plain text
+description: createPlainEditor, one native block of plain text for short writing.
+---
+
+`createPlainEditor(host, options)` is one block of plain text, for a name, a title or a short specimen where a document would be too much. It has Aa's selection and takes the surrounding type, and nothing else.
+
+```ts
+import { createPlainEditor } from '@0001-labs/aa'
+
+const field = createPlainEditor(host, {
+  value: 'A title',
+  onChange: text => save(text),
+})
+```
+
+## What it is
+
+- **One block.** The browser edits it as plain text: lines, the clipboard, composition and undo are all the browser's.
+- **No Markdown.** What is typed is what is stored. There is no toolbar, no menus, no atoms and no document model.
+- **The page's type.** It inherits the font, size and colour around it.
+- **Aa's selection.** The selection is drawn with the same rounded corners as the editor's.
+
+Use [`createEditor`](/start-here/install/#from-code) for anything that is a document.
+
+## Options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `value` | the host's text | The text it starts with |
+| `readOnly` | `false` | The text can be read and selected, not changed |
+| `onChange` | none | Called with the text after each change |
+
+## The editor it returns
+
+| Member | What it does |
+| --- | --- |
+| `value` | The text; set it to change it |
+| `readOnly` | Whether it can be changed |
+| `focus()` | Puts the caret in it |
+| `destroy()` | Releases its listeners |
+| `element` | The host |

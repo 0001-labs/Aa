@@ -1,0 +1,170 @@
+---
+title: Comments
+description: Threads on ranges of the text, kept on their words as the text changes, drawn at the words or in a panel.
+---
+
+import Example from "../../../components/Example.astro";
+
+A comment is a thread on a run of the words, kept on those words as the text around them changes.
+
+<Example name="comments-thread" />
+
+Comments change nothing in the Markdown. The commented words are marked on a decoration layer of their own, `comments`, and the threads are kept by your app, in a store it gives the editor. Without a store, nothing is commented.
+
+## Try it
+
+- **Open a thread.** Bring the caret into the orange words, or press them. Escape closes it, and it stays closed until the caret has left its words.
+- **Start one.** Select words and press Comment in the toolbar, or ⌘⇧M. The words stay marked while the first comment is written.
+- **Reply.** Enter sends, Shift-Enter breaks a line.
+- **Resolve.** Resolve stands at the end of the thread's own row. A resolved thread says who resolved it, takes no replies, and can be reopened.
+
+## The marks
+
+| Mark | What it says |
+| --- | --- |
+| A pale orange over the words | An open thread stands here |
+| A stronger orange | The thread open now, or the words of a thread being started |
+| A line under the words | A thread with a comment the reader has not seen |
+
+Yellow is highlight's and blue is AI's, so a comment's orange is never taken for either. `--aa-comment-fill` and `--aa-comment-fill-open` change the two fills. With forced colours the words are outlined instead.
+
+## Popover and panel
+
+<Example name="comments-panel" />
+
+Threads are drawn in one of two places, chosen by the store's `panel`.
+
+| | Popover | Panel |
+| --- | --- | --- |
+| Where | At the words: half a square under them, or over them where there is no room under | In an element your app gives, beside the text |
+| Width | Sixteen squares, or the window less a square each side | The panel's |
+| Shows | The open thread, or the one being started | Every thread, under two tabs, Open and Resolved, each with its count |
+| The quoted words | Left out, since they stand right over it | In the thread's row, muted |
+| Moving on | Previous comment and Next comment step through the open threads in the order of the words | Press a thread to open it and select its words |
+| Closing | Escape, or a press outside it | Escape, or a press on the open thread |
+
+In a panel, the left and right arrows move between the tabs, and the chosen tab decides which threads are marked in the text. In a popover, a thread of three comments or more that runs long carries its count as a title.
+
+## Anchors
+
+<Example name="comments-orphaned" />
+
+A thread stands on `from` and `to`, offsets into the Markdown, and `quote`, the words between them. After every change Aa finds the smallest replacement that turns the old text into the new one (`textChange`, the same diff [shared editing](/together/shared-editing/) uses) and moves each thread through it (`mapRange`).
+
+| An edit | What happens to the thread |
+| --- | --- |
+| Before the words | The thread moves with them |
+| At the start of the words | The new words stand before the thread |
+| At the end of the words | The new words go on with the thread, as typing goes on in bold |
+| Inside the words | The thread grows or shrinks |
+| Over its start or its end | That end is cut back to what is left |
+| Over all of the words | The thread is **orphaned** |
+
+An orphaned thread is kept: still listed in a panel, its words named as no longer in the text, and no longer marked. When the words come back, by undo or from outside, it is found again.
+
+A thread that arrives from the store with offsets that no longer hold its words is looked for by its quote, nearest to where it was. Moved anchors are given back to the store with `move` a moment after the typing stops, so a sentence typed is one move and other readers find the thread where its words now are.
+
+## Reactions and mentions
+
+<Example name="comments-reactions" />
+
+- **Reactions.** Under each comment, a chip for each emoji given, with its count, pressed where the reader gave it and naming who did. The plus offers sixteen, eight a row (`REACTION_EMOJIS`). A press on a chip gives that emoji, or takes the reader's back. Reactions appear only where the store has `react`, and not on a resolved thread.
+- **Mentions.** `@` in a reply opens the people menu, filled by the store's `people`. The arrows go through it, Enter or Tab chooses, Escape closes it. The name is written as `@Name`, set in that person's colour, and handed to the store in `mentions`. Backspace just after a name takes the whole name.
+- **People.** Each person is drawn as Design system 1 draws one: round, their initial in their own ink inside a ring of it. The ink is chosen by their id from six of the palette's accents, unless the store gives a `colour`.
+- **Editing.** A person's own comments carry Edit. Enter keeps the new words, Escape leaves the old ones; the time then says Edited.
+- **Deleting.** The person who started a thread can delete it from its row, with a second press to confirm.
+
+## Dictation and AI in replies
+
+Where the browser can listen, an empty reply says "Press space to speak, or reply". Space dictates into the field in the prompt's colour; Enter sends what was heard, Escape stops, and any other key stops listening and types on.
+
+Where the browser cannot listen and the editor has a [`prompt`](/ai/asking/), the empty field says "Press space for AI, or reply". Space asks AI about the commented words, with the thread so far as its context; Enter sends the question, and the answer becomes the reply to send. Escape, or Backspace in an empty field, stops asking.
+
+## Read only
+
+<Example name="comments-read-only" />
+
+A read-only editor, or a store with no `me`, still marks the words and opens the threads, with nothing to reply, resolve or react with.
+
+## The store
+
+Aa is a library: the storage, the people, the permissions and the notifications are your app's. Your app gives the editor a `CommentStore`, and every write is a promise that may refuse. A refusal is shown under the thread for a few seconds, in the words of its error.
+
+```ts
+import { createEditor, type CommentStore } from '@0001-labs/aa'
+
+const comments: CommentStore = {
+  me: { id: user.id, name: user.name },
+  subscribe: receive => api.watchThreads(noteId, receive),
+  add: (range, body, mentions) => api.addThread(noteId, range, body, mentions),
+  reply: (threadId, body, mentions) => api.reply(threadId, body, mentions),
+  resolve: (threadId, resolved) => api.resolve(threadId, resolved),
+  move: moves => api.moveThreads(moves),
+  seen: threadId => api.markSeen(threadId),
+  react: (commentId, emoji) => api.react(commentId, emoji),
+  people: query => api.people(noteId, query),
+}
+
+const editor = createEditor(host, { value: markdown, toolbar: true, comments })
+```
+
+| Member | What it does |
+| --- | --- |
+| `subscribe(receive)` | Gives the threads now, and again on every change, until the returned function is called |
+| `me` | Who is writing. Without it the comments read only |
+| `add(range, body, mentions)` | Starts a thread on `{ from, to, quote }` |
+| `reply(threadId, body, mentions)` | Adds a comment to a thread |
+| `edit(commentId, body)` | Optional. Changes a comment's words |
+| `resolve(threadId, resolved)` | Resolves a thread, or reopens it |
+| `remove(threadId)` | Optional. Deletes a thread |
+| `move(moves)` | Optional. Keeps the threads whose words moved, `{ id, from, to, quote }` each |
+| `seen(threadId)` | Optional. The reader has opened the thread |
+| `react(commentId, emoji)` | Optional. Gives an emoji, or takes the reader's own back. Without it, no reactions |
+| `people(query)` | Optional. The people who may be mentioned, for what is typed after `@` |
+| `panel` | Optional. An element beside the text to draw the threads in; without it, a popover |
+
+A thread is `{ id, from, to, quote, comments, createdAt, updatedAt }`, with `resolvedAt` and `resolvedBy` once resolved. Two fields are the store's to say for the reader: `unread`, whether they have not seen its latest comment, and `canDelete`, whether they may delete it. A comment is `{ id, author, body, createdAt }`, with `editedAt`, `mentions` and `reactions` where it has them. A person is `{ id, name, colour? }`. A reaction is `{ emoji, count, reacted, names }`: how many gave it, whether the reader did, and who else did.
+
+## From outside
+
+`editor.comments` opens, starts and closes threads from your app, for a list of comments elsewhere on the page or a notification that leads to one.
+
+| Member | What it does |
+| --- | --- |
+| `open(threadId)` | Opens a thread, in the popover or expanded in the panel |
+| `start()` | Starts a thread on the selected words; false with nothing selected or nobody to write as |
+| `close()` | Puts the popover away, or folds the panel's open thread; true when something was open |
+| `threads` | Every thread as it stands in the text now, each with `orphaned` |
+
+## In memory
+
+`memoryCommentStore` keeps its threads in the tab, doing what a backend would: ids, times, who may delete, what is unread, the people to mention. The examples on this page use it. It is meant for a playground and for tests.
+
+```ts
+import { createEditor, memoryCommentStore } from '@0001-labs/aa'
+
+const comments = memoryCommentStore({
+  me: { id: 'you', name: 'You' },
+  people: [{ id: 'ann', name: 'Ann Lund' }, { id: 'bo', name: 'Bo Ek' }],
+  delay: 150,
+})
+
+createEditor(host, { value: markdown, comments })
+```
+
+| Option | What it does |
+| --- | --- |
+| `me` | Who is writing |
+| `people` | Who can be mentioned |
+| `threads` | The threads it starts with |
+| `panel` | An element to draw the threads in |
+| `delay` | Milliseconds each write takes, as a server's would |
+| `now` | The clock, for tests |
+
+`put(thread)` puts a thread in from outside, as another person's comment would arrive, and `threads` gives the threads as they are kept.
+
+## Not yet
+
+Pictures on a comment, and drafts kept across reloads, are not in this version.
+
+[Toolbar](/editing/toolbar/) · [Decorations](/building/decorations/) · [Shared editing](/together/shared-editing/) · [Options](/building/options/)

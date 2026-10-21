@@ -1,0 +1,61 @@
+---
+title: Lists and boxes
+description: Bullets, numbered lists and boxes to tick, nested with Tab, each item a block of its own.
+---
+
+import Example from "../../../components/Example.astro";
+
+A list is a run of items, each a block of its own: a bullet, a number or a box to tick.
+
+<Example name="lists-bullets" />
+
+## Try it
+
+Type `-` and a space at the start of a block for a bullet, `1.` and a space for a number, or `[]` and a space for a box. Enter starts the next item of the same kind: a number one on, a box empty. Enter on an empty item ends the list, and Backspace at an item's start makes it a paragraph.
+
+The bullet, number or box stays in view while the item's words are edited.
+
+## The Markdown
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| A bullet | `-` and a space, or ⌘⌥5 | `- An item` (`*` and `+` read as bullets too) |
+| A number | `1.` and a space, or ⌘⌥6 | `1. A step` (`1)` reads as a number too) |
+| A box | `[]` and a space, or ⌘⌥4 | `- [ ] To do` |
+| A ticked box | Press the box, or ⌘Enter | `- [x] Done` |
+| A nested item | Tab | Two spaces in, three under a number |
+
+Items of a list are stored one to a line, with no empty line between them, so the list stays a list wherever the Markdown is read.
+
+## Numbers
+
+<Example name="lists-numbered" />
+
+A numbered list keeps the number it starts with and counts on from it. When an item is moved, added or taken away, the numbers after it are written again, each level counting on its own. A paragraph between two lists ends the count, and the list after it counts on from its own first number.
+
+## Boxes
+
+<Example name="lists-boxes" />
+
+A box is Design system 1's checkbox, on the first square of its line. Press it to tick it or untick it, or press ⌘Enter with the caret anywhere in its line. A ticked item's words turn to the muted ink. `[x]` and `[X]` both read as ticked; Aa writes `x`.
+
+## Nesting
+
+<Example name="lists-nested" />
+
+Tab nests an item under the one above it, a square further in, and Shift-Tab brings it back out. An item can only nest under another item. Enter on an empty nested item brings it out a level before it ends the list. Bullets, numbers and boxes nest under each other.
+
+## Keys
+
+| Keys | What they do |
+| --- | --- |
+| Enter | The next item of the same kind |
+| Enter on an empty item | Brings a nested item out a level, or ends the list |
+| Tab, Shift-Tab | Nests the item, or brings it back out |
+| ⌘Enter | Ticks or unticks a box |
+| ⌘⌥4 | To-do, a box |
+| ⌘⌥5 | Bulleted list |
+| ⌘⌥6 | Numbered list |
+| Backspace at an item's start | Makes it a paragraph |
+
+Several selected blocks turn into a list together: ⌘⌥6 numbers them from 1. See [Selecting and moving](/editing/selecting/).

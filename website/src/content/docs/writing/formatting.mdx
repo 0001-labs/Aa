@@ -1,0 +1,71 @@
+---
+title: Formatting
+description: Bold, italic, underline, strikethrough, code, highlight and colour, written as Markdown.
+---
+
+import Example from "../../../components/Example.astro";
+
+Words are formatted as you write them, and stored as Markdown.
+
+<Example name="formatting" />
+
+## Try it
+
+Select words and the toolbar stands over them: Text colour, Bold, Italic, Underline, Strikethrough, then Link, Code and Equation. Each cell's tooltip names its shortcut. The same keys work without the toolbar.
+
+<Example name="formatting-typed" />
+
+Markdown typed in the text turns into formatting too. While a mark is open, its stars or tildes are written as they are; once it is closed they are hidden, and the words are drawn bold, italic or struck. The syntax stays in the Markdown and is never shown, the caret in the words or not.
+
+## The Markdown
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| Bold | ⌘B, or type it | `**words**` (`__words__` reads as bold too) |
+| Italic | ⌘I, or type it | `*words*` (`_words_` reads as italic too) |
+| Underline | ⌘U | `<u>words</u>` |
+| Strikethrough | ⌘⇧S or ⌘⇧X, or type it | `~~words~~` |
+| Code | ⌘E, or type it | `` `words` `` |
+| Highlight | Type it | `==words==` |
+| A colour | Text colour on the toolbar | `<span color="red">words</span>` |
+
+Markdown has no underline and no colour, so Aa writes those two as HTML, the way GitHub and Notion read them. Marks nest: `***both***` is bold and italic. An underscore inside a word is a letter, so `snake_case` stays as written.
+
+## Keys
+
+| Keys | What they do |
+| --- | --- |
+| ⌘B | Bold |
+| ⌘I | Italic |
+| ⌘U | Underline |
+| ⌘⇧S or ⌘⇧X | Strikethrough |
+| ⌘E | Code |
+| ⌘K | Link, see [Links](/writing/links/) |
+
+Ctrl stands for ⌘ on Windows and Linux. A mark's key puts the mark round the selected words, and takes it off again when they already have it. With nothing selected, it writes the mark's two halves with the caret between them, so the next words are written in it. Words selected across several blocks are marked in each block on its own. Every shortcut is on [Keyboard](/editing/keyboard/).
+
+## Colours
+
+<Example name="formatting-colours" />
+
+Text colour, the first cell on the toolbar, opens the colours: Default, Grey, Red, Orange, Green, Blue and Purple. Default takes the colour off. A colour chosen for words that already have one replaces it rather than nesting another inside it.
+
+| Colour | What it stores |
+| --- | --- |
+| Grey | `<span color="gray">` |
+| Red | `<span color="red">` |
+| Orange | `<span color="orange">` |
+| Green | `<span color="green">` |
+| Blue | `<span color="blue">` |
+| Purple | `<span color="purple">` |
+
+Each colour is a dark ink from Design system 1's palette on light paper and a light one on dark. `--aa-color-red` and its siblings change one; see [Styling](/building/styling/).
+
+## From code
+
+```ts
+editor.format('bold')   // italic, strike, underline, code, link, equation, highlight
+editor.color('blue')    // or null for the text's own colour
+```
+
+Both act on the selection, as the keys do. `TEXT_COLORS` lists the colours by the names they are stored with. See [Methods and events](/building/methods/).

@@ -1,0 +1,98 @@
+---
+title: Drawing on the board
+description: Boxes, notes, lines, arrows and colour drawn on a diagram by pointer or by keys, each change written back as words.
+---
+
+import Example from "../../../components/Example.astro";
+
+A diagram is changed where it stands, by pointer or by keys, and every change is written back as the words a person would write.
+
+<Example name="board-draw" />
+
+## The board
+
+Press a diagram, or bring the caret into its block, and its board takes the keys: it rules its squares under the drawing, and its tools stand in the middle of its last square. The tools show while the diagram is hovered or in use, and only where the writing can be changed.
+
+Everything that happens on the board is the board's own: the editor reads none of its keys, typing or pastes, and the block does not drag. ⌘Z and ⌘⇧Z are still the editor's, and each change on the board is one step to undo.
+
+Every gesture moves things a whole square at a time, never by the browser's own drag.
+
+## The tools
+
+| Tool | What it does |
+| --- | --- |
+| Item (I) | A box: carried onto a square, or pressed for a free one |
+| Note (N) | A post-it, eight squares a side: carried onto a square, or pressed for a free one |
+| Line (L) | Draws lines from box to box; with a line chosen, makes it a plain line |
+| Arrow (A) | Draws arrows from box to box; with a line chosen, makes it an arrow |
+| Colour | A menu of the pale accents, for what is chosen |
+| Fit the width | Writes `wrap` on the fence, so the diagram fits the width it is read in. See [Fit the width](/diagrams/diagrams/#fit-the-width) |
+| Delete | Takes away what is chosen. On touch screens only: a keyboard has its Delete key |
+
+## By pointer
+
+- **Add.** Carry Item or Note out of the tools and let it go on a square. Pressed instead, it lands on a free square beside what is chosen, or under the drawing. A double press on an empty square puts an item there. Either way it is named at once: write its name and press Enter.
+- **Choose and write.** A press chooses a box, a stack, one box of a stack, a post-it or a line. A click on a box or a post-it writes in it where it stands, as a double press or Enter does.
+- **Move.** A press that moves carries what it pressed; on a touch screen, hold the finger still a moment first. It follows the pointer while its place glides from square to square, and settles there when let go.
+- **Size.** A chosen box's grip widens it a whole item at a time. A post-it is sized from its corner, a whole column at a time, and stays square.
+- **Join.** Press Line or Arrow, then press one box and let go over another. Once the line is drawn, or let go over nothing, the board goes back to choosing.
+- **Colour.** Choose a box, a stack, one box of a stack or a post-it, and pick from Colour: Green, Blue, Pink, Yellow, Orange, Red, White or No colour. The tool wears the colour of what is chosen. In the menu the arrows go up and down, and Escape closes it.
+
+<Example name="board-lines" />
+
+What is chosen shows by its grip; a chosen line is drawn over in the focus ring's colour. Months, grids and charts can be moved, not named, sized or coloured on the board: their words say what they hold.
+
+## By keys
+
+<Example name="board-keys" />
+
+| Key | What it does |
+| --- | --- |
+| Tab, Shift-Tab | Chooses each group in turn as written, each box of a stack after its name, then each line. Past the last, Tab goes on to the tools and out |
+| Arrows | Move what is chosen a square |
+| Shift and arrows | Move it four squares |
+| Alt and arrows | Size it: a box or a stack an item wider or narrower, a post-it a column every way |
+| Enter or F2 | Names what is chosen. Enter keeps the name, Escape leaves the old one |
+| L, A | With a box chosen, joins it from the keys: Tab to the one to join it to, then Enter; Escape stops. With a line chosen, makes it a line or an arrow. With nothing chosen, turns on Line or Arrow |
+| I, N | Adds an item or a note, named at once |
+| Delete, Backspace | Takes away what is chosen, with every line that reached it |
+| V | Back to choosing, from Line or Arrow |
+| Space | Asks AI, where the editor can (below) |
+| Escape | Turns Line or Arrow off; else lets go of what is chosen; else gives the caret back to the writing after the diagram |
+| Arrows, nothing chosen | Give the caret back to the writing: down and right after the diagram, up and left before it |
+
+To a screen reader the board says what its keys do, and says what each key or press did: what is chosen, by its name and kind, and each change, such as "Moved Plan" or "Joined Draft to Review".
+
+## What is written
+
+Each change takes the diagram's words and gives them back as they would be written by hand for that change. Nothing else in the words moves, so what a person wrote stays as they wrote it.
+
+| Change | What is written |
+| --- | --- |
+| Move | `@ x y` on the group's first line, written or written again |
+| Size | `w8`, `w12` on the group's first line; nothing for the size a group has unwritten |
+| Add an item | `[Item] @ x y`, after the groups already written |
+| Add a note | `{Note} @ x y w8` |
+| Join | `A -> B`, or `A -- B` for a line, at the end |
+| Name | The new name, and every line that reached it by its old one |
+| Colour | The colour after the name, or after a box's words for one box of a stack; a group coloured whole loses its boxes' own |
+| Delete | The group or box taken out, with every line that reached it; the rest of a chain is kept |
+| Fit the width | `wrap` after the fence's `diagram` |
+
+A new item or note takes the first free name: `Item`, then `Item 2`, `Item 3`. The same changes are functions in `@0001-labs/aa/diagram`, with nothing of the page, so a server can make them too: `moveGroup`, `resizeGroup`, `addGroup`, `addJoin`, `joinKind`, `renameTarget`, `colorTarget` and `deleteTarget`.
+
+## AI on a diagram
+
+<Example name="board-ask" />
+
+Where the editor has a [`prompt`](/ai/asking/), Space on the board opens a prompt under it; Space again, before anything is written, listens instead. Enter asks with `kind: 'diagram'` and the diagram's words as `text`, and the drawing glistens while it waits. The answer is the diagram written again, taken in place of the old one as one change, one step to undo. Without a `prompt`, Space only says that asking AI is not set up.
+
+```ts
+createEditor(host, {
+  atoms: [imageAtom, diagramAtom],
+  prompt: (said, { kind, text, signal }) =>
+    kind === 'diagram' ? api.redrawDiagram({ said, words: text }, { signal }) : api.write(said, { signal }),
+})
+```
+
+[Diagrams](/diagrams/diagrams/) · [The language](/diagrams/language/) · [Asking AI](/ai/asking/) · [Undo](/editing/undo/)

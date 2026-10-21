@@ -1,0 +1,107 @@
+---
+title: Diagrams
+description: Boxes and lines on Design system 1's squares, stored as words in a fenced block and drawn in their place.
+---
+
+import Example from "../../../components/Example.astro";
+
+A diagram is boxes and lines on Design system 1's squares, stored as words in a ```` ```diagram ```` block and drawn in its place.
+
+<Example name="diagram-start" />
+
+## What a diagram is
+
+- **Words in the Markdown.** A diagram is a fenced block like any code block, so it is stored, copied and read as text, and a server or an agent can read and write it. The words are [the diagram language](/diagrams/language/).
+- **Never shown as words.** In the editor the block is always its drawing, the caret in it or not. Nobody writes the language by hand.
+- **Changed where it stands.** Pressed, or with the caret come into its block, the diagram rules its squares and shows its tools: see [Drawing on the board](/diagrams/board/). Every change is written back as the words a person would write, the lines it does not change kept as they were, one step of undo.
+- **Only once it is closed.** A fence still open, with no closing ```` ``` ````, stays code while it is being written. Other fences stay code.
+
+## Try it
+
+<Example name="diagram-loop" />
+
+Start a diagram with `/diagram` in the [slash menu](/editing/menus/), or Diagram on the toolbar on a touch screen. It begins as two boxes and an arrow between them, after the block the caret is in or in place of an empty one, as one step to undo.
+
+## Use it
+
+Diagrams are their own entry, `@0001-labs/aa/diagram`. Give the editor `diagramAtom` beside the [atoms](/building/atoms/) it already has:
+
+```ts
+import { createEditor, imageAtom } from '@0001-labs/aa'
+import { diagramAtom } from '@0001-labs/aa/diagram'
+
+createEditor(host, { atoms: [imageAtom, diagramAtom], toolbar: true })
+```
+
+`diagramAtom` adds Diagram to the slash menu and the touch toolbar, and draws every closed ```` ```diagram ```` block on a board. In a read-only editor a diagram is drawn, and only drawn.
+
+## The element
+
+`<aa-diagram>` draws a diagram anywhere on a page, without an editor. `defineAaDiagram()` defines it, under your app's own name if it passes one, and returns the name.
+
+```ts
+import { defineAaDiagram } from '@0001-labs/aa/diagram'
+
+defineAaDiagram() // <aa-diagram>
+defineAaDiagram('notes-diagram') // or a name of your app's own
+```
+
+```html
+<aa-diagram source="[Idea]&#10;[Plan] @ 6 0&#10;Idea -> Plan"></aa-diagram>
+
+<aa-diagram>
+  [Idea]
+  [Plan] @ 6 0
+  Idea -> Plan
+</aa-diagram>
+```
+
+| Member | What it does |
+| --- | --- |
+| `source` | The diagram's words, as an attribute or a property. Written between the tags instead, they are read once, their indent in the page taken off |
+| `wrap` | Lays the diagram out again to fit the width of what holds it |
+| `diagram` | The diagram as last laid out, from [`layoutDiagram`](/diagrams/language/#read-it-from-code) |
+| `updateComplete` | Settles once it has drawn what it was last given |
+
+It sizes itself in squares, `--diagram-columns` and `--diagram-rows` on the element, so what holds it can keep its room before it has drawn. Once drawn it measures its names and lays itself out again, so a line into a name meets the name's middle; again when the typeface arrives. It is an image to a screen reader, named by its words.
+
+In an editor the drawing is a child of the board in the page's own DOM, so your rules for the element reach it there too.
+
+## Its measures
+
+The measures are Design system 1's, from its tokens. Your app gives its own on the element:
+
+| Property | What it sets | Default |
+| --- | --- | --- |
+| `--aa-diagram-unit` | A square | `--ds-grid-unit`, 20px |
+| `--aa-diagram-stroke` | The width of a line and of a box's edge | 1px |
+| `--aa-diagram-ink` | The words and the lines | `--ds-text-color` |
+| `--aa-diagram-cell` | A box's paper | White, black in the dark |
+| `--aa-diagram-radius` | A box's corners, and how round a line turns | 4px; `0px` for square |
+| `--aa-diagram-paper` | The paper let through a marker's strokes | `--ds-paper` |
+
+## Fit the width
+
+<Example name="diagram-wrap" />
+
+Fit the width, on the board's tools, writes `wrap` on the fence: ```` ```diagram wrap ````. The diagram is then laid out again in strips that fit the width it is read in, one under another, as writing wraps, so nobody scrolls sideways to read it. Each strip keeps the places its groups have among themselves, and a post-it carries what stands on it. While its board is drawing on it, a diagram stands as written; it wraps only to be read.
+
+Unwrapped, a diagram wider than what holds it reaches past it on both sides, centred on it. One wider than the window stands at its holder's edge instead, where its first words are, and scrolls sideways within itself.
+
+## Charts and marker
+
+<Example name="diagram-chart" />
+
+A line chart, and a grid or a month written with `marker`, are drawn as if with a felt-tip marker on the paper: grainy strokes laid over one another, darker where they cross. Their drawing is its own entry, `@0001-labs/aa/marker`, loaded only once a diagram has one, so pages that draw other diagrams never carry it. Every stroke is drawn from a seed, so a chart drawn again is the same chart. How to write them is on [the language](/diagrams/language/#charts) page.
+
+## Entries
+
+| Entry | What it holds |
+| --- | --- |
+| `@0001-labs/aa/diagram` | `diagramAtom`, `<aa-diagram>` and its board, and everything of the language |
+| `@0001-labs/aa/diagram-language` | The language alone: `layoutDiagram`, `diagramFences` and the rest, with nothing of the page, for a page or a server that only reads diagrams |
+| `@0001-labs/aa/marker` | The marker's drawing, loaded by the diagram entry when it needs it |
+
+The diagram entry loads the language and the marker from beside itself, and touches no page globals until an element is made.
+
+[Drawing on the board](/diagrams/board/) · [The language](/diagrams/language/) · [Atoms](/building/atoms/) · [Asking AI](/ai/asking/)

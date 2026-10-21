@@ -1,0 +1,60 @@
+---
+title: Callouts and toggles
+description: Callouts with a title and a body, folded callouts that hide their body, and toggle headings, written as Markdown's alerts.
+---
+
+import Example from "../../../components/Example.astro";
+
+A callout sets a title and its body apart with an icon; folded, it shows only its title.
+
+<Example name="callouts" />
+
+## Try it
+
+Choose Callout in the [slash menu](/editing/menus/), or type `> [!note]` and a space at the start of a block. The words on its first line are its title; Enter starts a line of its body under it. Press its icon, or press ⌘Enter with the caret in it, to fold it.
+
+A callout stands a square in, its icon on the first square and a hairline at its start. Its title and body are formatted as any other words.
+
+## The Markdown
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| A callout | Callout in the slash menu, or `> [!note]` and a space | `> [!note] Title`, then `> The body` on each line under it |
+| A folded callout | Its icon, or ⌘Enter | `> [!note]- Title` |
+| A toggle | Toggle in the slash menu | `> [!note]- Title` |
+| A toggle heading | Toggle heading 1, 2 or 3 in the slash menu | `> [!note]- ## Title` |
+
+The word in the brackets is the callout's type, any word in letters. Its icon follows it:
+
+| Type | Icon |
+| --- | --- |
+| `[!tip]` | A tick |
+| `[!warning]`, `[!caution]` | A box with a dot |
+| `[!note]`, and any other | A box with lines |
+| Any type, folded | A triangle |
+
+Every line of a callout starts with `>`, so a Markdown reader that does not know callouts shows it as a quote.
+
+## Folded callouts
+
+<Example name="callouts-folded" />
+
+A folded callout shows its title and hides its body. The body is kept as it was: folding and opening write or take away the one minus sign and nothing else. With the caret in a folded callout's body, the body is shown while it is edited. ⌘⌥T opens every folded callout in the editor.
+
+A toggle is a folded callout made from the slash menu, the same Markdown.
+
+## Toggle headings
+
+<Example name="toggle-headings" />
+
+A toggle heading is a callout whose title is a heading, folded to begin with: `#`, `##` or `###` and a space after the type make the title one. The title is set in the headings' medium face, and it folds and opens as any callout does.
+
+## Keys
+
+| Keys | What they do |
+| --- | --- |
+| Enter | A new line of the body |
+| ⌘Enter | Folds the callout the caret is in, or opens it |
+| ⌘⌥T | Opens every folded callout and toggle in the editor |
+
+From code, `editor.toggle()` folds or opens the callout the caret is in, or ticks the box it is in, and `editor.toggle(true)` opens a callout. See [Methods and events](/building/methods/).

@@ -1,0 +1,48 @@
+---
+title: Find and replace
+description: ⌘F finds words in the document and replaces one or all of them.
+---
+
+import Example from "../../../components/Example.astro";
+
+⌘F in the editor opens a field to find words, every match marked in the text, and a second field to replace them.
+
+<Example name="find-replace" />
+
+## The find bar
+
+The bar stands at the editor's top left corner, sixteen squares wide, and takes the focus. Every match is marked in the highlight's yellow as it is typed, and the bar counts them.
+
+| Part | What it does |
+| --- | --- |
+| The Find field | What to look for. Upper and lower case are found alike. |
+| The Replace field | What a match becomes. |
+| Previous match, Next match | Select the match before or after, and say which it is: 2 of 5. From the last, Next goes round to the first. |
+| Replace | Replaces the selected match, or the first when none is selected. |
+| Replace all | Replaces every match, one step to undo. |
+| Close find | Takes the marks away and gives the editor back its focus. |
+
+| Key | In the find bar |
+| --- | --- |
+| Enter | Next match. |
+| Shift-Enter | Previous match. |
+| Escape | Close find. |
+
+The matches follow the writing: each change in the document while the bar is open finds them again.
+
+## What is searched
+
+Find searches the Markdown the editor stores, not the words as they are drawn, so it also finds what a link's address or a picture's name holds. What is replaced is written as Markdown too: `**done**` in the Replace field makes a bold word. In a read-only editor nothing is replaced.
+
+## From code
+
+```ts
+const matches = editor.find('colour')               // [{ start, end }, …] in the Markdown
+editor.find('Colour', true)                         // case matters
+editor.decorate(matches.map(({ start, end }) => ({ from: start, to: end, className: 'my-match' })), 'search')
+editor.replace(matches[0].start, matches[0].end, 'color')
+```
+
+`find(query, caseSensitive?)` gives the matches as offsets into the Markdown; `decorate()` marks words on a layer of their own without changing the Markdown, as the find bar does on its `find` layer. See [Decorations](/building/decorations/) and [Methods and events](/building/methods/).
+
+[Undo](/editing/undo/) · [Keyboard](/editing/keyboard/)

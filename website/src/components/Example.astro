@@ -1,0 +1,38 @@
+---
+// The editor itself on the page, with the Markdown it stores beside it: what Design system 1's
+// pages do with a component and its code. The examples are in lib/examples.
+import { EXAMPLES } from '../lib/examples';
+const { name } = Astro.props as { name: string };
+const example = EXAMPLES[name];
+if (!example) throw new Error(`No example named "${name}"`);
+const { title, hint, source = true, ...options } = example;
+---
+
+<figure class="aa-example not-content" data-ds-not-prose data-aa-example={JSON.stringify(options)} data-source={source ? '' : undefined}>
+  {(title || hint) && <figcaption>{title && <p class="aa-example-title">{title}</p>}{hint && <p class="aa-example-hint">{hint}</p>}</figcaption>}
+  <div class="aa-example-panes">
+    <div class="aa-example-editor"></div>
+    {source && <div class="aa-example-stored"><p class="aa-example-label">What it stores</p><aside class="aa-example-comments" hidden></aside><pre class="aa-example-source"></pre></div>}
+  </div>
+</figure>
+
+<script>
+  import { mountExamples } from '../lib/mount';
+  mountExamples();
+</script>
+
+<style>
+  .aa-example { margin: var(--grid) 0 calc(2 * var(--grid)); padding: var(--grid); border-radius: calc(4px * var(--sf, 1)); box-shadow: inset 0 0 0 1px var(--ds1-docs-divider); }
+  figcaption { margin-bottom: var(--grid); }
+  figcaption p { margin: 0; }
+  .aa-example-title { font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
+  .aa-example-hint { color: var(--ds-text-color-muted); }
+  .aa-example-panes { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(2 * var(--grid)); }
+  .aa-example[data-source] .aa-example-panes { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  @media (max-width: 1100px) { .aa-example[data-source] .aa-example-panes { grid-template-columns: minmax(0, 1fr); } }
+  .aa-example-editor { min-width: 0; min-height: calc(4 * var(--grid)); }
+  .aa-example-label { margin: 0 0 var(--grid); color: var(--ds-text-color-muted); }
+  .aa-example-comments { margin-bottom: var(--grid); }
+  .aa-example-comments[hidden] { display: none; }
+  .aa-example-source { margin: 0; padding: 0; background: none; color: var(--ds-text-color-muted); font-family: var(--typeface-mono); font-size: calc(13px * var(--sf, 1)); line-height: var(--grid); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>

@@ -1,0 +1,57 @@
+---
+title: Undo
+description: How changes are grouped into steps, and where undo puts the caret.
+---
+
+import Example from "../../../components/Example.astro";
+
+Undo takes back a word, not a letter, and puts the caret where the change it took back was.
+
+<Example name="undo-steps" />
+
+## Steps
+
+Undo is a stack of whole documents, which are small. What makes a step:
+
+| Change | Step |
+| --- | --- |
+| Letters typed one after another, in the same block, within a moment | One step: the word. |
+| A space after a word | Begins a new step. |
+| Letters deleted one after another | One step, apart from the typing before it. |
+| Enter, Backspace across a block's edge, paste, cut, a mark, a link | A step of its own. |
+| A command from a menu, with the `/` and the letters typed for it | One step. |
+| Moving, duplicating or deleting blocks, by hand or from the keys | A step of its own. |
+| A correction made while writing | A step of its own. See [Correction while writing](/ai/correction/). |
+| An AI answer, everything it changed | One step. See [Asking AI](/ai/asking/). |
+| Find's Replace all | One step. |
+
+A moment is 700 milliseconds: letters typed with a longer pause between them are a step apart.
+
+## The caret
+
+Undo puts the caret at the end of the change it took back, not where the caret stood after the step before, so the next keys go on where the change was. Redo goes forward to the step undone, with the caret where it was after that step. Either way the page scrolls just far enough to show the caret, and not at all while it is in view.
+
+## Keys
+
+| Key | What it does |
+| --- | --- |
+| ⌘Z | Undo. |
+| ⌘⇧Z | Redo. |
+| ⌘Y | Redo. |
+
+On Windows and Linux, Control takes the place of ⌘. The browser's own Undo and Redo, from its Edit menu, go through the same steps. A read-only editor neither undoes nor redoes.
+
+## From code
+
+```ts
+editor.undo()          // false when there is nothing to undo
+editor.redo()
+editor.transaction(() => {
+  editor.replace(0, 0, '# Minutes\n\n')
+  editor.replace(editor.value.length, editor.value.length, '\n\nNext meeting: Monday.')
+})                     // both changes, one step
+```
+
+`replace()` is one step on its own. Setting `value` from outside starts the steps afresh: what came before it cannot be undone. With [shared editing](/together/shared-editing/), undo is Yjs's own, through `setHistoryProvider`, and takes back only the person's own changes, never another's.
+
+[Selecting and moving](/editing/selecting/) · [Keyboard](/editing/keyboard/) · [Methods and events](/building/methods/)

@@ -1,0 +1,59 @@
+---
+title: Tables
+description: GitHub's Markdown tables, edited cell by cell, with rows and columns added from the block menu.
+---
+
+import Example from "../../../components/Example.astro";
+
+A table is GitHub's Markdown table, written cell by cell, with its first row as its header.
+
+<Example name="tables-basic" />
+
+## Try it
+
+Choose Table in the [slash menu](/editing/menus/) for a table of two columns, with a header row and one empty row. Write in a cell; Tab moves to the next and Shift-Tab to the one before. Tab in the last cell, or Enter in any, leaves the table for a new paragraph under it.
+
+With the caret in a table, ⌘/ opens the block's commands with Add row, Delete row, Add column and Delete column. A row is added under the caret's row and a column after its column. The header row is never deleted, and neither is a table's only column.
+
+## The Markdown
+
+```md
+| Room | Seats | Floor |
+| --- | --- | --- |
+| Lake | 8 | 1 |
+```
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| A table | Table in the slash menu, or rows pasted from a spreadsheet | A header row, a row of dashes, then a line a row |
+| The header | The first row | The line above the dashes |
+| A column set to its start, centre or end | Write it in the row of dashes | `:---`, `:---:` or `---:` |
+
+Each cell holds plain words. Markdown written in a cell is kept and shown as written, not formatted. A pipe written with a backslash before it stays part of its cell's words, and pipes in cells Aa writes itself, from a paste or a new row or column, are given the backslash.
+
+## Alignment
+
+<Example name="tables-aligned" />
+
+The row of dashes sets each column: `:---` to its start, `:---:` to its centre and `---:` to its end. Every figure in a table is one width, so prices and counts in a column set to its end line up. Rows and columns added or deleted keep every column's alignment.
+
+A table is drawn as Design system 1's prose draws one: each row two squares high, the words on one square with half a square round them, a hairline at each row's foot, no box and no lines between columns. The header row is set in the medium face.
+
+## Pasting
+
+Rows copied from a spreadsheet arrive as text with tabs between the cells. Pasted into the writing, they become a table. Pasted into a table, they fill its cells from the caret's cell on, to the right and down, adding rows and columns where the table runs out. ⌘⇧V pastes them as plain text.
+
+## Keys
+
+| Keys | What they do |
+| --- | --- |
+| Tab, Shift-Tab | The next cell, or the one before |
+| Tab in the last cell | A new paragraph under the table |
+| Enter | A new paragraph under the table |
+| Left at a cell's start, Right at its end | The cell before or after |
+| Up, Down | The cell above or below |
+| Backspace at a cell's start | Nothing: a cell's edge holds |
+| ⌘A | The cell's words, then all of the writing |
+| ⌘/ | The block's commands, with the rows and columns |
+
+From code, `editor.table('add-row')` and its siblings `delete-row`, `add-column` and `delete-column` act at the caret's cell. `writeTable`, `tableRows` and `fromTSV` read and write tables outside the editor. See [Methods and events](/building/methods/).

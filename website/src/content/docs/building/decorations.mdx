@@ -1,0 +1,104 @@
+---
+title: Decorations
+description: "Classes drawn over runs of the text, in layers, without changing the Markdown: matches, comments, AI's changes and other people's carets."
+---
+
+import Example from "../../../components/Example.astro";
+
+A decoration draws a class over a run of the text without writing anything into the Markdown. Comments, find, AI's changes and other people's selections are all decorations, each on a layer of its own; a product adds its own the same way.
+
+<Example name="decorations-find" />
+
+```ts
+editor.decorate([{ from: 0, to: 5, className: 'spelling', label: 'Check this word' }], 'spelling')
+```
+
+## A decoration
+
+```ts
+type Decoration = {
+  from: number
+  to: number
+  className: string
+  label?: string
+  attributes?: Record<string, string>
+}
+```
+
+| Field | What it does |
+| --- | --- |
+| `from`, `to` | The run, as offsets into the Markdown. `from` equal to `to` is a caret. |
+| `className` | One class or several, separated by spaces, put on each span the run is drawn in. |
+| `label` | The span's `title`. On a caret, the name its avatar is lettered from. |
+| `attributes` | Attributes written on each span. Where two runs cover the same words, their values stand side by side, separated by a space. |
+
+The run is drawn as spans inside the words it covers, cut where other runs begin and end, so runs may overlap. Syntax that is never shown, and atoms, are not decorated.
+
+## Layers
+
+`decorate(ranges, layer)` replaces everything on `layer` with `ranges`, and leaves the other layers as they are. `decorate([], layer)` clears one. Without a layer, the ranges go on `external`.
+
+| Layer | Whose | Class |
+| --- | --- | --- |
+| `external` | The product's, when no layer is named | Its own |
+| `comments` | The `comments` store's threads | `aa-comment`, with `aa-comment--open`, `aa-comment--unread`, `aa-comment--resolved` and `aa-comment--draft` |
+| `find` | Find and replace | `aa-find-match` |
+| `ai` | The words an answer from AI changed or wrote | `aa-ai-changed` |
+| `presence` | Other people's selections, in [shared editing](/together/shared-editing/) | `aa-peer-selection`, with the person's name as `label` |
+
+A product names its own layer for each kind of thing it marks, and leaves Aa's alone: a range given on `comments` replaces the threads' marks.
+
+<Example name="decorations-comments" />
+
+## Keeping them right
+
+Decorations stand at the offsets they were given. When the text changes, give them again from `onChange`, mapped through the change. `textChange(before, after)` finds the smallest replacement between two versions, and `mapRange(range, edit)` moves a range through it, or returns `null` when the change took all of its words, as comments do:
+
+```ts
+import { createEditor, textChange, mapRange } from '@0001-labs/aa'
+
+let flagged: { from: number; to: number } | null = { from: 10, to: 18 }
+let before = text
+const editor = createEditor(host, {
+  value: text,
+  onChange(after) {
+    if (flagged) flagged = mapRange(flagged, textChange(before, after))
+    before = after
+    editor.decorate(flagged ? [{ ...flagged, className: 'flagged' }] : [], 'flags')
+  },
+})
+editor.decorate([{ from: 10, to: 18, className: 'flagged' }], 'flags')
+```
+
+Only the blocks whose decorations changed are drawn again, and none while a composition is under way: they are drawn once it ends, so typing with an input method is never cut off.
+
+## Carets
+
+A decoration with `from` equal to `to` is drawn as a caret: an uneditable `span.aa-peer-caret` carrying its `className`, a hairline in `--aa-accent` with the person's initial in a round avatar over it, drawn from `label`. Shared editing draws other people's carets this way.
+
+```ts
+editor.decorate([{ from: 42, to: 42, className: 'peer', label: 'Ann Lund' }], 'cursors')
+```
+
+## Drawing them
+
+`aa.css` draws `aa-find-match` in the highlight's yellow, the comment classes in orange's pastel, and the carets. `aa-peer-selection` and `aa-ai-changed` carry no style of their own: the product gives them one if it wants them seen.
+
+```css
+.aa-peer-selection { background: color-mix(in srgb, var(--ds-sharp-blue) 20%, transparent); }
+.spelling { text-decoration: underline wavy red; }
+```
+
+See [Styling](/building/styling/) for `--aa-highlight`, `--aa-comment-fill` and `--aa-accent`.
+
+## Counts
+
+`stats()` returns `{ words, characters, blocks }`:
+
+| Count | What it counts |
+| --- | --- |
+| `words` | The words in every block but code, the Markdown's marks set aside, counted by the language's own word breaks where the browser has `Intl.Segmenter`, and by spaces otherwise. |
+| `characters` | The characters of the whole Markdown, syntax included. |
+| `blocks` | The blocks. |
+
+The block menu ends with the words and characters. See [Methods and events](/building/methods/).

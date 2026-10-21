@@ -1,0 +1,53 @@
+---
+title: On a phone
+description: On touch the bar docks above the keyboard, blocks are inserted from a sheet, and every measure follows the page's scale.
+---
+
+import Example from "../../../components/Example.astro";
+
+On a phone or a tablet there are no keys for the kinds of block and no ⌘/, so the bar above the keyboard holds them.
+
+<Example name="phone-touch" />
+
+## The docked bar
+
+Where the page is worked by touch (`pointer: coarse`), the bar shows whenever the editor has the focus, with or without words selected. It is docked across the foot of what is in view: above the keyboard, and clear of the home indicator when no keyboard is up. It is as wide as the view, and its cells scroll sideways when more than fit.
+
+| Cell | What it does |
+| --- | --- |
+| Insert block | Opens the Insert block sheet. |
+| Text colour, Bold, Italic, Underline, Strikethrough, Link, Code, Equation | As on the [toolbar](/editing/toolbar/). |
+| Comment | Where the editor has a `comments` store. |
+| Turn into | Opens a sheet of the kinds, to change the block the caret is in. |
+| Diagram, Image or file | With the diagram atom, and with `onFiles`. |
+| Block commands | Opens the [block menu](/editing/menus/#the-block-menu) over its cell: Duplicate, Delete, Move up, Move down and the rest. |
+| Indent, Outdent | Nest a list item under the one before, or take it out. |
+
+The link field takes the bar's place while a link is edited.
+
+## The sheets
+
+Insert block and Turn into open Design system 1's sheet from the foot of the screen, as wide as the screen up to 32 squares. Its title stands on the first row with Cancel at its end. Each kind is a row one square high, its icon, its name, and at the row's end the Markdown that writes it: `#`, `-`, `[ ]`, `>`, `---`. Insert block lists the kinds under Blocks, then what else can be inserted under More: a diagram, a picture, and the product's own `commands`. Choosing a row closes the sheet and does its work; Cancel, a press beside the sheet or a swipe puts it away.
+
+A kind inserted from the sheet takes the place of an empty paragraph, or starts a new block after the one the caret is in.
+
+## Touch
+
+- A double tap selects a word and never zooms the page, and nothing is lit by a tap.
+- A long press is the system's own, for selecting words; blocks are moved with Move up and Move down in the block menu.
+- The block menu stands within the visible part of the screen and leaves the caret in the block rather than selecting it, so the system's selection handles stay away.
+- Space on a phone's keyboard asks AI as the key does on a computer, where the product answers prompts.
+
+## Scaling
+
+Every measure in `aa.css` is a size multiplied by `--aa-sf`, which follows the page's `--ds-sf`, or `--sf`. Design system 1's scaling module works the scale out for a phone or a tablet and puts it on the page before it is drawn:
+
+```ts
+import { startScaling } from './DS1/0-face/scaling'
+
+startScaling({ snap: 'layout' }) // before anything is drawn, so a phone's first paint is to scale
+```
+
+A computer stays at 1. See [Design system 1](/start-here/design-system-1/) and Design system 1's [Scaling](https://designsystem1.com/1-root/scaling/).
+
+[Toolbar](/editing/toolbar/) · [Slash and block menus](/editing/menus/) · [Keyboard](/editing/keyboard/)

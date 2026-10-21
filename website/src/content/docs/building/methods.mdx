@@ -1,0 +1,144 @@
+---
+title: Methods and events
+description: Everything on the editor createEditor returns, and the attributes, properties and events of aa-editor.
+---
+
+import Example from "../../../components/Example.astro";
+
+`createEditor(host, options)` returns an `Editor`. Every offset it takes or gives is a character offset into the Markdown, `value`, so a picker, an upload or a store can say where something is without knowing how it is drawn. Methods that change the text do nothing in a read-only editor.
+
+```ts
+const editor = createEditor(host, { value: 'Hello' })
+const at = editor.selection()
+if (at) editor.replace(at.start, at.end, '**world**')
+```
+
+## Properties
+
+| Property | Type | What it is |
+| --- | --- | --- |
+| `element` | `HTMLElement` | The host the editor draws into. It carries the class `aa`, the role `textbox` and one child a block. |
+| `value` | `string` | The document as Markdown. Set it to change the document from outside: only the blocks that changed are drawn again, so the caret, the focus and the pictures of everything else stay. Setting it starts the undo history afresh and does not call `onChange`. |
+| `readOnly` | `boolean` | Whether the text can be changed. Setting it applies at once, to columns too. |
+| `placeholder` | `string` | What an empty document says. |
+| `correcting` | `boolean` | Whether words are corrected as they are written. Always `false` without `correct`. |
+| `comments` | `EditorComments \| undefined` | With a `comments` store: `open(threadId)`, `start()` on the selected words, `close()`, and the anchored `threads`. See [Comments](/together/comments/). |
+
+## Reading and writing
+
+| Method | What it does |
+| --- | --- |
+| `selection()` | Where the selection is, as `{ start, end }`, or `null` when it is not in the editor. |
+| `replace(start, end, text)` | Puts `text` in place of the characters from `start` to `end`, the caret after it, as one step to undo. Without the focus, the editor takes it to show the caret. |
+| `transaction(action)` | Runs `action` and records every change it makes as one step to undo, with one `onChange` at the end. Transactions nest. |
+| `find(query, caseSensitive?)` | Every place `query` stands in the Markdown, as `{ start, end }`. Case is ignored unless `caseSensitive` is `true`. |
+| `rangeOf(start, end)` | Those characters as a `Range` in the page, to stand something over them, or `null`. |
+| `insertFile(file)` | Hands `file` to `onFiles`, as a drop would. |
+
+## The selection and the caret
+
+| Method | What it does |
+| --- | --- |
+| `focus()` | Puts the caret at the end of the document. |
+| `blur()` | Takes the focus away. |
+| `selectRange(start, end?)` | Selects from `start` to `end`, or puts the caret at `start`. |
+| `selectBlocks(anchor, focus?)` | Selects whole blocks, by their indices, as Escape does. |
+| `activeBlock()` | The block the caret is in: `{ index, start, end, block }`, its offsets and its parsed `Block`, or `null`. |
+
+## Formatting and blocks
+
+Each acts on the selection, or on the selected blocks.
+
+| Method | What it does |
+| --- | --- |
+| `format(mark)` | Writes or takes off a mark: `'bold'`, `'italic'`, `'strike'`, `'underline'`, `'code'`, `'equation'` or `'highlight'`. `'link'` opens the link field. |
+| `color(color)` | Writes the words in one of `TEXT_COLORS` (`'gray'`, `'red'`, `'orange'`, `'green'`, `'blue'`, `'purple'`) as `<span color="…">`, or in the text's own colour with `null`. |
+| `turnInto(kind)` | Turns the blocks into `'paragraph'`, `'h1'`, `'h2'`, `'h3'`, `'todo'`, `'bullet'`, `'numbered'`, `'quote'`, `'code'`, `'divider'`, `'callout'`, `'toggle'`, `'toggle-h1'`, `'toggle-h2'`, `'toggle-h3'`, `'table'` or `'equation'`. |
+| `blockAction(action)` | `'delete'`, `'duplicate'`, `'up'` or `'down'`. |
+| `moveBlock(from, to, count?)` | Moves `count` blocks (one unless given) from index `from` so the first stands at `to`. They stay selected and the editor keeps the focus. |
+| `indent(direction)` | Nests list items one level in with `1`, out with `-1`. |
+| `toggle(open?)` | Opens or folds the callout or toggle the caret is in, `open` saying which and otherwise the other way; in a box, ticks or unticks it. |
+| `table(action)` | In a table: `'add-row'`, `'delete-row'`, `'add-column'` or `'delete-column'`, at the caret's cell. |
+
+## Decorations and counts
+
+| Method | What it does |
+| --- | --- |
+| `decorate(ranges, layer?)` | Draws classes over runs of the text without changing the Markdown, on a layer of their own. See [Decorations](/building/decorations/). |
+| `stats()` | `{ words, characters, blocks }`: the words outside code, the characters of the Markdown, and the number of blocks. |
+
+<Example name="methods-stats" />
+
+## History
+
+| Method | What it does |
+| --- | --- |
+| `undo()` | Takes back the last step, and says whether there was one. See [Undo](/editing/undo/). |
+| `redo()` | Puts it back again. |
+| `setHistoryProvider(provider)` | Hands undo and redo to `{ undo(): boolean, redo(): boolean }`, or back to Aa's own history with `null`. Shared editing gives Yjs's undo this way. |
+
+## AI and lifetime
+
+| Method | What it does |
+| --- | --- |
+| `askAbout(said)` | Asks `prompt` about the selected words. The answer takes their place as one step to undo and stays selected. Resolves `false` with nothing selected, no `prompt` or no answer. See [Asking AI](/ai/asking/). |
+| `destroy()` | Releases the listeners, the toolbar and menus, and stops every atom still drawn. |
+
+## Events
+
+The editor's element fires these, for a product that listens to it rather than passing `onChange`:
+
+| Event | When |
+| --- | --- |
+| `aa-change` | After every change to the document, and when `readOnly` changes. A correction's carries `detail.correction`, `true`. |
+| `aa-selectionchange` | When the selection moves, once Aa has drawn what it shows. |
+
+An atom talks to the editor with `aa-atom-change`, `aa-atom-leave` and `aa-atom-prompt`; see [Atoms](/building/atoms/#events).
+
+## The element
+
+`defineAaEditor(tag?)` defines `<aa-editor>`, or the name given, once. The element is the editor in the page's own DOM, with no shadow root, so the page's rules reach it.
+
+```ts
+import '@0001-labs/aa/aa.css'
+import { defineAaEditor } from '@0001-labs/aa'
+
+defineAaEditor()
+```
+
+```html
+<aa-editor placeholder="Write" toolbar></aa-editor>
+```
+
+### Attributes
+
+| Attribute | What it does |
+| --- | --- |
+| `value` | The Markdown to start with, read when the element is connected. |
+| `placeholder` | What an empty document says. |
+| `readonly` | The text can be read and selected, not changed. |
+| `toolbar` | Shows the toolbar over selected words, unless `options.toolbar` says otherwise. Read when the element is connected. |
+| `correct` | `correct="off"` turns [correction while writing](/ai/correction/) off. |
+
+`placeholder`, `readonly` and `correct` apply at once when they change.
+
+### Properties and methods
+
+| Member | What it is |
+| --- | --- |
+| `value` | The Markdown. Set before the element is connected, it is kept until it is. |
+| `readOnly` | The `readonly` attribute, as a boolean. |
+| `options` | The `EditorOptions`, set before the element is connected. See [Options](/building/options/#on-the-element). |
+| `editor` | The `Editor` inside, or `null` while the element is not connected. |
+| `focus()`, `undo()`, `redo()` | The editor's own. |
+
+`options`, `value` and `readOnly` set before `defineAaEditor()` runs are kept and passed on once the element is upgraded.
+
+### Events
+
+| Event | When |
+| --- | --- |
+| `input` | After every change, bubbling, beside `options.onChange`. |
+| `aa-change`, `aa-selectionchange` | As above: the element is the editor's host. |
+
+Taken off the page, the element destroys its editor and keeps the Markdown; put back, it makes a new one from it.

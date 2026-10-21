@@ -1,0 +1,185 @@
+---
+title: The language
+description: The words a diagram is stored as, from boxes and lines to months, grids and charts, and how to read them from code.
+---
+
+import Example from "../../../components/Example.astro";
+
+A diagram is stored as words, a line each for a group, a box or a line between them, and laid out on the grid from them.
+
+<Example name="language-groups" />
+
+Nobody has to write the language by hand: the [board](/diagrams/board/) writes it as things are drawn. It is plain enough for a person or an agent to write, and for a server to read.
+
+## Groups and boxes
+
+```text
+# A title
+
+Kitchen @ 0 3
+  Kettle
+  - Toaster
+
+[Pantry] @ 6 3
+```
+
+| Written | What it is |
+| --- | --- |
+| `# words` | The title, on the first row. `#` to `####`, before any group |
+| `Name` at the left edge | A group, named on the row over its boxes |
+| A line indented under it, or `- Box` | One of its boxes, a row each, stacked edge to edge |
+| `[Box]` | A group that is one box, with no name over it |
+| `@ x y` | Places a group, in squares from the top left. `@ 6, 3` reads the same |
+| `@ x y` alone | A stack with no name over it |
+| `// words` | Left out |
+
+Blank lines say nothing. Each box is an item cell, four squares across and one down.
+
+<Example name="language-flow" />
+
+A group with no `@` takes the next place along a row, two squares free after the last. When the next would take the row past twelve squares, it starts again at the left, two rows under the row's tallest group. Under a title, the first of these rows is the fourth.
+
+## Lines
+
+<Example name="language-lines" />
+
+| Written | What it draws |
+| --- | --- |
+| `A -- B` | A line |
+| `A -> B` | A line ending in an arrow at B |
+| `A <- B` | A line ending in an arrow at A |
+| `A <-> B` | An arrow at each end |
+| `A -> B -> C` | A line from each to the next |
+
+A line reaches a group by its name, or a box by its words, so a line can leave from the middle of a stack. Names are matched whatever their case. Where two groups hold boxes of the same name, `Group.Box` names one of them.
+
+<Example name="language-names" />
+
+Two groups side by side are joined straight across the middle of the rows they share. Otherwise a line leaves the middle of one group's lower or upper edge and comes into the other from above or below: straight down the columns they share, or turning on the grid line halfway between them. A line down into a group's name meets the middle of the name, to the nearest half square, and the other lines down out of the same group leave from that point, so they share one stem.
+
+Every group a line reaches stands on an even square across, so two groups side by side stand two squares apart and the line between them is two squares long. A group no line reaches keeps the square it names, so chips in a row can stand a square apart, as a legend's do; so does a group placed on a post-it. A line that names nothing in the diagram is left out.
+
+## Colours
+
+<Example name="language-colours" />
+
+The pale accents are `light-green`, `light-blue`, `pink`, `yellow`, `orange`, `red` and `white`, the plainest: white in the dark and the paper's pale grey in the light.
+
+| Written | What it colours |
+| --- | --- |
+| `Name pink`, `[Box] pink`, `@ 0 4 pink` | Every box of the group |
+| `  Box light-green` | That box alone, over its group's colour |
+| `{Post-it} yellow` | The post-it |
+
+A colour is read after a name or a place, never as one: a group called `Pink` stays Pink, and a box that is only a colour's name keeps it as its words. Boxes that touch share the edge between them, as a board's cells do, so a stack reads as one block and a row of groups coloured box by box reads as a table of states.
+
+## Widths
+
+<Example name="language-sizes" />
+
+`w8` on a group's line makes its boxes two items across, and `w12` three. A width between whole items keeps the one under it, so `w6` is still one item; the widest is `w40`, ten items.
+
+## Post-its
+
+<Example name="language-post-it" />
+
+`{Name}` is a post-it: a square frame holding whatever groups are placed on it, its name one square in from its top left corner. It is twelve squares a side unless `w8` makes it eight (`h8` says the same), always a whole number of columns of four, and square whichever side is written. Its place across is taken to the nearest column. A colour fills it as it fills boxes. Boxes written under a post-it are left out: groups are placed on it with `@`.
+
+## Months
+
+<Example name="language-month" />
+
+`(2026-10)` is a month: a day a square, seven across from Monday as a calendar has them, its weeks one under the other. The words before it are its name, on the row over it.
+
+| Under a month | What it does |
+| --- | --- |
+| `pink 1 5 8 12` | The days that wear the colour |
+| `yellow 19-23` | A run of days |
+| Seven words | The days' names, Monday first, on a row of their own over the weeks |
+
+Coloured days that touch share their edges, so a run of them reads as one band. A later line colours over an earlier one. A month that is none, such as `(2026-13)`, is part of a name like any other words.
+
+## Grids
+
+<Example name="language-grid" />
+
+`(30x8)` is a grid of squares, thirty across and eight down, for whatever is counted a square at a time; at most sixty a side. Its name is on the row over it, as a month's is.
+
+| Under a grid | What it does |
+| --- | --- |
+| `pink 3` | The whole third column |
+| `pink 3-5` | Three columns |
+| `light-green 8:1-2` | The first two squares of the eighth column |
+| As many words as columns | Names the columns, over the squares, each in a box of its own |
+| As many words as rows | Names the rows, in a column before the squares, in the condensed face |
+| One word more than rows | Names the lines instead, each from the squares' top edge to their foot, as the hours of a day stand on theirs |
+
+Columns and rows count from one, a later line colours over an earlier one, and a span past the grid's edge stops there. A column whose squares wear nothing is named faintly, as a day with nothing on it is. In a grid as tall as it is wide, the first line of names names the columns and the next the rows.
+
+<Example name="language-grid-states" />
+
+A column's name longer than three letters slants up and to the right from its square, so a grid of states (a platform a column, a feature a row) keeps its columns one square wide whatever they are called.
+
+## Charts
+
+<Example name="language-chart" />
+
+`(chart 12x6)` is a line chart, its plot twelve squares across and six down, drawn as if with a marker on the paper.
+
+| Under a chart | What it does |
+| --- | --- |
+| The first line of words | Names the points along its foot, the first under the left edge and the last under the right |
+| The next line of numbers | The values ruled across the plot, from the foot up |
+| A colour and numbers, `orange 3.4 3.8 6 11 17.9` | One line, a value a point from left to right, its last value written at its end |
+
+Without values written, the chart runs from nought to its highest value, rounded up to a step. The values' names stand in a column before the plot and the last values in two after it, moved apart where their lines end close together. The whole stands on a card a square wider all round, its name inside its top corner.
+
+## Marker
+
+<Example name="language-marker" />
+
+`marker` inside a grid's or a month's brackets, `(30x8 marker)` or `(2026-10 marker)`, colours its squares in with a marker, a few short strokes laid over one another, rather than as chips.
+
+## Read it from code
+
+`@0001-labs/aa/diagram-language` is the language alone, with nothing of the page, for a page or a server that only reads diagrams.
+
+```ts
+import { diagramFences, layoutDiagram } from '@0001-labs/aa/diagram-language'
+
+const lines = markdown.split('\n')
+for (const { start, end } of diagramFences(markdown)) {
+  const diagram = layoutDiagram(lines.slice(start + 1, end).join('\n'))
+  console.log(diagram.columns, diagram.rows, diagram.unread)
+}
+```
+
+`layoutDiagram(source, measure?, options?)` reads a diagram's words, without their fences, and sets everything on the grid, in squares from the top left. `measure` gives a name's width in squares, so a line into a name meets its middle; without it a line meets the group's middle. `{ room }` is the squares across it may take: a wider diagram is laid out again in strips that fit.
+
+| Field | What it holds |
+| --- | --- |
+| `columns`, `rows` | Squares across and down |
+| `labels` | The title and the groups' names, each with its place and width |
+| `boxes` | Every box, with its place, width, colour and the edges it shares |
+| `postIts` | Every post-it |
+| `days` | A month's days and a grid's coloured squares and names |
+| `charts` | Every chart: its plot, its card, its names and its lines' points |
+| `lines` | Every line, as straight runs between points, and whether it ends in an arrow |
+| `groups` | Every group as written: its kind, the source lines it stands on, its name, boxes, place and size |
+| `joins` | Where each of `lines` is written, by the same place in the list |
+| `unread` | The source lines that said nothing it understood, by number from one |
+
+| Function | What it does |
+| --- | --- |
+| `diagramFences(text)` | Where the closed diagram fences in a text start and end, by line from nought, both fence lines included. An open fence with no close is not a diagram yet |
+| `isDiagramBlock(text)` | Whether a block of writing is a diagram, fenced from its first line to its last |
+| `diagramSource(block)` | The words inside a fenced diagram, without its fences |
+| `diagramWraps(fence)` | Whether a fence says `wrap` |
+| `diagramFenceWrapped(fence, wrap)` | The fence's first line with `wrap` put on or taken off |
+| `diagramBlockRows(block)` | How many rows a fenced diagram takes |
+| `writingLineRows(text)` | How many rows a text holds at the least, each diagram counted as the rows it is drawn on |
+| `diagramListColumns(text)` | How many columns of four squares the widest diagram in a text needs |
+
+The functions that change a diagram as the board does are in `@0001-labs/aa/diagram`: see [What is written](/diagrams/board/#what-is-written).
+
+[Diagrams](/diagrams/diagrams/) · [Drawing on the board](/diagrams/board/) · [Asking AI](/ai/asking/)

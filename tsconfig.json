@@ -21,6 +21,7 @@
     "src",
     "tests",
     "playground.ts",
+    "playground-ai.ts",
     "vite.config*.ts",
     "convex"
   ]

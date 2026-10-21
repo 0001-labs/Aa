@@ -1,0 +1,117 @@
+---
+title: Commands
+description: The product's own actions in the slash menu, the block menu and the toolbar, and the icons they can name.
+---
+
+import Example from "../../../components/Example.astro";
+
+A product adds its own actions in three places: `commands` in the slash menu, `blockCommands` in the block menu, and toolbar actions on the bar over selected words. Each is `{ id, label, icon, run(editor) }`, and `run` is handed the editor to act through.
+
+<Example name="commands-slash" />
+
+```ts
+import { createEditor, type Command } from '@0001-labs/aa'
+
+const today: Command = {
+  id: 'today',
+  label: 'Today’s date',
+  icon: 'text',
+  keywords: 'date day now',
+  run(editor) {
+    const at = editor.selection()
+    if (at) editor.replace(at.start, at.end, new Date().toLocaleDateString())
+  },
+}
+
+createEditor(host, { commands: [today] })
+```
+
+## Toolbar actions
+
+```ts
+type ToolbarAction = {
+  id: string
+  label: string
+  icon: string
+  /** Named in the button's tooltip after its label, as ⌘B. */
+  shortcut?: string
+  run(editor: Editor): void
+}
+```
+
+| Field | What it does |
+| --- | --- |
+| `id` | Names the action, written on its button as `data-action`. |
+| `label` | The button's accessible name, and its tooltip. |
+| `icon` | One of [the icons](#icons), drawn one square. |
+| `shortcut` | Words for the tooltip after the label. It does not bind a key: the product listens for the key itself. |
+| `run` | Called with the editor, the selected words selected again first. |
+
+Give the actions as `toolbar`. They stand after Aa's own buttons: Text colour, Bold, Italic, Underline, Strikethrough, Link, Code and Equation, then Comment where the editor has a `comments` store.
+
+```ts
+createEditor(host, {
+  toolbar: [{
+    id: 'quote-it',
+    label: 'Quote',
+    icon: 'quote',
+    run: editor => editor.turnInto('quote'),
+  }],
+})
+```
+
+An array turns the toolbar on, an empty one too. See [Toolbar](/editing/toolbar/).
+
+## Menu commands
+
+```ts
+type Command = ToolbarAction & {
+  /** More words the slash menu finds it by. */
+  keywords?: string
+  /** One of TEXT_COLORS: its row's icon is drawn in that colour. */
+  ink?: string
+  /** Whether it is offered: asked each time the menu opens. */
+  enabled?(editor: Editor): boolean
+}
+```
+
+| Field | What it does |
+| --- | --- |
+| `keywords` | Words the slash menu finds the command by, beside its label. What is typed after `/` must stand in one or the other, ignoring case. |
+| `ink` | Draws the row's icon in one of the text colours, `'gray'`, `'red'`, `'orange'`, `'green'`, `'blue'` or `'purple'`, as the colour rows are. |
+| `enabled` | Leaves the command out of the menu when it returns `false`. |
+
+### In the slash menu
+
+`commands` follow the block kinds, what the atoms insert (see [Atoms](/building/atoms/)) and Image or file (with `onFiles`). Typing `/` and a word narrows them all by label and keywords. Chosen, the typed `/` and its word are taken out and the command run, as one step to undo. On touch the commands are under More in the Insert block sheet.
+
+### In the block menu
+
+`blockCommands` follow Aa's own in the block menu that ⌘/ opens: the block kinds, Duplicate, Delete, Move up, Move down, Indent and Outdent in a list, and a table's rows and columns. The menu ends with the document's counts. The commands act on the block the menu was opened for, the caret's. With a pointer it is selected while the menu is open; on touch the caret stays in it.
+
+```ts
+createEditor(host, {
+  blockCommands: [{
+    id: 'copy-block',
+    label: 'Copy as Markdown',
+    icon: 'duplicate',
+    run(editor) {
+      const block = editor.activeBlock()
+      if (block) navigator.clipboard.writeText(editor.value.slice(block.start, block.end))
+    },
+  }],
+})
+```
+
+A command does not run in a read-only editor. See [Slash and block menus](/editing/menus/).
+
+## Icons
+
+`icon` names one of the Design system 1 icons Aa carries. A name it does not carry leaves the cell empty.
+
+| Icon | Names |
+| --- | --- |
+| Marks | `bold`, `italic`, `underline`, `strike`, `code`, `link`, `color`, `equation`, `mention` |
+| Blocks | `text`, `h1`, `h2`, `h3`, `bullet`, `numbered`, `todo`, `quote`, `code-block`, `callout`, `toggle`, `divider`, `table`, `image` |
+| Moving | `up`, `down`, `indent`, `outdent`, `handle`, `chevron-up`, `chevron-down` |
+| Actions | `plus`, `duplicate`, `delete`, `close`, `check`, `search`, `send`, `comment`, `note`, `slash`, `connect` |

@@ -1,0 +1,82 @@
+---
+title: Correction while writing
+description: Words corrected in place as they are written, with no suggestions or underlines, each correction one step to undo.
+---
+
+import Example from "../../../components/Example.astro";
+
+Give the editor a `correct` call and it corrects the person's words as they write, in place: the corrected text simply replaces what was written.
+
+<Example name="ai-correct" />
+
+There are no suggestions and no underlines. The product makes the call; Aa decides when to ask and how much of the answer to take.
+
+## When it asks
+
+| When | What is asked about |
+| --- | --- |
+| Typing pauses for 400 milliseconds | The block the caret is in. |
+| The caret leaves a block | That block, at once. |
+
+Only blocks the person typed in are asked about: text set from outside, and blocks only pasted into or written by a command or an AI answer, are left as they are, and so are code, tables, equations and dividers. Paragraphs, headings, list items, quotes and callouts are corrected; a block longer than 4,000 characters is not. Nothing is asked or changed during an IME composition, or in a read-only editor. An answer for a text already asked about is kept, so the same words are answered at once.
+
+## What it takes
+
+The answer is compared with the block word by word, and only edits within the words are made.
+
+- Never Markdown's syntax, code, atoms, link addresses, or addresses and email addresses written among the words.
+- Never a change that would alter how the block reads as Markdown: its kind, its marks, its links.
+- Never the word the caret is in. That one follows once the caret has left it.
+- An answer that rewrites rather than corrects, changing more than half the block's words (counted in letters, and always more than twelve), is not taken at all.
+- An answer for a block that changed since it was asked about is dropped, and its `signal` aborted.
+- A call that fails is not made again for that block until the person writes in it again.
+
+## Seen and undone
+
+The words a correction changed shimmer once: a band of the accent colour passes through their letters in under a second, drawn over the text and never in it. With less motion asked for it only fades, and with forced colours it is not drawn. Its colour is `--aa-shimmer`, else Design system 1's accent.
+
+Each correction is an edit from outside: only its block is drawn again, and the caret and the focus stay among the same words. It is a step of its own to undo; ⌘Z gives back what the person wrote, and a correction taken back is not made again. `onChange` reports it like any change, and with [shared editing](/together/shared-editing/) it stays a step of its own in Yjs's undo.
+
+While it corrects, the editor turns the browser's own spelling marks off, and puts them back when it stops.
+
+## Turning it off
+
+| Where | How |
+| --- | --- |
+| At the start | `correcting: false` in the options. |
+| From code | `editor.correcting = false`, and `true` to turn it on again. |
+| On the element | `<aa-editor correct="off">`. |
+| In React | The `correcting` prop. See [React](/start-here/react/). |
+
+Without `correct`, nothing is corrected and `editor.correcting` is always `false`.
+
+## Options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `correct` | None | Corrects a block's words: given its Markdown, it answers with the same Markdown corrected. |
+| `correcting` | `true` | Whether `correct` starts on. |
+
+```ts
+import { createEditor, type Corrector } from '@0001-labs/aa'
+
+const correct: Corrector = async (markdown, { kind, before, after, signal }) => {
+  const response = await fetch('/api/correct', {
+    method: 'POST', signal,
+    body: JSON.stringify({ markdown, kind, before, after }),
+  })
+  if (!response.ok) throw new Error('Not corrected')
+  return await response.text() // the same Markdown, its spelling, grammar and punctuation corrected
+}
+
+createEditor(host, { correct })
+```
+
+| Field | What it holds |
+| --- | --- |
+| `kind` | What the block is: `'paragraph'`, `'heading'`, `'bullet'`, `'quote'` or `'callout'`. |
+| `before` | Up to two blocks before it, as Markdown, to read it by: never to be corrected. |
+| `after` | The block after it, the same way. |
+| `signal` | Aborted once the answer can no longer be used: the block changed, or correction stopped. |
+
+[Asking AI](/ai/asking/) · [Undo](/editing/undo/) · [Options](/building/options/)

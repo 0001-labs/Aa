@@ -1,0 +1,128 @@
+---
+title: Keyboard
+description: Every key Aa takes, grouped by what it is for.
+---
+
+import Example from "../../../components/Example.astro";
+
+The browser types, spells and composes; Aa takes the keys below. On Windows and Linux, Control takes the place of ⌘ and Alt the place of ⌥.
+
+<Example name="keyboard-practice" />
+
+## Writing
+
+| Key | What it does |
+| --- | --- |
+| Enter | Ends the block and starts the next. In a callout, a new line of the callout; in a table, a new paragraph under it. |
+| Shift-Enter | A line break within the block. |
+| Backspace at a block's start | Takes off a heading's, a list item's or a quote's mark, then joins the block to the one before. |
+| Delete at a block's end | Joins the next block to it. |
+| ←, → at a block's edge | On to the end of the block before, or the start of the block after. |
+| ↑, ↓ on a block's first or last line | On to the block above or below, under the same point. |
+| / | Opens the slash menu, at a block's start or after a space. See [Slash and block menus](/editing/menus/). |
+| ⌘V | Pastes. An address over selected words makes a link; tab-separated text makes a table. |
+| ⌘⇧V | Pastes as plain text. |
+
+## Formatting
+
+| Key | What it does |
+| --- | --- |
+| ⌘B | Bold. |
+| ⌘I | Italic. |
+| ⌘U | Underline. |
+| ⌘E | Code. |
+| ⌘⇧S, ⌘⇧X | Strikethrough. |
+| ⌘K | Adds a link to the selected words, or changes the link the caret is in. See [Toolbar](/editing/toolbar/#a-link). |
+| ⌘-click on a link | Opens it in a new tab. |
+| ⌘⇧M | Comments on the selected words, where the editor has a `comments` store. See [Comments](/together/comments/). |
+
+Each mark pressed again over the same words comes off.
+
+## Selecting
+
+| Key | What it does |
+| --- | --- |
+| ⌘A | Selects the block's words (a table cell's first), then all the writing. |
+| Escape | Selects the block the caret is in. An open comment closes first, and an AI answer's marks are put away first. |
+| Shift-↑, Shift-↓ | Selects whole blocks, from the caret's block up or down. |
+| Shift-click in another block | Extends the selection to it. |
+
+With blocks selected:
+
+| Key | What it does |
+| --- | --- |
+| ↑, ↓ | Selects the block above or below instead. |
+| ←, Enter | Back to writing, at the block's start. |
+| → | Back to writing, at the block's end. |
+| Backspace, Delete | Deletes the blocks. |
+| Typing | Writes in their place. |
+
+See [Selecting and moving](/editing/selecting/).
+
+## Blocks
+
+| Key | What it does |
+| --- | --- |
+| ⌘/ | Opens the block menu. |
+| ⌘D | Duplicates the block, or the selected blocks. |
+| ⌘⇧↑, ⌘⇧↓ | Moves the block, or the selected blocks, up or down. |
+| ⌘⌥0 | Text. |
+| ⌘⌥1, ⌘⌥2, ⌘⌥3 | Heading 1, 2 or 3. |
+| ⌘⌥4 | To-do. |
+| ⌘⌥5 | Bulleted list. |
+| ⌘⌥6 | Numbered list. |
+| ⌘⌥7 | Quote. |
+| ⌘⌥8 | Code. |
+| ⌘Enter | Ticks or unticks a box; folds or opens a callout or a toggle. |
+| ⌘⌥T | Opens every folded callout and toggle. |
+
+## Lists and tables
+
+| Key | What it does |
+| --- | --- |
+| Tab, Shift-Tab in a list | Indents the item under the one before, or outdents it. See [Lists and boxes](/writing/lists/). |
+| Tab, Shift-Tab in a table | The next or the previous cell; Tab in the last cell leaves the table. |
+| Arrows in a table | At a cell's edge, on to the next cell; ↑ and ↓ to the cell above or below. |
+| Enter in a table | Leaves the table, for a paragraph under it. See [Tables](/writing/tables/). |
+
+## Undo and find
+
+| Key | What it does |
+| --- | --- |
+| ⌘Z | Undo. See [Undo](/editing/undo/). |
+| ⌘⇧Z, ⌘Y | Redo. |
+| ⌘F | Opens find and replace. See [Find and replace](/editing/find/). |
+
+## Asking AI
+
+Where the product answers prompts:
+
+| Key | What it does |
+| --- | --- |
+| Space in an empty paragraph | Opens a prompt. |
+| Space at a sentence's end, or in an empty list item | Opens a prompt that goes on from the caret. |
+| Space in an empty prompt | Listens instead. |
+| Enter in the prompt | Sends it. |
+| Escape, or Backspace in an empty prompt | Puts it away. |
+| Escape after an answer | Puts its marks away; the changes stay. |
+
+See [Asking AI](/ai/asking/).
+
+## In menus and fields
+
+| Where | Key | What it does |
+| --- | --- | --- |
+| A menu | ↓, ↑ | The next or the previous command. |
+| A menu | Enter | Runs the command. |
+| A menu | Escape | Closes it. |
+| The link field | Enter, Escape | Apply, Cancel. |
+| The find bar | Enter, Shift-Enter | The next or the previous match. |
+| The find bar | Escape | Closes it. |
+| Ask AI on the toolbar | Enter | Sends it. |
+| Ask AI on the toolbar | Escape | Empties it and gives the selection back. |
+| A picture's caption | ⌘A | Selects the caption's words. |
+| A picture's caption | Enter, Escape | Leaves the caption. |
+
+A diagram's board takes its own keys while it has the focus: see [Drawing on the board](/diagrams/board/). A comment's thread has its own too: see [Comments](/together/comments/).
+
+[Toolbar](/editing/toolbar/) · [Selecting and moving](/editing/selecting/) · [On a phone](/editing/phone/)

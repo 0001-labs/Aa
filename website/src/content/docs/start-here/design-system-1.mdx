@@ -1,0 +1,44 @@
+---
+title: Design system 1
+description: Aa draws writing as Design system 1's prose, on its squares, tokens and faces.
+---
+
+import Example from "../../../components/Example.astro";
+
+Aa is the text editor that goes with [Design system 1](https://designsystem1.com), the design system its apps are built on. It draws every block as Design system 1's prose sheet draws the same Markdown read on a page, so writing in Aa and reading it elsewhere look the same.
+
+<Example name="design-system-1" />
+
+## The same prose
+
+Design system 1's [Prose](https://designsystem1.com/1-root/prose/) draws long-form writing in native HTML on its grid: headings, paragraphs, lists, quotes, code, rules and tables, under `data-ds-prose`. Aa's `aa.css` draws its blocks with the same measures:
+
+| | Measure |
+| --- | --- |
+| A line | One square, 20px |
+| Between blocks | One square, two before a heading |
+| The title | 20px on two squares |
+| `##` and `###` | 17px and 15px |
+| Code | 13px on the same lines, in a hairline frame |
+| Links | Underlined, in the text's colour |
+| Quotes | On a muted hairline |
+| Tables | Two squares a row |
+
+A measure is changed in Design system 1's prose sheet first, then in Aa.
+
+## Tokens and fallbacks
+
+Every measure and colour in `aa.css` is a `--ds-*` token with its value as the fallback. With Design system 1's stylesheet on the page, Aa follows its theme, scale and accent; without it, Aa still draws every measure. One thing changes with an `--aa-*` property; see [Styling](/building/styling/).
+
+## Pieces it shares
+
+- **The toolbar** is Design system 1's context bar, from its `context.css`.
+- **Tooltips** are Design system 1's, naming each cell with its shortcut.
+- **The block menu** is drawn in the Context face, and the insert sheet on a phone is Design system 1's sheet.
+- **Checkboxes, avatars and tabs** in boxes and comments are drawn as Design system 1 draws them.
+- **On a phone** every measure follows Design system 1's scale, `--sf`; see [Scaling](https://designsystem1.com/1-root/scaling/).
+- **Diagrams** stand on Design system 1's squares and palette.
+
+## Building an app with both
+
+An app built on Design system 1 takes Aa for everything people write: notes, comments, messages, descriptions. Load Design system 1's root stylesheet, then `aa.css`, and the editor draws in the app's theme, at its scale, with its accent.

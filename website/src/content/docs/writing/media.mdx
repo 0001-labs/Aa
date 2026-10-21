@@ -1,0 +1,51 @@
+---
+title: Pictures and media
+description: Pictures, sound and film written as Markdown images, with captions, and files your app uploads.
+---
+
+import Example from "../../../components/Example.astro";
+
+A picture is written as a Markdown image, `![caption](address)`, and drawn in place as one piece of the text.
+
+<Example name="media-picture" />
+
+## Captions
+
+A picture's caption is its alt text. Write under the picture to change it; the Markdown follows. A picture without one says "Add a caption" where it would be.
+
+## Sound and film
+
+An image whose address ends in `mp4`, `webm` or `mov` is drawn as a film, and one ending in `mp3`, `wav`, `ogg` or `m4a` as sound, each with the browser's controls. A data address of an audio or video type is drawn the same way.
+
+```md
+![The interview](https://example.com/interview.mp3)
+![A walk through the studio](https://example.com/studio.mp4)
+```
+
+## Files
+
+Aa never keeps or uploads a file itself. A picture or file pasted or dropped into the editor is handed to `onFiles`, and your app uploads it and writes its address back:
+
+```ts
+const editor = createEditor(host, {
+  onFiles: async files => {
+    for (const file of files) {
+      const url = await upload(file)
+      const at = editor.selection()
+      if (at) editor.replace(at.start, at.end, `![${file.name}](${url})`)
+    }
+  },
+})
+```
+
+<Example name="media-files" />
+
+`editor.insertFile(file)` hands a file to `onFiles` the same way, for a picker of your own.
+
+## Pictures side by side
+
+Carry one picture to another's side to stand them in [columns](/writing/columns/).
+
+## Drawn as an atom
+
+Pictures are Aa's first [atom](/building/atoms/), `imageAtom`, on by default. An app that gives its own `atoms` includes `imageAtom` among them to keep pictures.

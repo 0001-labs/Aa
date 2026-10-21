@@ -1,0 +1,48 @@
+---
+title: Columns
+description: Blocks side by side, made by carrying one block to another's side, and stored as Notion writes columns.
+---
+
+import Example from "../../../components/Example.astro";
+
+Columns stand blocks side by side, each column written where it stands as a page of its own.
+
+<Example name="columns-text" />
+
+## Try it
+
+Write in either column: Enter, Backspace, the keys and the slash menu work in a column as they do on the page. The columns share the measure, two squares apart. On a screen narrower than 480px they stand one under another.
+
+## Making columns
+
+<Example name="columns-pictures" />
+
+Carry a block to the side of another, within its first or last fifth and no more than four squares in. A line down that side shows where it will stand; let go, and the two become columns, in the order they stand. Carried to the side of columns already there, a block becomes one more column. Columns are never carried into columns, and blocks carried together, several selected at once, are moved rather than put beside.
+
+How a block is lifted and carried is on [Selecting and moving](/editing/selecting/). Pictures in columns fill their column, a square apart down it.
+
+## The Markdown
+
+Columns are one block, written as Notion writes them: `<columns>` around a `<column>` for each, every column Markdown of its own.
+
+```md
+<columns>
+<column>
+## Before
+The draft, as it was sent.
+</column>
+<column>
+![A ceramic cup on a white table](cup.jpg)
+</column>
+</columns>
+```
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| Two columns | A block carried to another's side | `<columns>` holding two `<column>` |
+| One more column | A block carried to the side of columns | Another `<column>` in the same `<columns>` |
+| A column's writing | Write in the column | The column's Markdown between its tags |
+
+The tags are never shown. Lines inside a column indented by tabs, as Notion indents them, are read without the tabs.
+
+A change in a column is one change to the whole block, one step to undo, and the columns and the caret in them stay as they are. Files are the page's, not a column's: they land on the page beside the columns, and are carried in from there.

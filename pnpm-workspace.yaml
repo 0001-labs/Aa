@@ -1,11 +1,16 @@
+packages:
+  - "."
+  - "website"
 allowBuilds:
-  esbuild: set this to true or false
-  workerd: set this to true or false
+  esbuild: true
+  sharp: true
+  workerd: true
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@0.2.8
   vitest: 4.1.10
   vite-plus: 0.2.8
 overrides:
+  astro>vite: "^6.4.1"
   vite: "catalog:"
   vitest: "catalog:"
 peerDependencyRules:

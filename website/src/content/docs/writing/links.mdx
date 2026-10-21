@@ -1,0 +1,44 @@
+---
+title: Links
+description: Links written through an address field, pasted over words, or typed as bare addresses, and stored as Markdown links.
+---
+
+import Example from "../../../components/Example.astro";
+
+A link is words with an address, edited through a field rather than its Markdown.
+
+<Example name="links" />
+
+## Try it
+
+Select words and press ⌘K, or Link on the toolbar. A field for the address opens at the top of the editor: Apply writes the link, and Cancel or Escape leaves the words as they were. With the caret in a link, ⌘K opens the same field with its address in it, to change it.
+
+Select words within one block and paste an address starting `https://` or `http://` over them, and the words become a link to it. ⌘⇧V pastes the address as plain text instead.
+
+## The Markdown
+
+| What you see | How you write it | What it stores |
+| --- | --- | --- |
+| A link | ⌘K, Link on the toolbar, or an address pasted over words | `[words](https://example.com)` |
+| An address | Type or paste it | `https://example.com` or `www.example.com`, as written |
+
+An address in the text is a link as it stands: one starting `https://`, `http://` or `www.` is drawn as a link and kept exactly as it was written. A `www.` address opens as `https://`. Addresses in code and in a link's words stay as they are.
+
+A link's words can be formatted like any others. Its address has no spaces, and parentheses in an address written through the field or pasted over words are stored as `%28` and `%29`, so the Markdown reads back as one link.
+
+## Opening a link
+
+<Example name="links-read-only" />
+
+While the text can be changed, a press on a link puts the caret in it, as on any words. ⌘-press, or Ctrl-press, opens it in a new tab. In a read-only editor a press opens it in a new tab.
+
+Links are underlined in the text's colour; `--aa-link` gives them a colour of their own. See [Styling](/building/styling/).
+
+## Keys
+
+| Keys | What they do |
+| --- | --- |
+| ⌘K | Opens the address field for the selected words, or for the link the caret is in |
+| ⌘V over selected words | Pasting an address makes the words a link |
+| ⌘⇧V | Pastes as plain text |
+| Escape in the field | Closes it without changing anything |

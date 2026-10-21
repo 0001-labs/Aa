@@ -1,0 +1,21 @@
+---
+// One square of header: Aa's name, then the playground, Design system 1 and the source.
+---
+
+<header class="docs-header">
+  <a class="docs-brand" href="/">Aa</a>
+  <nav class="docs-header-links" aria-label="Elsewhere">
+    <a href="/playground/">Playground</a>
+    <a href="https://designsystem1.com">Design system 1</a>
+    <a href="https://github.com/0001-labs/Aa">GitHub</a>
+  </nav>
+</header>
+
+<style>
+  .docs-header { display: flex; align-items: center; gap: var(--grid); width: 100%; height: 100%; }
+  .docs-brand { font-family: var(--typeface-medium, var(--ds-typeface-medium)); color: var(--ds-text-color); text-decoration: none; line-height: calc(16px * var(--sf, 1)); }
+  .docs-header-links { display: flex; gap: var(--grid); margin-inline-start: auto; }
+  .docs-header-links a { color: var(--ds-text-color-muted); text-decoration: none; line-height: calc(16px * var(--sf, 1)); }
+  .docs-header-links a:hover { color: var(--ds-text-color); }
+  @media (max-width: 50rem) { .docs-header-links { display: none; } }
+</style>
