@@ -12,9 +12,7 @@ import '@0001-labs/aa/aa.css'
 <AaEditor value={markdown} onChange={setMarkdown} toolbar />
 ```
 
-These [options](/building/options/) are props: `value`, `onChange`, `readOnly`, `placeholder`, `toolbar`, `menus`, `atoms`, `commands`, `blockCommands`, `onFiles`, `drawEquation`, `correct` and `correcting`. Any other prop goes to the editor's element as an attribute.
-
-Asking AI (`prompt`), comments and `blockPlaceholder` are not passed on by `AaEditor` yet. For those, create the editor yourself with `createEditor` in an effect, as below, or use `<aa-editor>` and its `options`.
+Every [option](/building/options/) is a prop: asking AI (`prompt`), `comments`, `correct` and `blockPlaceholder` among them. Any other prop goes to the editor's element as an attribute.
 
 ## The ref
 
@@ -36,17 +34,6 @@ const ref = useRef<AaEditorRef>(null)
 
 ## Keep options stable
 
-Arrays and callbacks that define the editor, `atoms`, `toolbar`, `commands`, `blockCommands`, `menus` and `drawEquation`, should keep their identity between renders: define them outside the component or with `useMemo` and `useCallback`. A new one each render makes the editor again.
+Arrays, objects and callbacks that define the editor, `atoms`, `toolbar`, `commands`, `blockCommands`, `menus`, `drawEquation`, `comments` and `blockPlaceholder`, should keep their identity between renders: define them outside the component or with `useMemo` and `useCallback`. A new one each render makes the editor again.
 
-## Creating it yourself
-
-```tsx
-const host = useRef<HTMLDivElement>(null)
-
-useLayoutEffect(() => {
-  const editor = createEditor(host.current!, { value: markdown, toolbar: true, prompt, comments })
-  return () => editor.destroy()
-}, [])
-
-<div ref={host} />
-```
+`onChange`, `onFiles`, `correct` and `prompt` may be new functions each render: the editor calls the latest one.

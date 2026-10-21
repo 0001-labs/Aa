@@ -48,7 +48,7 @@ $$
 const editor = createEditor(host, { value, atoms: [imageAtom, diagramAtom] })
 \`\`\`
 
-A diagram is drawn by hand on its own board: press it for its squares and tools. Drag a Box or a Post-it out of the tools onto a square, drag a box to move it, pull a chosen box's grip to widen it, press Line or Arrow and drag from one box to another, double-press a box to name it, and choose a colour. From the keys: Tab chooses, the arrows move, Alt and the arrows size, Enter names, L joins, B adds a box and Delete takes it away. Type /diagram to start one.
+A diagram is drawn by hand on its own board: press it for its squares and tools. Drag an Item or a Note out of the tools onto a square, drag an item to move it, pull a chosen item's grip to widen it, press Line or Arrow and drag from one item to another, click an item to write in it, and choose a colour. From the keys: Tab chooses, the arrows move, Alt and the arrows size, Enter writes in it, L joins, I adds an item, N a note, and Delete takes it away. Type /diagram to start one.
 
 \`\`\`diagram
 # A diagram by hand

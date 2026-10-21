@@ -40,7 +40,7 @@ The options are read once, when the editor is made. `value`, `readOnly`, `placeh
 | `toolbar` | `boolean \| readonly ToolbarAction[]` | `false` | The bar over selected words. `true` shows it with Aa's own buttons; an array shows it with these actions after them. On touch it is docked above the keyboard. See [Toolbar](/editing/toolbar/). |
 | `commands` | `readonly Command[]` | none | The product's commands in the slash menu, after the block kinds and what the atoms insert. On touch they are under More in Insert block. |
 | `blockCommands` | `readonly Command[]` | none | The product's commands in the block menu (⌘/), after Aa's own and before the counts. |
-| `menus` | `boolean` | `true` | `false` turns off the slash menu, the line an empty block says, a table's menu on a right click, and moving blocks by dragging them. |
+| `menus` | `boolean` | `true` | `false` turns off the slash menu, the block menu (⌘/), the line an empty block says, a table's menu on a right click, and moving blocks by dragging them. |
 | `blockPlaceholder` | `string` | “Type / for commands”, or “Press space for AI or / for commands” with `prompt` | What an empty line with the caret in it says. `''` says nothing. Never shown with `menus: false` or in a read-only editor. |
 
 Actions and commands are `{ id, label, icon, run(editor) }`; see [Commands](/building/commands/).

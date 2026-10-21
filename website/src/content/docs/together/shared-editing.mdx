@@ -82,7 +82,7 @@ const transport = {
 
 ## Selections
 
-With `publishSelection` and `subscribeSelections`, each editor sees where the others are. A selection is `{ id, label, anchor, focus }`, its two ends encoded Yjs relative positions, so they stay on the same words as the text changes. They are drawn on the `presence` [decoration](/building/decorations/) layer. A caret is a line in the accent with the person's initial in a circle over it. A run of selected words carries the class `aa-peer-selection` and the label as its title; `aa.css` gives it no fill, so your stylesheet colours it. An editor never draws its own `id`. Destroying a connection publishes `null`.
+With `publishSelection` and `subscribeSelections`, each editor sees where the others are. A selection is `{ id, label, anchor, focus }`, its two ends encoded Yjs relative positions, so they stay on the same words as the text changes. They are drawn on the `presence` [decoration](/building/decorations/) layer. A caret is a line in the accent with the person's initial in a circle over it. A run of selected words carries the class `aa-peer-selection` and the label as its title, drawn behind the words in a faint fill of the accent (`--aa-accent`). An editor never draws its own `id`. Destroying a connection publishes `null`.
 
 ## Convex
 

@@ -262,7 +262,7 @@ describe('drawing on a diagram\'s board', () => {
     key('Enter', {}, field)
     expect(e.value).toContain('[Sea] @ 8 0\nA -> B\nA -- Sea')
     await nextTask()
-    // B adds a box on a free square, named at once.
+    // I adds an item on a free square, named at once.
     key('Escape'); key('i')
     expect(e.value).toContain('[Item] @ 0 5')
   })

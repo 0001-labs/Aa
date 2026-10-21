@@ -82,10 +82,10 @@ editor.decorate([{ from: 42, to: 42, className: 'peer', label: 'Ann Lund' }], 'c
 
 ## Drawing them
 
-`aa.css` draws `aa-find-match` in the highlight's yellow, the comment classes in orange's pastel, and the carets. `aa-peer-selection` and `aa-ai-changed` carry no style of their own: the product gives them one if it wants them seen.
+`aa.css` draws `aa-find-match` in the highlight's yellow, the comment classes in orange's pastel, the carets, and `aa-peer-selection` in a faint fill of the accent. `aa-ai-changed` carries no style of its own: the product gives it one if it wants it seen.
 
 ```css
-.aa-peer-selection { background: color-mix(in srgb, var(--ds-sharp-blue) 20%, transparent); }
+.aa-ai-changed { background: color-mix(in srgb, var(--ds-zenith-blue) 30%, transparent); }
 .spelling { text-decoration: underline wavy red; }
 ```
 
