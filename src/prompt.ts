@@ -76,26 +76,52 @@ function recognition(): SpeechRecognitionLike | null {
   return Speech ? new Speech() : null
 }
 
+/** How long the dot stands still after the words last carried it before it breathes again, in milliseconds. */
+export const SETTLE = 500
+
 /**
- * A listening dot's breath: a slow pulse of its opacity, never its size, and
- * the voice's level over it once `followVoice` has the microphone (asked for
- * only once dictation has it, never beside it in Safari, where the pulse is
- * alone). Still where less motion is asked for.
+ * The listening dot's opacity. Carried along by the words as they come, it is
+ * steady, so it moves at one size and one strength; standing still, it is a
+ * slow pulse (0 to 1) mixed with the voice's level (0 to 1), so it breathes and
+ * brightens as the voice does.
+ */
+export function dotOpacity(moving: boolean, pulse: number, level: number): number {
+  return moving ? 0.85 : Math.min(1, 0.55 + 0.3 * pulse + 0.3 * level)
+}
+
+/**
+ * A listening dot's breath: its opacity, never its size. Standing still, a slow
+ * pulse with the voice's level over it once `followVoice` has the microphone
+ * (asked for only once dictation has it, never beside it in Safari, where the
+ * pulse is alone). While the words carry it along it holds steady, the pulse
+ * and the voice set aside, and it breathes again once it has stood still for
+ * `SETTLE`, the pulse starting afresh. It eases between the two rather than
+ * jumping. Still where less motion is asked for.
  */
 export function breatheDot(dot: HTMLElement, view: Window): { followVoice: (() => Promise<void>) | null; stop(): void } {
   if (view.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return { followVoice: null, stop: () => {} }
-  let frame = 0, stopped = false, eased = 0
+  let frame = 0, stopped = false, eased = 0, shown = dotOpacity(false, 0, 0)
   let analyser: AnalyserNode | null = null, stream: MediaStream | undefined, context: AudioContext | undefined
   const samples = new Float32Array(512)
-  const start = performance.now()
+  let start = performance.now(), movedAt = -Infinity, wasMoving = false
+  let at: { x: number; y: number } | null = null
   const step = (now: number) => {
     if (stopped) return
     if (analyser) {
       analyser.getFloatTimeDomainData(samples)
       eased += (Math.min(1, Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length) * 8) - eased) * 0.15
     }
+    // Where it stands: the words heard move it along the line, and down to the next.
+    const rect = dot.getBoundingClientRect()
+    if (at && (Math.abs(rect.left - at.x) > 0.5 || Math.abs(rect.top - at.y) > 0.5)) movedAt = now
+    at = { x: rect.left, y: rect.top }
+    const moving = now - movedAt < SETTLE
+    // Standing still again, the pulse starts from its faintest, so it rises out of the steady dot.
+    if (wasMoving && !moving) start = now
+    wasMoving = moving
     const pulse = 0.5 - 0.5 * Math.cos((now - start) / 2400 * 2 * Math.PI)
-    dot.style.opacity = Math.min(1, 0.55 + 0.3 * pulse + 0.3 * eased).toFixed(3)
+    shown += (dotOpacity(moving, pulse, eased) - shown) * 0.12
+    dot.style.opacity = shown.toFixed(3)
     frame = requestAnimationFrame(step)
   }
   frame = requestAnimationFrame(step)
@@ -214,10 +240,10 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   /**
    * While listening, the caret is a dot a space after the words heard, where
    * typing would go on: a mark in the line itself, so it follows the words as
-   * they come. For as long as it listens it breathes, very slightly: a slow
-   * pulse of its opacity mixed with the microphone's level, never its size,
-   * so it pulses while it stands still and brightens a little as the voice
-   * does; still where less motion is asked for.
+   * they come. Standing still it breathes, very slightly: a slow pulse of its
+   * opacity mixed with the microphone's level, never its size; carried along
+   * by the words it holds steady (`breatheDot`); still where less motion is
+   * asked for.
    */
   let dot: HTMLElement | null = null
   let level: { frame: number; stop: () => void } | null = null
