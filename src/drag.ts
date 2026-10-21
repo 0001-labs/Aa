@@ -84,8 +84,12 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   /** The selection stays away while a block is carried, so the browser does not go on selecting words under it. */
   const keepClear = () => { if (carried && window.getSelection()?.rangeCount) window.getSelection()!.removeAllRanges() }
 
+  // Keep side targets where the blocks stood at lift: sortable moves siblings
+  // aside during the gesture, but that must not move a column target away.
+  let sideTargets: DOMRect[] = []
+  let liftedScroll = { x: 0, y: 0 }
+
   const sortable = createSortable({
-    lockAxis: 'y',
     inheritProperties: CARRIED,
     renderPreview: source => {
       const clone = source.cloneNode(true) as HTMLElement
@@ -99,6 +103,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       const block = children()[start.source.index]
       const selected = press?.selected ?? []
       const group = block && selected.includes(block) ? selected : []
+      sideTargets = children().map(element => element.getBoundingClientRect())
+      liftedScroll = { x: window.scrollX, y: window.scrollY }
       carried = { caret: group.length ? null : editor.selection(), group, from: start.source.index }
       document.addEventListener('pointermove', besides, true)
       for (const element of group) if (element !== block) element.setAttribute('data-ghost', '')
@@ -109,6 +115,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     onDragEnd: result => {
       const { caret, group } = carried ?? { caret: null, group: [] as HTMLElement[] }
       carried = null
+      sideTargets = []
       document.removeEventListener('pointermove', besides, true)
       const beside = side, over = across
       side = null; across = null; sideLine.hidden = true
@@ -144,15 +151,17 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   function besides(event: PointerEvent) {
     if (!carried || carried.group.length > 1) return
     if (acrossColumns(event)) return
-    const all = children()
-    const target = document.elementsFromPoint(event.clientX, event.clientY)
-      .map(element => element.closest?.('.aa-block') as HTMLElement | null)
-      .find(block => !!block && block.parentElement === host)
-    const index = target ? all.indexOf(target) : -1
     const unit = parseFloat(getComputedStyle(host).getPropertyValue('--aa-unit')) || 20
-    const rect = target?.getBoundingClientRect()
+    const dx = window.scrollX - liftedScroll.x, dy = window.scrollY - liftedScroll.y
+    const x = event.clientX + dx, y = event.clientY + dy
+    // Include one square beyond the edge: a picture is placed beside another,
+    // so the pointer need not stay inside the picture it is placed beside.
+    const index = sideTargets.findIndex((rect, index) => index !== carried!.from &&
+      y >= rect.top && y <= rect.bottom && x >= rect.left - unit && x <= rect.right + unit)
+    const original = sideTargets[index]
+    const rect = original ? new DOMRect(original.left - dx, original.top - dy, original.width, original.height) : null
     const zone = rect ? Math.min(rect.width / 5, 4 * unit) : 0
-    const at = !rect || index < 0 || index === carried.from ? null
+    const at = !rect ? null
       : event.clientX < rect.left + zone ? 'start'
       : event.clientX > rect.right - zone ? 'end'
       : null
@@ -187,7 +196,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     const others = alone ? columns.filter(column => column !== host) : columns
     const rects = others.map(column => column.getBoundingClientRect())
     const slot = rects.filter(rect => rect.left + rect.width / 2 < event.clientX).length
-    sideLine.hidden = true
+    side = null; sideLine.hidden = true
     // Let go where it already stands, nothing moves: no line.
     if (alone && slot === origin) return true
     across = { slot }

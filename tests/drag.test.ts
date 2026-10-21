@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createEditor, type Editor, type EditorOptions } from '../src/editor'
 import { HOLD, REST } from '../src/drag'
+import { readColumns, parseBlocks, writeColumns } from '../src/markdown'
 
 let editor: Editor | undefined, host: HTMLElement | undefined
 afterEach(() => { editor?.destroy(); host?.remove(); editor = undefined; host = undefined; window.getSelection()?.removeAllRanges(); vi.useRealTimers() })
@@ -32,6 +33,60 @@ const lifted = () => Array.from(host!.children).filter(element => (element as HT
 const settle = () => vi.runAllTimers()
 
 describe('moving blocks without a handle, on the Drag library', () => {
+  it('carries an image horizontally with the pointer', () => {
+    setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
+    const image = block(0).querySelector('img')!
+    pointer('pointerdown', image, 10, { clientX: 100 })
+    pointer('pointermove', document, 10, { clientX: 130 })
+    expect(lifted()).toEqual([0])
+    expect((document.querySelector('[data-drag-preview]') as HTMLElement).style.transform).toBe('translate3d(30px, 0px, 0)')
+    pointer('pointerup', document, 10, { clientX: 130 }); settle()
+  })
+
+  it('drops a picture beside another using the actual pointer gesture', () => {
+    const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
+    pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
+    pointer('pointermove', document, 50, { clientX: 120 })
+    pointer('pointermove', document, 10, { clientX: 395 })
+    pointer('pointerup', document, 10, { clientX: 395 }); settle()
+    expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
+    e.undo(); expect(e.value).toBe('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
+  })
+
+  it('accepts a picture just outside the other picture’s edge, even when sorting has moved the target', () => {
+    const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
+    const target = block(0)
+    // The pointer is beside the original picture. Sorting shifts it down to
+    // make room, so neither a live hit test nor its shifted box contains it.
+    pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
+    pointer('pointermove', document, 50, { clientX: 120 })
+    Object.defineProperty(target, 'getBoundingClientRect', { configurable: true, value: () => new DOMRect(0, 40, 400, 20) })
+    pointer('pointermove', document, 10, { clientX: 410 })
+    expect((document.querySelector('.aa-drop-side') as HTMLElement).hidden).toBe(false)
+    pointer('pointerup', document, 10, { clientX: 410 }); settle()
+    expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
+  })
+
+  it('reorders images across columns using the actual pointer gesture', () => {
+    const original = writeColumns(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
+    const e = setup(original)
+    const row = host!.querySelector<HTMLElement>('.aa-columns')!
+    const columns = [...row.children] as HTMLElement[]
+    Object.defineProperty(row, 'getBoundingClientRect', { value: () => new DOMRect(0, 0, 400, 100) })
+    columns.forEach((column, index) => {
+      const box = () => new DOMRect(index * 220, 0, 180, 100)
+      Object.defineProperty(column, 'getBoundingClientRect', { value: box })
+      Object.defineProperty(column.firstElementChild!, 'getBoundingClientRect', { value: box })
+    })
+    pointer('pointerdown', columns[0].querySelector('img')!, 20, { clientX: 100 })
+    pointer('pointermove', document, 20, { clientX: 130 })
+    expect(columns[0].hasAttribute('data-dragging')).toBe(true)
+    pointer('pointermove', document, 20, { clientX: 395 })
+    pointer('pointerup', document, 20, { clientX: 395 }); settle()
+    expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Cup](cup.jpg)', '![Lake](lake.jpg)'])
+    e.undo(); expect(e.value).toBe(original)
+  })
+
   it('draws no grip and no plus beside a block, hovered or not', () => {
     setup('One\n\nTwo', { toolbar: true })
     block(0).dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
