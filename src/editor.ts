@@ -568,8 +568,8 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const same = endOld - start === endNew - start
     const selection = document.getSelection()
     const focused = document.activeElement as HTMLElement | null
-    const saved = same && focused && host.contains(focused) && focused.closest('.aa-atom') && selection?.rangeCount
-      ? { focused, anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset, focusNode: selection.focusNode, focusOffset: selection.focusOffset }
+    const saved = same && focused && host.contains(focused) && focused.closest('.aa-atom')
+      ? { focused, ...(selection?.rangeCount ? { anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset, focusNode: selection.focusNode, focusOffset: selection.focusOffset } : {}) }
       : null
     const fresh = next.slice(start, endNew).map((block, i) => makeElement(block, same ? els[start + i] : undefined))
     const anchor = els[endOld] ?? null
@@ -578,7 +578,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (saved && host.contains(saved.focused) && document.activeElement !== saved.focused) {
       saved.focused.focus({ preventScroll: true })
       if (saved.anchorNode && saved.focusNode && saved.focused.contains(saved.focusNode)) {
-        try { selection!.setBaseAndExtent(saved.anchorNode, saved.anchorOffset, saved.focusNode, saved.focusOffset) } catch { /* the nodes moved on */ }
+        try { selection!.setBaseAndExtent(saved.anchorNode, saved.anchorOffset!, saved.focusNode, saved.focusOffset!) } catch { /* the nodes moved on */ }
       }
     }
     showPlaceholder()

@@ -44,11 +44,19 @@ describe('columns', () => {
     const before = host.querySelector<HTMLElement>('.aa-atom.aa-columns')!
     const column = before.querySelector<HTMLElement>('.aa-column .aa-block')!
     column.focus()
-    column.firstChild!.textContent = 'Left words!'
-    column.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    expect(document.activeElement).toBe(column)
+    // The column's editor hands the block back, as it does after each keystroke: the atom and the focus in it stay.
+    before.dataset.source = writeColumns(['Left words!', 'Right'])
+    before.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, detail: { source: before.dataset.source } }))
     expect(editor.value).toBe(writeColumns(['Left words!', 'Right']))
     expect(host.querySelector('.aa-atom.aa-columns')).toBe(before)
     expect(document.activeElement).toBe(column)
+    // Typed in, the same: the atom is the one drawn first.
+    const block = before.querySelector<HTMLElement>('.aa-column .aa-block')!
+    block.firstChild!.textContent = 'Left words!!'
+    block.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    expect(editor.value).toBe(writeColumns(['Left words!!', 'Right']))
+    expect(host.querySelector('.aa-atom.aa-columns')).toBe(before)
     editor.destroy()
     host.remove()
   })
