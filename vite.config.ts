@@ -7,5 +7,13 @@ export default defineConfig({
   // this build's own CSS, and the playground's is in public/ds1, so the toolbar's
   // fill came out as two colours and drew nothing.
   build: { outDir: "site", cssTarget: ["chrome123", "edge123", "firefox120", "safari17.5"] },
-  test: { environment: "happy-dom", include: ["tests/**/*.test.ts"] },
+  test: {
+    // Vitest v4 compatibility: preserve mock call history.
+    // Remove after tests no longer rely on calls from setup or earlier tests.
+    // https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
+    // https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
+    clearMocks: false,
+    environment: "happy-dom",
+    include: ["tests/**/*.test.ts"],
+  },
 });

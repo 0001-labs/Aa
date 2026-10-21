@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createEditor, type Editor } from '../src/editor'
 import { memoryCommentStore, type MemoryCommentStore } from '../src/comments-memory'
 import type { CommentThread } from '../src/comments'

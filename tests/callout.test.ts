@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vite-plus/test'
 import { createEditor, type Editor } from '../src/editor'
 import { parseBlocks, serialize, readCallout, writeCallout, calloutIsBox, CALLOUT_COLORS } from '../src/markdown'
 import { fromMarkdown, setCallout, toggleCallout, turnInto } from '../src/document'

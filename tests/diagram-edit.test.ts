@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { layoutDiagram } from '../src/diagram-language'
 import { addGroup, addJoin, colorTarget, deleteTarget, freeName, joinKind, moveGroup, referenceOf, renameTarget, resizeGroup } from '../src/diagram-edit'
 

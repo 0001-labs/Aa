@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createEditor, type Editor } from '../src/editor'
 
 let editor: Editor | undefined, host: HTMLElement | undefined

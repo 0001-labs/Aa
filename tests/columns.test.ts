@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { createEditor } from '../src/editor'
 import { besideChange, blockRuns, parseBlocks, readColumns, serialize, writeColumns } from '../src/markdown'
 

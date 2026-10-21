@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { SETTLE, breatheDot, dotOpacity } from '../src/prompt'
 
 /** Frames run by hand: each call gives the next one its moment. */

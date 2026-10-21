@@ -7,3 +7,4 @@ site/
 .claude
 .env
 .env.local
+.vitest/

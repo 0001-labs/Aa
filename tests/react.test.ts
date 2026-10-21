@@ -1,6 +1,6 @@
 import { createElement, createRef, act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { AaEditor, type AaEditorRef } from '../src/react'
 import { memoryCommentStore } from '../src/comments-memory'
 

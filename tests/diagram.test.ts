@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 import { diagramBlockRows, diagramFenceWrapped, diagramFences, diagramListColumns, diagramWraps, isDiagramBlock, layoutDiagram, writingLineRows } from '../src/diagram-language'
 import { defineAaDiagram } from '../src/diagram'
 

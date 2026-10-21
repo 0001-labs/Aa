@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createEditor, imageAtom, type Editor } from '../src/editor'
 import { diagramAtom, type AaDiagramBoardElement } from '../src/diagram'
 import type { PromptContext, Prompter } from '../src/prompt'

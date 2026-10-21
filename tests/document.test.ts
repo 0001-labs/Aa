@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, select, turnInto, duplicateBlocks, deleteBlocks, moveBlocks } from '../src/document'
 import { History, changeEnd } from '../src/history'
 

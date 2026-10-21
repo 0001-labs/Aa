@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { paintSelection, selectionPath } from '../src/selection'
 
 const rect = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom })

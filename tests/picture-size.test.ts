@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { createEditor } from '../src/editor'
 import { blockRuns, parseBlocks, readPicture, writePicture } from '../src/markdown'
 

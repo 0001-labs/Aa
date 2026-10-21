@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { createEditor, type Atom } from '../src/editor'
 import { atomPattern, blockRuns, parseBlocks } from '../src/markdown'
 import { offsetIn, pointAt, readBlock, renderBlock } from '../src/render'

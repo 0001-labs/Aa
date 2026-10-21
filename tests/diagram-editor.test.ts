@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { createEditor, imageAtom, type Editor } from '../src/editor'
 import { readBlock } from '../src/render'
 import { diagramAtom, DIAGRAM_START, type AaDiagramElement, type AaDiagramBoardElement } from '../src/diagram'

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { parseBlocks, serialize, blockRuns, codeClosed } from '../src/markdown'
 
 describe('parseBlocks', () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import { anchorThreads, applyEdit, commentsLabel, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type CommentThread } from '../src/comments'
 
 const ann = { id: 'ann', name: 'Ann' }, bo = { id: 'bo', name: 'Bo Ek' }

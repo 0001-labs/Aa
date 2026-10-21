@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import * as Y from 'yjs'
 import { createEditor, type Editor } from '../src/editor'
 import { connectCollaboration, type Collaboration, type CollaborationTransport } from '../src/collaboration'

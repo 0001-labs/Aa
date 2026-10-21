@@ -6,13 +6,13 @@ allowBuilds:
   sharp: true
   workerd: true
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@0.2.8
-  vitest: 4.1.10
-  vite-plus: 0.2.8
+  vite: npm:@voidzero-dev/vite-plus-core@1.3.0
+  vitest: 5.0.5
+  vite-plus: 1.3.0
 overrides:
   astro>vite: "^6.4.1"
-  vite: "catalog:"
-  vitest: "catalog:"
+  vite@*: "catalog:"
+  vitest@*: "catalog:"
 peerDependencyRules:
   allowAny:
     - vite

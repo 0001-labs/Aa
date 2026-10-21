@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 import { createEditor } from '../src/editor'
 
 test('editor controls stay inside their native dialog and are removed with the editor', () => {

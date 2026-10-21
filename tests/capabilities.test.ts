@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import { defineAaEditor, type AaEditorElement } from '../src/element'
 import { createEditor, type Editor } from '../src/editor'
 import { parseBlocks, serialize, blockRuns } from '../src/markdown'
