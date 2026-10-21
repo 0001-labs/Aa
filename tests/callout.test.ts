@@ -3,6 +3,7 @@ import { createEditor, type Editor } from '../src/editor'
 import { parseBlocks, serialize, readCallout, writeCallout, calloutIsBox, CALLOUT_COLORS } from '../src/markdown'
 import { fromMarkdown, setCallout, toggleCallout, turnInto } from '../src/document'
 import { readBlock, renderBlock } from '../src/render'
+import { readFileSync } from 'node:fs'
 
 let editor: Editor | undefined, host: HTMLElement | undefined
 function setup(value: string, options = {}) {
@@ -45,6 +46,14 @@ describe('a callout as Notion draws it', () => {
     expect(alert.icon).toBeUndefined()
     // A toggle heading is still read as one.
     expect(parseBlocks('> [!note]- ## Title\n> Body')[0]).toMatchObject({ kind: 'callout', folded: true, level: 2 })
+  })
+
+  it('lets a written fill win over the grey: the box rule only falls back to it', () => {
+    const css = readFileSync(new URL('../src/aa.css', import.meta.url), 'utf8')
+    const box = css.slice(css.indexOf('.aa-block[data-kind="callout"][data-box] {'), css.indexOf('}', css.indexOf('.aa-block[data-kind="callout"][data-box] {')))
+    expect(box).not.toMatch(/--aa-callout-fill:/)
+    expect(box).toContain('background: var(--aa-callout-fill, var(--aa-callout-grey))')
+    for (const color of CALLOUT_COLORS) expect(css).toContain(`[data-fill="${color}"] { --aa-callout-fill:`)
   })
 
   it('is drawn as a box with its emoji, its picture or no icon, and its fill', () => {

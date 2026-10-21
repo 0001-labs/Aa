@@ -367,11 +367,12 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 [data-fill="red"] { --aa-callout-fill: var(--aa-callout-fill-red, var(--one-tuned-red-pastel, light-dark(#ffcccc, #4c1a1a))); }
 [data-fill="white"] { --aa-callout-fill: var(--aa-callout-fill-white, transparent); }
 .aa-block[data-kind="callout"][data-box] {
-  --aa-callout-fill: var(--aa-callout-fill-gray, color-mix(in srgb, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)) 50%, transparent));
+  /* The grey is the fallback, never a declaration of --aa-callout-fill here: that would outweigh the [data-fill] rules above. */
+  --aa-callout-grey: var(--aa-callout-fill-gray, color-mix(in srgb, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)) 50%, transparent));
   box-sizing: border-box;
   padding: var(--aa-unit);
   border-radius: var(--ds-radius, calc(4px * var(--aa-sf)));
-  background: var(--aa-callout-fill);
+  background: var(--aa-callout-fill, var(--aa-callout-grey));
   box-shadow: none;
 }
 .aa-block[data-kind="callout"][data-box][data-fill="white"] { box-shadow: inset 0 0 0 1px var(--aa-rule-color); }
@@ -380,7 +381,7 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-block[data-kind="callout"][data-box][data-icon]::before { content: attr(data-icon); box-sizing: border-box; padding-top: calc(4px * var(--aa-sf)); font-size: var(--aa-size, var(--ds-type-size-default, calc(14px * var(--aa-sf)))); line-height: calc(16px * var(--aa-sf)); letter-spacing: 0; text-align: start; white-space: nowrap; overflow: hidden; -webkit-user-select: none; user-select: none; }
 .aa-block[data-kind="callout"][data-box][data-picture]::before { content: ""; background: var(--aa-callout-picture) 0 100% / calc(16px * var(--aa-sf)) calc(16px * var(--aa-sf)) no-repeat; }
 /* Selected or carried, the box darkens its own fill rather than taking the selection grey over it. */
-.aa-block[data-kind="callout"][data-box][data-selected], .aa-block[data-kind="callout"][data-box][data-lifted] { background: color-mix(in srgb, currentColor 15%, var(--aa-callout-fill)); }
+.aa-block[data-kind="callout"][data-box][data-selected], .aa-block[data-kind="callout"][data-box][data-lifted] { background: color-mix(in srgb, currentColor 15%, var(--aa-callout-fill, var(--aa-callout-grey))); }
 /* A fill's row in the block menu: its mark a square of the colour, in the system's corners. */
 .aa-icon[data-fill] { mask: none; -webkit-mask: none; border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: var(--aa-callout-fill); }
 .aa-icon[data-fill="white"] { box-shadow: inset 0 0 0 1px var(--aa-rule-color); }
