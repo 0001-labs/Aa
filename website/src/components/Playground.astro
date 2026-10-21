@@ -1,19 +1,18 @@
 ---
-// The front page: the editor itself, twice. First a note as anyone writes one; then a page as
-// Notion's are, with pictures, a table, boxes, a toggle, columns and a diagram to carry about,
-// its bar of Read only, Undo and Redo, and Open comments. Each beside the Markdown it stores.
-import Example from './Example.astro';
+// The front page: the editor itself, in two tabs. Playground is the note with every feature in it,
+// as `vp run dev` draws it, and two editors sharing one document; Advanced is a page with pictures,
+// a table, boxes, a toggle, pictures in columns to put in order, and a diagram. Each has its bar of
+// Read only, Undo and Redo, and Open comments, and the Markdown it stores beside it.
 import commentIcon from '../../../src/icons/comment.svg?raw';
 ---
 
-<div class="front">
-  <Example name="front-simple" />
-
-  <figure class="advanced not-content" data-ds-not-prose data-front>
-    <figcaption>
-      <p class="title">A page, as in Notion</p>
-      <p class="hint">Carry a picture or a block somewhere else by pressing it and holding it still. Carry a picture to another's side for columns. Type / for every kind of block, Space in an empty line to ask AI.</p>
-    </figcaption>
+<div class="front not-content" data-ds-not-prose data-front-root>
+  <div class="tabs" role="tablist" aria-label="Examples">
+    <button id="front-playground-tab" role="tab" aria-selected="true" aria-controls="front-playground">Playground</button>
+    <button id="front-advanced-tab" role="tab" aria-selected="false" aria-controls="front-advanced" tabindex="-1">Advanced</button>
+  </div>
+  <section id="front-playground" role="tabpanel" aria-labelledby="front-playground-tab" data-page="playground" hidden>
+    <p class="hint">Every feature in one note: select words for the toolbar, type / for the kinds of block, Space in an empty line to ask AI.</p>
     <div class="bar">
       <button data-front="readonly" aria-pressed="false">Read only</button>
       <span class="split" role="group" aria-label="History"><button data-front="undo">Undo</button><button data-front="redo">Redo</button></span>
@@ -27,21 +26,47 @@ import commentIcon from '../../../src/icons/comment.svg?raw';
         <pre class="front-source"></pre>
       </div>
     </div>
-  </figure>
+    <div class="shared">
+      <div><div class="bar"><p class="name">Shared editing</p><button data-front="share">Try two editors</button></div><div class="front-shared-first"></div></div>
+      <div><div class="bar"><p class="name">Second editor</p></div><div class="front-shared-second"></div></div>
+    </div>
+  </section>
+  <section id="front-advanced" role="tabpanel" aria-labelledby="front-advanced-tab" data-page="advanced" hidden>
+    <p class="hint">A page of pictures, a table, boxes and a diagram. Press a block or a picture, hold it still, and carry it: up and down, beside another for columns, or from one column to another’s side to put pictures in order.</p>
+    <div class="bar">
+      <button data-front="readonly" aria-pressed="false">Read only</button>
+      <span class="split" role="group" aria-label="History"><button data-front="undo">Undo</button><button data-front="redo">Redo</button></span>
+      <button data-front="comments" class="with-icon" aria-pressed="false"><span class="icon" aria-hidden="true" set:html={commentIcon}></span>Open comments</button>
+    </div>
+    <div class="panes">
+      <div class="front-editor"></div>
+      <p class="label">What it stores</p>
+      <div class="stored">
+        <aside class="front-comments" hidden></aside>
+        <pre class="front-source"></pre>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script>
   import { mountFront } from '../lib/front';
-  const root = document.querySelector<HTMLElement>('[data-front]');
+  const root = document.querySelector<HTMLElement>('[data-front-root]');
   if (root) mountFront(root);
 </script>
 
 <style>
-  .advanced { margin: var(--grid) 0 calc(2 * var(--grid)); padding: var(--grid); border-radius: calc(4px * var(--sf, 1)); box-shadow: inset 0 0 0 1px var(--ds1-docs-divider); }
-  figcaption { margin-bottom: var(--grid); }
-  figcaption p { margin: 0; }
-  .title { font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
+  /* Design system 1's text tabs: the words alone, 4px padded and 4px apart, the run 4px back so the
+     first word starts on the edge, the chosen one in the ink and the rest muted, on one square's sixteen. */
+  .tabs { display: flex; align-items: flex-end; gap: calc(4px * var(--sf, 1)); height: var(--grid); margin: 0 0 var(--grid) calc(-4px * var(--sf, 1)); line-height: calc(16px * var(--sf, 1)); }
+  .tabs [role="tab"] { height: calc(16px * var(--sf, 1)); padding: 0 calc(4px * var(--sf, 1)); background: none; color: var(--ds-text-color-muted); line-height: calc(16px * var(--sf, 1)); }
+  .tabs [role="tab"][aria-selected="true"], .tabs [role="tab"]:hover { background: none; color: var(--ds-text-color); }
+  [role="tabpanel"][hidden] { display: none; }
+  .hint { margin: 0 0 var(--grid); }
   .hint, .label { color: var(--ds-text-color-muted); }
+  .shared { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2 * var(--grid)); margin-top: calc(3 * var(--grid)); }
+  @media (max-width: 1100px) { .shared { grid-template-columns: minmax(0, 1fr); } }
+  .shared .name { margin: 0; font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
   .label { margin: 0 0 var(--grid); }
   /* The page and what it stores start on the same line; the label stands over the Markdown alone. */
   .panes { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-areas: ". label" "editor stored"; column-gap: calc(2 * var(--grid)); }
