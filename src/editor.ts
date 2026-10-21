@@ -1525,6 +1525,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     readOnly: () => readOnly,
     prompt: options.prompt,
   })
-  stopControls = createControls(editor, options)
+  // The controls offer every atom the editor draws that can be inserted, its own Columns among them.
+  stopControls = createControls(editor, { ...options, atoms })
   return editor
 }

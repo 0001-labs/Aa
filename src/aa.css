@@ -361,6 +361,8 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-block[data-fence] > .aa-atom { display: block; max-width: 100%; overflow-x: auto; font-family: "Inter Arrows", var(--aa-typeface, var(--ds-typeface-regular, var(--typeface-regular, system-ui))), system-ui, sans-serif; font-size: var(--aa-size, var(--ds-type-size-default, calc(14px * var(--aa-sf)))); letter-spacing: var(--aa-letterspacing, var(--ds-type-letterspacing-default, calc(-0.3px * var(--aa-sf)))); }
 .aa-block[data-fence] > .aa-atom > * { margin-inline-start: 0; }
 
+/* A collaborator's selection: their caret's colour, faint, behind the words. */
+.aa-peer-selection { background: color-mix(in srgb, var(--aa-accent, var(--ds-sharp-blue, Highlight)) 20%, transparent); }
 .aa-peer-caret { position: relative; display: inline; border-left: calc(1px * var(--aa-sf)) solid var(--aa-accent, var(--ds-sharp-blue, Highlight)); }
 /* A collaborator's caret: a hairline in the accent, their avatar over it, 16px round with their
    initial, as Design system 1 draws a person, filled so it reads over the line above. */

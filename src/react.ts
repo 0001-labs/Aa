@@ -7,7 +7,7 @@ const useClientLayoutEffect = typeof window === 'undefined' ? useEffect : useLay
 
 /** Controlled Markdown without replacing Aa's DOM on each React render. */
 export const AaEditor = forwardRef<AaEditorRef, AaEditorProps>(function AaEditor(props, ref) {
-  const { value = '', readOnly = false, placeholder = '', onChange, onFiles, atoms, toolbar, commands, blockCommands, menus, drawEquation, correct, correcting = true, ...attributes } = props
+  const { value = '', readOnly = false, placeholder = '', blockPlaceholder, onChange, onFiles, atoms, toolbar, commands, blockCommands, menus, drawEquation, correct, correcting = true, prompt, comments, ...attributes } = props
   const host = useRef<HTMLDivElement>(null)
   const instance = useRef<Editor | null>(null)
   const latest = useRef(props)
@@ -21,15 +21,17 @@ export const AaEditor = forwardRef<AaEditorRef, AaEditorProps>(function AaEditor
   useClientLayoutEffect(() => {
     const editor = createEditor(host.current!, {
       value: latest.current.value, readOnly: latest.current.readOnly, placeholder: latest.current.placeholder,
-      atoms, toolbar, commands, blockCommands, menus, drawEquation,
+      blockPlaceholder, atoms, toolbar, commands, blockCommands, menus, drawEquation, comments,
       onChange: value => latest.current.onChange?.(value),
       onFiles: onFiles ? files => latest.current.onFiles?.(files) : undefined,
       correct: correct ? (text, context) => latest.current.correct!(text, context) : undefined,
+      // The latest prompt answers, as the latest onChange is told: a new function each render keeps the editor.
+      prompt: prompt ? (said, context) => latest.current.prompt!(said, context) : undefined,
       correcting: latest.current.correcting !== false,
     })
     instance.current = editor
     return () => { editor.destroy(); instance.current = null }
-  }, [atoms, toolbar, commands, blockCommands, menus, drawEquation, !!onFiles, !!correct])
+  }, [atoms, toolbar, commands, blockCommands, menus, drawEquation, comments, blockPlaceholder, !!onFiles, !!correct, !!prompt])
   useClientLayoutEffect(() => {
     const editor = instance.current
     if (!editor) return

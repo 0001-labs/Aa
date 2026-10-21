@@ -180,7 +180,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       { label: 'More', rows: [...builtin.filter(command => !kinds.some(kind => kind.kind === command.id)), ...(options.commands ?? [])].map(command => ({ id: command.id, label: command.label, icon: command.icon, run: () => { restore(); command.run(editor) } })) },
     ]) } },
     ...toolbar.actions,
-    { id: 'block', label: 'Block commands', icon: 'slash', run: () => { restore(); target = editor.activeBlock()?.index ?? -1; blockMenu(toolbar.querySelector('[data-action="block"]')?.getBoundingClientRect()) } },
+    ...(options.menus === false ? [] : [{ id: 'block', label: 'Block commands', icon: 'slash', run: () => { restore(); target = editor.activeBlock()?.index ?? -1; blockMenu(toolbar.querySelector('[data-action="block"]')?.getBoundingClientRect()) } }]),
     { id: 'indent', label: 'Indent', icon: 'indent', run: () => { restore(); editor.indent(1) } },
     { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => { restore(); editor.indent(-1) } },
   ]
@@ -290,7 +290,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   } })
   /** The block's commands, over the block, or at `at` (the toolbar's cell on touch, where the finger is). */
   const blockMenu = (at?: DOMRect) => {
-    if (target < 0) return
+    if (target < 0 || options.menus === false) return
     // The caret's block is the commands' block as it is; selecting it would draw the system's handles on touch. A table is never selected whole.
     const active = editor.activeBlock()
     if (active?.index !== target || (active.block.kind !== 'table' && !coarse())) editor.selectBlocks(target)
@@ -378,7 +378,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       event.preventDefault(); event.stopImmediatePropagation(); findBar.hidden = false
       const rect = host.getBoundingClientRect(); findBar.style.left = `${Math.max(0, rect.left)}px`; findBar.style.top = `${Math.max(0, rect.top)}px`; refreshFind(); query.focus(); return
     }
-    if (mod && event.key === '/') { event.preventDefault(); event.stopImmediatePropagation(); target = editor.activeBlock()?.index ?? -1; blockMenu(); return }
+    if (mod && event.key === '/' && options.menus !== false) { event.preventDefault(); event.stopImmediatePropagation(); target = editor.activeBlock()?.index ?? -1; blockMenu(); return }
     if (menu.hidden) return
     if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); return }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {

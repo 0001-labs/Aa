@@ -227,6 +227,20 @@ describe('controls, decorations and media', () => {
     expect(menu.hidden).toBe(false)
   })
 
+  it('offers Columns in the slash menu, an atom of the editor\'s own', () => {
+    const e = setup('/col', { toolbar: true })
+    e.selectRange(e.value.length)
+    e.replace(e.value.length, e.value.length, 'umns')
+    const menu = document.querySelector('.aa-menu') as HTMLElement
+    expect(menu.hidden).toBe(false)
+    expect([...menu.querySelectorAll('button')].map(button => button.textContent)).toContain('Columns')
+  })
+  it('opens no block menu with menus off', () => {
+    setup('Alpha beta', { toolbar: true, menus: false })
+    key('/', mod)
+    expect((document.querySelector('.aa-menu') as HTMLElement | null)?.hidden ?? true).toBe(true)
+  })
+
   it('filters slash commands and runs one as a single undoable edit', () => {
     const e = setup('/head', { toolbar: true })
     e.selectRange(e.value.length)

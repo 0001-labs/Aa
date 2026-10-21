@@ -2,6 +2,7 @@ import { createElement, createRef, act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 import { AaEditor, type AaEditorRef } from '../src/react'
+import { memoryCommentStore } from '../src/comments-memory'
 
 describe('React binding', () => {
   it('keeps controlled Markdown in sync and cleans up controls on unmount', async () => {
@@ -27,6 +28,20 @@ describe('React binding', () => {
     expect(ref.current?.editor?.correcting).toBe(true)
     await act(async () => { root.render(createElement(AaEditor, { value: 'Hello', ref, correct, correcting: false })) })
     expect(ref.current?.editor?.correcting).toBe(false)
+    await act(async () => { root.unmount() })
+    container.remove()
+  })
+  it('passes asking AI, comments and the block placeholder to the editor, not to the element', async () => {
+    const container = document.createElement('div'); document.body.append(container)
+    const root = createRoot(container), ref = createRef<AaEditorRef>()
+    const comments = memoryCommentStore({ me: { id: 'me', name: 'Me' }, people: [], threads: [] })
+    const prompt = async () => 'An answer'
+    await act(async () => { root.render(createElement(AaEditor, { value: 'Hello', ref, prompt, comments, blockPlaceholder: 'Write' })) })
+    expect(ref.current?.editor?.comments).toBeDefined()
+    const element = container.firstElementChild!
+    expect(element.hasAttribute('prompt')).toBe(false)
+    expect(element.hasAttribute('comments')).toBe(false)
+    expect(element.hasAttribute('blockPlaceholder')).toBe(false)
     await act(async () => { root.unmount() })
     container.remove()
   })
