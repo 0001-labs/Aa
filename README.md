@@ -1,5 +1,7 @@
 # Aa
 
+The documentation is at https://aa.0001.dev, every feature with the editor to try; the playground is at https://aa.0001.dev/playground/.
+
 Edit formatted text with the toolbar or typed Markdown shortcuts. Aa stores Markdown and keeps its syntax hidden, including while editing, a heading's `#` too. It draws writing as Design system 1's `prose.css` draws the same Markdown on a page, from the `--ds-*` tokens with their values as fallbacks; `--aa-*` properties change one measure. One editable element per block preserves source offsets through formatting and atoms. Command/Control-K opens a URL field to add or edit a link.
 
 ```ts
@@ -83,4 +85,4 @@ A Convex component is exported at `@0001-labs/aa/convex.config`. Register it in 
 
 `convexTransport` from `@0001-labs/aa/convex` supports `ConvexClient`; applications using `ConvexReactClient` can implement the same transport with `watchQuery` and `mutation`. Convex is an optional peer dependency. The core imports neither React nor Yjs.
 
-Run the playground with `vp run dev` at http://localhost:5195. Run `vp test`, `vp run check` and `vp run build` before a release.
+Run the playground with `vp run dev` at http://localhost:5195, and the documentation (`website/`) with `vp run docs:dev` at http://localhost:5196. Run `vp test`, `vp run check` and `vp run build` before a release.
