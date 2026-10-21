@@ -72,7 +72,7 @@
    after a still press (drag.ts), and the hand holds while it is carried. */
 .aa[data-movable] > .aa-block[data-selected], .aa[data-movable] > .aa-block[data-grab] { cursor: grab; }
 .aa[data-dragging], .aa[data-dragging] *, .aa[data-dragging] *::before { cursor: grabbing; -webkit-user-select: none; user-select: none; }
-/* Selected blocks carried with the one lifted wait dimmed in their places, as a multi-drag in Pangea does. */
+/* Selected blocks carried with the one lifted wait dimmed in their places. */
 .aa-block[data-ghost] { opacity: 0.4; }
 /* The mask joins wrapped lines into one softly rounded silhouette. The
    native selection still owns editing, copying and touch handles. */

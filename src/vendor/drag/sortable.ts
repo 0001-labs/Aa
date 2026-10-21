@@ -6,7 +6,7 @@
  * © 2021 Gabriel Santerre; see NOTICE): siblings move out of the way by the
  * lifted item's whole size, a sibling moves once the lifted item's edge passes
  * its centre, counting the room it has already given, and the timings and
- * curves are Pangea's. The engine around it is new and has no framework: the
+ * curves are carried over too. The engine around it is new and has no framework: the
  * lifted item is a clone in an overlay moved by writing its transform in the
  * pointer handler, siblings move by the `translate` property alone, geometry is
  * measured once at lift, and nothing changes layout while the pointer moves.
@@ -53,12 +53,23 @@ export type SortableContainerArgs = {
   isDropDisabled?: () => boolean;
   /**
    * Whether an item held over the middle of another here combines with it
-   * (as a list dropped onto a list makes a folder), Pangea's rule: the
-   * leading edge inside the middle half of the other item.
+   * (as a list dropped onto a list makes a folder): the leading edge inside
+   * the middle half of the other item.
    */
   isCombineEnabled?: () => boolean;
   /** The list's name in announcements; its aria-label or id when left out. */
   label?: string;
+  /**
+   * Its items hold still while something is carried over them: nothing makes
+   * room, the keyboard steps the lifted item from item to item, and a drop
+   * lands at once. For a page that draws where the item will land itself, as
+   * a board of squares does.
+   */
+  still?: boolean;
+  /** Keep an item lifted from here on one line; the engine's `lockAxis` when left out. */
+  lockAxis?: 'x' | 'y';
+  /** The element drawn under the pointer for an item lifted from here; the engine's `renderPreview`, then a clone, when it gives none. */
+  renderPreview?: (source: HTMLElement) => HTMLElement | null | undefined;
 };
 
 export type SortableItemArgs = {
@@ -185,7 +196,7 @@ const defaults = {
   autoScrollEdge: 60,
 } as const;
 
-/** Pangea's drop: the longest duration is reached at this distance. */
+/** The drop: the longest duration is reached at this distance. */
 const maxDropDistance = 1500;
 const maxScrollSpeed = 24;
 const inheritedText = ['color', 'font', 'letter-spacing', 'line-height', '-webkit-font-smoothing'];
@@ -196,10 +207,12 @@ const handleStyles = `
 :root[data-drag-active],:root[data-drag-active] *{-webkit-user-select:none!important;user-select:none!important;cursor:grabbing!important}
 `;
 
-type ContainerRegistration = Required<Omit<SortableContainerArgs, 'isDropDisabled' | 'isCombineEnabled' | 'label'>> & {
+type ContainerRegistration = Required<Omit<SortableContainerArgs, 'isDropDisabled' | 'isCombineEnabled' | 'label' | 'lockAxis' | 'renderPreview'>> & {
   isDropDisabled: () => boolean;
   isCombineEnabled: () => boolean;
   label: () => string;
+  lockAxis: SortableContainerArgs['lockAxis'];
+  renderPreview: SortableContainerArgs['renderPreview'];
 };
 
 type ItemRegistration = Required<Omit<SortableItemArgs, 'handle' | 'canDrag' | 'label' | 'text'>> & {
@@ -280,6 +293,8 @@ type Session = {
   dropping: boolean;
   /** The sibling the lifted item is held over, to combine with; the gap stays as it was. */
   combine: { container: ContainerSnapshot; slot: Slot } | null;
+  /** The line the lifted item keeps to, if any. */
+  lockAxis: 'x' | 'y' | undefined;
 };
 
 export function createSortable(options: SortableOptions = {}): SortableController {
@@ -312,6 +327,9 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       isDropDisabled: args.isDropDisabled ?? (() => false),
       isCombineEnabled: args.isCombineEnabled ?? (() => false),
       label: () => args.label ?? args.element.getAttribute('aria-label') ?? args.id,
+      still: args.still ?? false,
+      lockAxis: args.lockAxis,
+      renderPreview: args.renderPreview,
     };
     containers.set(args.element, registration);
     return once(() => {
@@ -366,7 +384,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       const style = document.createElement('style');
       style.setAttribute(handleStyleId, '');
       style.textContent = handleStyles;
-      document.head.append(style);
+      document.head.appendChild(style);
     }
     instructions = hiddenText(document, `0001-drag-instructions-${++instanceCount}`);
     instructions.textContent = messages.instructions;
@@ -650,8 +668,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         paddingStart: parsePixels(vertical ? style.paddingTop : style.paddingLeft) * scale,
         scroller,
         slots,
-        // The lifted item's margin box and the list's gap: the room siblings give.
-        room: (vertical ? liftBox.height + margins.vertical * itemScale : liftBox.width + margins.horizontal * itemScale) + gap,
+        // The lifted item's margin box and the list's gap: the room siblings give, none where they hold still.
+        room: candidate.still ? 0 : (vertical ? liftBox.height + margins.vertical * itemScale : liftBox.width + margins.horizontal * itemScale) + gap,
         marginStart: (vertical ? margins.top : margins.left) * itemScale,
         isHome,
       });
@@ -676,7 +694,10 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       overlay.style.setProperty(property, sourceStyle.getPropertyValue(property));
     }
 
-    const preview = options.renderPreview?.(registration.element) ?? cloneForPreview(registration.element);
+    const preview =
+      home.registration.renderPreview?.(registration.element) ??
+      options.renderPreview?.(registration.element) ??
+      cloneForPreview(registration.element);
     for (const property of inheritedText) {
       preview.style.setProperty(property, sourceStyle.getPropertyValue(property));
     }
@@ -698,8 +719,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       willChange: 'transform',
       pointerEvents: 'none',
     });
-    overlay.append(preview);
-    document.body.append(overlay);
+    overlay.appendChild(preview);
+    document.body.appendChild(overlay);
 
     const element = registration.element;
     session = {
@@ -728,6 +749,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       impactFrame: null,
       dropping: false,
       combine: null,
+      lockAxis: home.registration.lockAxis ?? options.lockAxis,
     };
 
     element.style.visibility = 'hidden';
@@ -745,8 +767,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (!current) return;
     current.lastX = clientX;
     current.lastY = clientY;
-    const x = options.lockAxis === 'y' ? 0 : clientX - current.startX;
-    const y = options.lockAxis === 'x' ? 0 : clientY - current.startY;
+    const x = current.lockAxis === 'y' ? 0 : clientX - current.startX;
+    const y = current.lockAxis === 'x' ? 0 : clientY - current.startY;
     current.preview.style.transform = previewTransform(x, y, current.previewScale);
     updateImpact(current);
     scheduleAutoScroll(current);
@@ -922,13 +944,13 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     const size = vertical ? current.liftBox.height : current.liftBox.width;
     const moved =
       vertical
-        ? options.lockAxis === 'x' ? 0 : current.lastY - current.startY
-        : options.lockAxis === 'y' ? 0 : current.lastX - current.startX;
+        ? current.lockAxis === 'x' ? 0 : current.lastY - current.startY
+        : current.lockAxis === 'y' ? 0 : current.lastX - current.startX;
     return { start: liftStart + moved, end: liftStart + moved + size };
   }
 
   /**
-   * The sibling the lifted item is held over, by Pangea's rule: before the
+   * The sibling the lifted item is held over: before the
    * gap, the leading edge inside its middle half; after the gap, the
    * trailing edge inside the middle half of where it has moved to.
    */
@@ -956,7 +978,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     return true;
   }
 
-  /** The lifted item's index in a container, with Pangea's hysteresis. */
+  /** The lifted item's index in a container, with hysteresis so it does not flicker. */
   function indexIn(current: Session, snapshot: ContainerSnapshot): number {
     const vertical = snapshot.registration.axis === 'vertical';
     const offset = offsetOf(current, snapshot);
@@ -1005,7 +1027,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (current.reserved !== foreign) {
       current.reserved?.registration.element.style.removeProperty('--drag-reserve');
       current.reserved?.registration.element.removeAttribute('data-drag-over');
-      if (foreign) {
+      if (foreign && !foreign.registration.still) {
         foreign.registration.element.style.setProperty('--drag-reserve', `${foreign.room}px`);
       }
       current.reserved = foreign;
@@ -1032,6 +1054,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       existing.value = value;
     }
     element.style.translate = value === 0 ? 'none' : axis === 'vertical' ? `0 ${value}px` : `${value}px 0`;
+    // How far it stands off, for what inside it stays where it is (`translate: calc(-1 * var(--drag-shift)) 0`).
+    element.style.setProperty('--drag-shift', `${value}px`);
   }
 
   function scheduleAutoScroll(current: Session): void {
@@ -1091,7 +1115,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (current.scrollFrame !== null) cancelAnimationFrame(current.scrollFrame);
     if (current.impactFrame !== null) cancelAnimationFrame(current.impactFrame);
 
-    // Dropped onto another item: it shrinks into it and fades, as Pangea's does.
+    // Dropped onto another item: it shrinks into it and fades.
     if (reason === 'DROP' && current.combine) {
       const { container, slot } = current.combine;
       const result: SortableResult = { ...startOf(current), destination: null, combine: combineOf(current), reason };
@@ -1140,7 +1164,9 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     const from = parseTranslate(current.preview.style.transform);
     const distance = Math.hypot(target.x - from.x, target.y - from.y);
     const { minDuration, maxDuration, easing } = settings.drop;
-    const duration = distance < 0.5 || reducedMotion ? 0 : minDuration + (maxDuration - minDuration) * Math.min(distance / maxDropDistance, 1);
+    // Among items that hold still the page draws where it lands: the drop is there at once.
+    const lands = !returning && !!current.destination?.container.registration.still;
+    const duration = distance < 0.5 || reducedMotion || lands ? 0 : minDuration + (maxDuration - minDuration) * Math.min(distance / maxDropDistance, 1);
 
     const result: SortableResult = {
       ...startOf(current),
@@ -1173,9 +1199,18 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     const offset = offsetOf(current, snapshot);
     const slots = snapshot.slots;
     let start: number;
+    // Where items hold still, the lifted one stands over the item at its index, as it was before the lift.
+    const still = snapshot.registration.still;
+    const over = still ? stillSlot(snapshot, destination.index) : undefined;
 
     if (snapshot.isHome && destination.index === current.sourceIndex) {
       start = vertical ? current.liftBox.top : current.liftBox.left;
+    } else if (over) {
+      start = vertical ? over.box.top : over.box.left;
+    } else if (still && slots.length > 0) {
+      // Past the last item: just beyond it, after the gap.
+      const last = slots[slots.length - 1];
+      start = (vertical ? last.box.top + last.box.height : last.box.left + last.box.width) + snapshot.gap;
     } else if (destination.index < slots.length) {
       start = baselineStart(current, snapshot, slots[destination.index]);
     } else if (slots.length > 0) {
@@ -1204,6 +1239,12 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     };
   }
 
+  /** The item at an index among items that hold still, counted as they stood with the lifted one among them. */
+  function stillSlot(snapshot: ContainerSnapshot, index: number): Slot | undefined {
+    if (!snapshot.isHome) return snapshot.slots[index];
+    return snapshot.slots.find((slot) => slot.original === index);
+  }
+
   function finish(current: Session, result: SortableResult): void {
     const at = announcement(current);
     try {
@@ -1230,6 +1271,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     for (const [shifted, saved] of current.shifts) {
       shifted.style.transition = 'none';
       shifted.style.translate = saved.translate;
+      shifted.style.removeProperty('--drag-shift');
     }
     const restored = [...current.shifts];
     view.requestAnimationFrame(() => {
@@ -1358,7 +1400,7 @@ function hiddenText(document: Document, id: string): HTMLElement {
     whiteSpace: 'nowrap',
     border: '0',
   });
-  document.body.append(element);
+  document.body.appendChild(element);
   return element;
 }
 

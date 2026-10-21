@@ -551,7 +551,7 @@ function installStyle(document: Document): void {
   const style = document.createElement('style');
   style.setAttribute(styleId, '');
   style.textContent = styles;
-  document.head.append(style);
+  document.head.appendChild(style);
 }
 
 /** Text only a screen reader reads, said as it changes. */
@@ -570,6 +570,6 @@ function hiddenText(document: Document): HTMLElement {
     whiteSpace: 'nowrap',
     border: '0',
   });
-  document.body.append(element);
+  document.body.appendChild(element);
   return element;
 }
