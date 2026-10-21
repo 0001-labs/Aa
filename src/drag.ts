@@ -51,8 +51,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   root.append(sideLine)
   /** The block's side the carried block would stand at, while it is over one. */
   let side: { index: number; at: 'start' | 'end' } | null = null
-  /** In columns: where among the columns the carried block would stand as a column of its own. */
-  let across: { slot: number } | null = null
+  /** In columns: where among the columns the carried block would stand as a column of its own, or the column it would trade places with. */
+  let across: { slot: number } | { swap: number } | null = null
   const children = () => Array.from(host.children) as HTMLElement[]
   const movable = () => !editor.readOnly && options.menus !== false
   host.toggleAttribute('data-movable', options.menus !== false)
@@ -118,7 +118,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       sideTargets = []
       document.removeEventListener('pointermove', besides, true)
       const beside = side, over = across
-      side = null; across = null; sideLine.hidden = true
+      side = null; across = null; sideLine.hidden = true; sideLine.removeAttribute('data-swap')
       for (const element of host.querySelectorAll(':scope > [data-ghost]')) element.removeAttribute('data-ghost')
       host.removeAttribute('data-dragging')
       document.removeEventListener('selectionchange', keepClear)
@@ -126,7 +126,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       if (result.reason === 'DROP' && beside && group.length <= 1 && movable() && placeBeside(from, beside.index, beside.at)) return
       // Out of its column, beside another: the columns move it, as one step to undo of the page around them.
       if (result.reason === 'DROP' && over && group.length <= 1 && movable()) {
-        host.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from, slot: over.slot } }))
+        host.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from, ...over } }))
         return
       }
       if (result.reason === 'DROP' && to !== undefined && movable()) {
@@ -166,6 +166,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       : event.clientX > rect.right - zone ? 'end'
       : null
     if (!at || !rect) { side = null; sideLine.hidden = true; return }
+    sideLine.removeAttribute('data-swap')
     side = { index, at }
     sideLine.style.left = `${at === 'start' ? rect.left : rect.right}px`
     sideLine.style.top = `${rect.top}px`
@@ -178,7 +179,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
    * In a column of columns, carried out of its own column anywhere along the row (over another
    * column, in the gap between two, or past either end): the line where it would stand as a column
    * of its own, halfway across the gap it would land in, and that place among the columns. A block
-   * alone in its column leaves it, so its column is not counted and its own place shows no line.
+   * alone in its column leaves it, so its column is not counted and its own place shows no line;
+   * let go on another column, it trades places with it, that column ringed to show which.
    * False over its own column, where it moves up and down as any block does.
    */
   function acrossColumns(event: PointerEvent): boolean {
@@ -194,9 +196,25 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     const origin = columns.indexOf(host)
     const alone = host.querySelectorAll(':scope > .aa-block').length <= 1
     const others = alone ? columns.filter(column => column !== host) : columns
+    sideLine.removeAttribute('data-swap')
+    // Alone in its column and let go on another, the two trade places.
+    const over = alone ? columns.findIndex(column => { const rect = column.getBoundingClientRect(); return column !== host && event.clientX >= rect.left && event.clientX <= rect.right }) : -1
+    if (over >= 0) {
+      // Ringed round what it holds, the picture, rather than the column's whole height.
+      const rect = (columns[over].querySelector(':scope > .aa-block') ?? columns[over]).getBoundingClientRect()
+      across = { swap: over }
+      side = null
+      sideLine.setAttribute('data-swap', '')
+      sideLine.style.left = `${rect.left}px`
+      sideLine.style.top = `${rect.top}px`
+      sideLine.style.height = `${rect.height}px`
+      sideLine.style.width = `${rect.width}px`
+      sideLine.hidden = false
+      return true
+    }
     const rects = others.map(column => column.getBoundingClientRect())
     const slot = rects.filter(rect => rect.left + rect.width / 2 < event.clientX).length
-    side = null; sideLine.hidden = true
+    sideLine.hidden = true
     // Let go where it already stands, nothing moves: no line.
     if (alone && slot === origin) return true
     across = { slot }

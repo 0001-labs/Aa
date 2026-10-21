@@ -212,16 +212,26 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         return editor
       })
     }
-    // A block carried out of its column, let go anywhere along the row: it stands in the place it was let go
-    // as a column of its own, and the column it left goes when nothing is left in it. Pictures are put in order sideways.
+    // A block carried out of its column, let go on another column: alone in its own, the two trade places.
+    // Let go in a gap or past either end: it stands there as a column of its own, and the column it left goes
+    // when nothing is left in it. Pictures are put in order sideways.
     const carry = (event: Event) => {
-      const { from, slot } = (event as CustomEvent<{ from: number; slot: number }>).detail
+      const { from, slot, swap } = (event as CustomEvent<{ from: number; slot?: number; swap?: number }>).detail
       const columns = Array.from(element.querySelectorAll(':scope > .aa-column'))
       const origin = columns.indexOf((event.target as HTMLElement).closest('.aa-column') as Element)
       if (origin < 0) return
       event.stopPropagation()
+      // Let go on another column, a block alone in its own trades places with it.
+      if (swap !== undefined) {
+        if (swap === origin || values[swap] === undefined || parseBlocks(values[origin]).length !== 1) return
+        const next = [...values]; [next[origin], next[swap]] = [next[swap], next[origin]]
+        values = next
+        build()
+        changed()
+        return
+      }
       const blocks = parseBlocks(values[origin]), block = blocks[from]
-      if (!block) return
+      if (!block || slot === undefined) return
       const rest = serialize(blocks.filter((_, index) => index !== from))
       // The place among the other columns, its own left out when nothing else is in it.
       const next = rest.trim() ? values.map((value, index) => (index === origin ? rest : value)) : values.filter((_, index) => index !== origin)

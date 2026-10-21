@@ -54,6 +54,20 @@ describe('columns', () => {
     host.remove()
   })
 
+  it('trade places when a picture is let go on another', () => {
+    const three = writeColumns(['![A forest](forest.jpg)', '![A chair](chair.jpg)', '![Headphones](headphones.jpg)'])
+    const host = document.createElement('div')
+    document.body.append(host)
+    const editor = createEditor(host, { value: three })
+    const first = host.querySelector<HTMLElement>('.aa-atom.aa-columns > .aa-column')!
+    first.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from: 0, swap: 2 } }))
+    expect(readColumns(parseBlocks(editor.value)[0].source)).toEqual(['![Headphones](headphones.jpg)', '![A chair](chair.jpg)', '![A forest](forest.jpg)'])
+    editor.undo()
+    expect(editor.value).toBe(three)
+    editor.destroy()
+    host.remove()
+  })
+
   it('keep a column that still has blocks when one is carried out of it', () => {
     const host = document.createElement('div')
     document.body.append(host)
