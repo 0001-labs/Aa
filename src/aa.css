@@ -787,6 +787,24 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
   .aa-atom.aa-columns { grid-template-columns: minmax(0, 1fr); gap: var(--aa-unit); }
 }
 
+/* Tabs: a row of Design system 1's text tabs, the words alone, each tab padded
+   4px so the words stand twelve apart and the run drawn 4px back so the first
+   starts on the column's edge, the open tab in the ink and the others muted,
+   all on the sixteen of one square; a row too wide scrolls sideways rather
+   than cutting its names. The open tab's page stands a square under it, an
+   editor of its own; the plus at the row's end adds a tab. */
+.aa-atom.aa-tabs { display: block; width: 100%; vertical-align: top; }
+.aa-tabs-row { display: flex; align-items: flex-end; gap: calc(4px * var(--aa-sf)); min-height: var(--aa-unit); margin-inline-start: calc(-4px * var(--aa-sf)); line-height: calc(16px * var(--aa-sf)); white-space: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.aa-tabs-row::-webkit-scrollbar { display: none; }
+.aa-tab { flex: none; display: inline-flex; align-items: flex-end; gap: calc(4px * var(--aa-sf)); box-sizing: border-box; height: calc(16px * var(--aa-sf)); margin: 0; padding: 0 calc(4px * var(--aa-sf)); border: 0; border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: none; color: var(--ds-text-color-muted, GrayText); font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf)); white-space: nowrap; cursor: pointer; -webkit-user-select: none; user-select: none; }
+.aa-tab[aria-selected="true"] { color: var(--ds-text-color, inherit); }
+.aa-tab:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: -2px; }
+.aa-tab-add { color: var(--ds-text-color-muted, GrayText); }
+.aa-tab-add:hover, .aa-tab-add:focus-visible { color: var(--ds-text-color, inherit); }
+.aa-tab-field { box-sizing: border-box; height: calc(16px * var(--aa-sf)); min-width: calc(2 * var(--aa-unit)); margin: 0; padding: 0; border: 0; border-bottom: 1px solid currentColor; border-radius: 0; background: none; color: var(--ds-text-color, inherit); font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf)); outline: none; }
+.aa-tab-panel { margin-top: var(--aa-unit); min-height: var(--aa-unit); }
+.aa-block[data-readonly="true"] .aa-tab { cursor: default; }
+
 /* A carried block let go at another's side stands beside it: a line down that side shows where. */
 .aa-drop-line.aa-drop-side { width: calc(2px * var(--aa-sf)); }
 /* Let go on another column, the two trade places: that column is ringed in the line's colour. */

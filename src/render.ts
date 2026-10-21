@@ -106,7 +106,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   // A fenced block an atom draws (a diagram) is that drawing, the caret in it
   // or not: its words are never shown, and it is changed where it is drawn.
   const fenced = fencedAtom(block, atoms)
-  element.toggleAttribute('data-drawn', !!fenced || block.kind === 'columns')
+  element.toggleAttribute('data-drawn', !!fenced || block.kind === 'columns' || block.kind === 'tabs')
   if (fenced) element.dataset.fence = fenced.name
   else delete element.dataset.fence
 

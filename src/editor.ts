@@ -5,7 +5,7 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, readPicture, serialize, writeColumns, writePicture, type AtomSyntax, type Block, type TextColor, type CalloutColor } from './markdown'
+import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type CalloutColor, type Tab } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
@@ -16,6 +16,7 @@ import { paintSelection } from './selection'
 import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
+import { icons } from './icons'
 import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from './marks'
 import { openPrompt, glisten, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 import { createCommentsView, type CommentsView } from './comments-view'
@@ -242,7 +243,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let stopControls = () => {}
   let transactionDepth = 0
   let historyProvider: { undo(): boolean; redo(): boolean } | null = null
-  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }]
+  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }, { name: 'tabs', match: () => 0, draw: (element, source) => drawTabs(element, source), insert: { label: 'Tabs', icon: 'table', keywords: 'tab pages sections panels', source: writeTabs([{ name: 'Tab 1', content: '' }, { name: 'Tab 2', content: '' }]) } }]
   /**
    * Columns (`<columns>` around a `<column>` each) side by side, each column
    * an editor of its own on the same atoms, so it is written where it stands
@@ -314,6 +315,144 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     build()
     return () => { element.removeEventListener('aa-column-carry', carry); editors.forEach(editor => { columnEditors.delete(editor); editor.destroy() }) }
   }
+  /**
+   * Tabs (`<tabs>` around a `<tab name="…">` each): a row of Design system 1's
+   * text tabs over the open tab's page, an editor of its own on the same atoms,
+   * so it is written where it stands. A press on the open tab's name writes it
+   * anew in its place; the plus at the row's end adds a tab; Delete on a tab
+   * takes it away, its words with it. Each change hands the whole block back in
+   * `aa-atom-change`, one step of undo, and the drawing keeps the open tab.
+   */
+  function drawTabs(element: HTMLElement, source: string) {
+    element.classList.add('aa-tabs')
+    element.setAttribute('data-aa-interactive', '')
+    let tabs: Tab[] = readTabs(source)
+    let current = 0
+    let page: Editor | null = null
+    const row = document.createElement('div')
+    row.className = 'aa-tabs-row'
+    row.setAttribute('role', 'tablist')
+    const panel = document.createElement('div')
+    panel.className = 'aa-tab-panel'
+    panel.setAttribute('role', 'tabpanel')
+    element.append(row, panel)
+    const changed = () => {
+      const written = writeTabs(tabs)
+      element.dataset.source = written
+      element.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, detail: { source: written } }))
+    }
+    const buildRow = () => {
+      row.replaceChildren(...tabs.map((tab, index) => {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'aa-tab'
+        button.setAttribute('role', 'tab')
+        button.setAttribute('aria-selected', String(index === current))
+        button.tabIndex = index === current ? 0 : -1
+        button.dataset.tab = String(index)
+        if (tab.icon) { const icon = document.createElement('span'); icon.className = 'aa-tab-icon'; icon.textContent = tab.icon; button.append(icon) }
+        const words = document.createElement('span')
+        words.className = 'aa-tab-name'
+        words.textContent = tab.name || `Tab ${index + 1}`
+        button.append(words)
+        button.addEventListener('pointerdown', event => { if (index === current && !readOnly) event.preventDefault() })
+        button.addEventListener('click', event => {
+          event.preventDefault(); event.stopPropagation()
+          if (index === current && !readOnly) rename(index, button)
+          else show(index, true)
+        })
+        return button
+      }))
+      if (!readOnly) {
+        const add = document.createElement('button')
+        add.type = 'button'
+        add.className = 'aa-tab aa-tab-add'
+        add.setAttribute('aria-label', 'Add tab')
+        add.dataset.tooltip = 'Add tab'
+        const picture = document.createElement('span')
+        picture.className = 'aa-icon'
+        const svg = icons['./icons/plus.svg']
+        if (svg) picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/currentColor/g, 'black'))}")`
+        add.append(picture)
+        add.addEventListener('pointerdown', event => event.preventDefault())
+        add.addEventListener('click', event => {
+          event.preventDefault(); event.stopPropagation()
+          tabs = [...tabs, { name: `Tab ${tabs.length + 1}`, content: '' }]
+          current = tabs.length - 1
+          changed(); build()
+          const button = row.querySelector<HTMLButtonElement>(`[data-tab="${current}"]`)
+          if (button) rename(current, button)
+        })
+        row.append(add)
+      }
+    }
+    /** The open tab's name written anew in its place: Enter keeps it, Escape leaves it as it was. */
+    const rename = (index: number, button: HTMLButtonElement) => {
+      const words = button.querySelector<HTMLElement>('.aa-tab-name')
+      if (!words) return
+      const field = document.createElement('input')
+      field.type = 'text'
+      field.className = 'aa-tab-field'
+      field.value = tabs[index].name
+      field.setAttribute('aria-label', 'Tab name')
+      field.size = Math.max(1, tabs[index].name.length || 5)
+      let done = false
+      const finish = (keep: boolean) => {
+        if (done) return
+        done = true
+        const name = field.value.trim()
+        field.replaceWith(words)
+        if (keep && name !== tabs[index].name) { tabs = tabs.map((tab, at) => at === index ? { ...tab, name } : tab); changed(); buildRow() }
+        row.querySelector<HTMLButtonElement>(`[data-tab="${index}"]`)?.focus({ preventScroll: true })
+      }
+      field.addEventListener('input', () => { field.size = Math.max(1, field.value.length || 1) })
+      field.addEventListener('keydown', event => {
+        event.stopPropagation()
+        if (event.key === 'Enter') { event.preventDefault(); finish(true) }
+        if (event.key === 'Escape') { event.preventDefault(); finish(false) }
+      })
+      field.addEventListener('blur', () => finish(true))
+      field.addEventListener('pointerdown', event => event.stopPropagation())
+      field.addEventListener('click', event => event.stopPropagation())
+      words.replaceWith(field)
+      field.focus(); field.select()
+    }
+    const show = (index: number, focus = false) => {
+      current = Math.max(0, Math.min(tabs.length - 1, index))
+      page?.destroy(); page = null
+      panel.replaceChildren()
+      buildRow()
+      page = createEditor(panel, {
+        value: tabs[current]?.content ?? '',
+        readOnly,
+        atoms: options.atoms,
+        drawEquation: options.drawEquation,
+        blockPlaceholder: '',
+        onChange(next) { tabs = tabs.map((tab, at) => at === current ? { ...tab, content: next } : tab); changed() },
+      })
+      if (focus) row.querySelector<HTMLButtonElement>(`[data-tab="${current}"]`)?.focus({ preventScroll: true })
+    }
+    const build = () => show(current)
+    // The row's keys: arrows step along the tabs, Enter or F2 names the open one, Delete takes it away.
+    row.addEventListener('keydown', event => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('.aa-tab[data-tab]')
+      if (!button || !row.contains(button)) return
+      const index = Number(button.dataset.tab)
+      if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+        event.preventDefault(); event.stopPropagation()
+        show((index + (event.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length, true)
+      } else if ((event.key === 'Enter' || event.key === 'F2') && !readOnly) {
+        event.preventDefault(); event.stopPropagation(); rename(index, button)
+      } else if ((event.key === 'Delete' || event.key === 'Backspace') && !readOnly && tabs.length > 1) {
+        event.preventDefault(); event.stopPropagation()
+        tabs = tabs.filter((_, at) => at !== index)
+        current = Math.min(index, tabs.length - 1)
+        changed(); show(current, true)
+      }
+    })
+    build()
+    return () => { page?.destroy(); page = null }
+  }
   const drawn = new Map<HTMLElement, (() => void) | void>()
   const drawAtom = (name: string, source: string) => {
     const element = atomElement(name, source)
@@ -357,9 +496,18 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const elements = () => Array.from(host.children) as HTMLElement[]
 
-  const makeElement = (block: Block): HTMLElement => {
+  /**
+   * A block's element, drawn. Given the element it replaces, its atoms come
+   * along first, so an atom drawn whole that edits itself (columns, tabs, a
+   * diagram's board, the ones marked data-aa-interactive) and hands a change
+   * back is kept with its editors rather than drawn anew (renderBlock keeps an
+   * atom whose source is unchanged). A picture is drawn again, its grip's
+   * width with it.
+   */
+  const makeElement = (block: Block, previous?: HTMLElement): HTMLElement => {
     const element = document.createElement('div')
     element.contentEditable = readOnly ? 'false' : 'true'
+    if (previous) element.append(...Array.from(previous.querySelectorAll<HTMLElement>(':scope > .aa-atom[data-aa-interactive]')))
     draw(element, block, null)
     return element
   }
@@ -402,7 +550,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   }
 
   const renderAll = () => {
-    host.replaceChildren(...blocks.map(makeElement))
+    host.replaceChildren(...blocks.map(block => makeElement(block)))
     showPlaceholder()
     sweep()
   }
@@ -416,10 +564,23 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     let endOld = old.length, endNew = next.length
     while (endOld > start && endNew > start && old[endOld - 1] === next[endNew - 1]) { endOld--; endNew-- }
     blocks = next
-    const fresh = next.slice(start, endNew).map(makeElement)
+    // The same number of blocks changed as were there: each fresh element takes over its atoms, and the focus in one of them with its selection.
+    const same = endOld - start === endNew - start
+    const selection = document.getSelection()
+    const focused = document.activeElement as HTMLElement | null
+    const saved = same && focused && host.contains(focused) && focused.closest('.aa-atom') && selection?.rangeCount
+      ? { focused, anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset, focusNode: selection.focusNode, focusOffset: selection.focusOffset }
+      : null
+    const fresh = next.slice(start, endNew).map((block, i) => makeElement(block, same ? els[start + i] : undefined))
     const anchor = els[endOld] ?? null
     for (let i = start; i < endOld; i++) els[i].remove()
     for (const element of fresh) host.insertBefore(element, anchor)
+    if (saved && host.contains(saved.focused) && document.activeElement !== saved.focused) {
+      saved.focused.focus({ preventScroll: true })
+      if (saved.anchorNode && saved.focusNode && saved.focused.contains(saved.focusNode)) {
+        try { selection!.setBaseAndExtent(saved.anchorNode, saved.anchorOffset, saved.focusNode, saved.focusOffset) } catch { /* the nodes moved on */ }
+      }
+    }
     showPlaceholder()
     sweep()
     marks?.draw()

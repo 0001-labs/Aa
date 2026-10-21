@@ -4,7 +4,7 @@
  * so what is drawn on the screen reads straight back into the text.
  */
 
-export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation' | 'columns'
+export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation' | 'columns' | 'tabs'
 
 export type Block = {
   kind: BlockKind
@@ -104,6 +104,47 @@ export function writeColumns(columns: readonly string[]): string {
   return ['<columns>', ...columns.flatMap(column => ['<column>', ...(column ? [column] : []), '</column>']), '</columns>'].join('\n')
 }
 
+export const TABS_OPEN = /^\s*<tabs>\s*$/
+const TABS_CLOSE = /^\s*<\/tabs>\s*$/
+const TAB_OPEN = /^\s*<tab\b([^>]*)>\s*$/
+const TAB_CLOSE = /^\s*<\/tab>\s*$/
+
+/** One tab of a tabs block: its name, an icon (an emoji, or a picture's address) and its Markdown. */
+export type Tab = { name: string; icon?: string; content: string }
+
+const unescapeAttribute = (value: string) => value.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+const escapeAttribute = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, ' ')
+
+/**
+ * Tabs, written as columns are: `<tabs>` around a `<tab name="…">` for each,
+ * every tab Markdown of its own; `icon="💡"` gives a tab an icon. A tab's lines
+ * may be indented by tabs; they are read without.
+ */
+export function readTabs(source: string): Tab[] {
+  const tabs: (Tab & { lines: string[] })[] = []
+  let current: (Tab & { lines: string[] }) | null = null
+  for (const line of source.replace(/\r\n?/g, '\n').split('\n')) {
+    if (TABS_OPEN.test(line) || TABS_CLOSE.test(line)) continue
+    const open = TAB_OPEN.exec(line)
+    if (open) {
+      const attributes: Record<string, string> = {}
+      for (const match of open[1].matchAll(/([a-z]+)="([^"]*)"/g)) attributes[match[1]] = unescapeAttribute(match[2])
+      current = { name: attributes.name ?? '', ...(attributes.icon ? { icon: attributes.icon } : {}), content: '', lines: [] }
+      tabs.push(current)
+      continue
+    }
+    if (TAB_CLOSE.test(line)) { current = null; continue }
+    if (current) current.lines.push(line.replace(/^\t{1,2}/, ''))
+  }
+  const read = tabs.map(({ lines, ...tab }) => ({ ...tab, content: lines.join('\n').replace(/^\n+|\n+$/g, '') }))
+  return read.length ? read : [{ name: '', content: '' }]
+}
+
+/** Tabs written back as one block. */
+export function writeTabs(tabs: readonly Tab[]): string {
+  return ['<tabs>', ...tabs.flatMap(tab => [`<tab name="${escapeAttribute(tab.name)}"${tab.icon ? ` icon="${escapeAttribute(tab.icon)}"` : ''}>`, ...(tab.content ? [tab.content] : []), '</tab>']), '</tabs>'].join('\n')
+}
+
 /**
  * The block at `from` put at a side of the one at `to`, as Notion places a
  * picture beside another: the two become columns, or it is one more column of
@@ -131,7 +172,7 @@ function closesFence(line: string, fence: string): boolean {
 
 /** A line that goes on with the paragraph before it rather than starting something of its own. */
 function continues(line: string): boolean {
-  return !!line.trim() && !FENCE.test(line) && !DIVIDER.test(line) && !HEADING.test(line) && !BULLET.test(line) && !QUOTE.test(line) && !COLUMNS_OPEN.test(line)
+  return !!line.trim() && !FENCE.test(line) && !DIVIDER.test(line) && !HEADING.test(line) && !BULLET.test(line) && !QUOTE.test(line) && !COLUMNS_OPEN.test(line) && !TABS_OPEN.test(line)
 }
 
 /** Read a text into its blocks. A text with nothing in it is one empty paragraph. */
@@ -165,6 +206,13 @@ export function parseBlocks(text: string): Placed[] {
       let j = i + 1
       while (j < lines.length && !COLUMNS_CLOSE.test(lines[j])) j++
       push('columns', i, Math.min(j, lines.length - 1), { prefix: line.length })
+      i = j + 1
+      continue
+    }
+    if (TABS_OPEN.test(line)) {
+      let j = i + 1
+      while (j < lines.length && !TABS_CLOSE.test(lines[j])) j++
+      push('tabs', i, Math.min(j, lines.length - 1), { prefix: line.length })
       i = j + 1
       continue
     }
@@ -483,6 +531,8 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   if (block.kind === 'equation') return [{ kind: 'atom', atom: 'equation-block', from: 0, to: block.source.length, group: [0, block.source.length] }]
   // Columns are drawn whole, each column written where it stands; their tags are never shown.
   if (block.kind === 'columns') return [{ kind: 'atom', atom: 'columns', from: 0, to: block.source.length }]
+  // Tabs too: the open tab written where it stands, the others kept; their tags are never shown.
+  if (block.kind === 'tabs') return [{ kind: 'atom', atom: 'tabs', from: 0, to: block.source.length }]
   const fenced = fencedAtom(block, atoms)
   if (fenced) return [{ kind: 'atom', atom: fenced.name, from: 0, to: block.source.length, group: [0, block.source.length] }]
   let at = 0

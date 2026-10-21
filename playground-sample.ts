@@ -29,6 +29,15 @@ Drag a block up or down to move it; dragging along a line selects words, and goe
 > [!note]- A folded note
 > The title holds the body while it is folded.
 
+<tabs>
+<tab name="Entrance">
+A red carpet in the doorway, and the sign on its stand just inside.
+</tab>
+<tab name="Stage" icon="🎤">
+The backdrop, three by two metres, hung before the doors open.
+</tab>
+</tabs>
+
 | Capability | Try it |
 | --- | --- |
 | Tables | Tab moves between cells; Enter leaves the table |

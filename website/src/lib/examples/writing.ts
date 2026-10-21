@@ -132,6 +132,22 @@ The second part starts below the line.`,
 
 > [!] A callout without an icon keeps its words on the first square.`,
   },
+  tabs: {
+    title: 'Tabs',
+    hint: 'Press a tab to open it, the open one again to name it, the plus to add one; Delete on a tab takes it away.',
+    markdown: `<tabs>
+<tab name="Entrance">
+A red carpet in the doorway, and the sign on its stand just inside.
+</tab>
+<tab name="Stairs">
+- Lights along the handrail
+- The programme on the landing
+</tab>
+<tab name="Stage">
+The backdrop, three by two metres, hung before the doors open.
+</tab>
+</tabs>`,
+  },
   'callouts-alerts': {
     title: 'Markdown alerts',
     hint: 'A type word alone: a hairline and the type\'s icon. Press the icon, or ⌘Enter, to fold one.',

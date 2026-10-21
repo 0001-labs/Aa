@@ -1,0 +1,37 @@
+---
+title: Tabs
+description: Pages side by side under a row of tabs, one open at a time, each written where it stands and stored as Notion's tabs.
+---
+
+import Example from "../../../components/Example.astro";
+
+Tabs hold several pages in one place, a row of names over the open one, each page written where it stands as a page of its own.
+
+<Example name="tabs" />
+
+## Try it
+
+Press a tab to open its page; write in it as on the page outside: Enter, Backspace, the keys and the slash menu work there. The row is Design system 1's text tabs, the words alone on one square, the open tab in the ink and the others muted, twelve pixels apart; a row too wide for the measure scrolls sideways rather than cutting its names. Arrows step along the tabs from the keyboard.
+
+Press the open tab again, or Enter on it, to write its name anew in its place; Enter keeps it, Escape leaves it as it was. The plus at the row's end adds a tab after the last, open and ready to name. Delete or Backspace on a tab takes it away, its page with it; the last tab stays. Each change is one step to undo.
+
+Tabs in the [slash menu](/editing/menus/) puts two empty tabs where the caret is.
+
+## The Markdown
+
+Tabs are one block, written as [columns](/writing/columns/) are: `<tabs>` around a `<tab name="…">` for each, every tab Markdown of its own; `icon="💡"` gives a tab an icon, drawn before its name.
+
+```md
+<tabs>
+<tab name="Entrance">
+A red carpet in the doorway.
+</tab>
+<tab name="Stage" icon="🎤">
+The backdrop, hung before the doors open.
+</tab>
+</tabs>
+```
+
+A name is written with `&quot;`, `&lt;`, `&gt;` and `&amp;` for its quotes, angle brackets and ampersands. Tabs indented by tabs, as Notion indents nested blocks, read without them. A Markdown reader that does not know tabs shows the tags.
+
+From code, `readTabs(source)` gives a block's tabs (`name`, `icon`, `content`) and `writeTabs(tabs)` writes them back. Link writes a Notion page's tabs this way, each tab's page edited in place and saved to its tab in Notion.

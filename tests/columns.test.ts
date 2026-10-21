@@ -37,6 +37,22 @@ describe('columns', () => {
     host.remove()
   })
 
+  it('keep their editors and the caret in them as a column is written in', () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const editor = createEditor(host, { value: writeColumns(['Left words', 'Right']) })
+    const before = host.querySelector<HTMLElement>('.aa-atom.aa-columns')!
+    const column = before.querySelector<HTMLElement>('.aa-column .aa-block')!
+    column.focus()
+    column.firstChild!.textContent = 'Left words!'
+    column.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    expect(editor.value).toBe(writeColumns(['Left words!', 'Right']))
+    expect(host.querySelector('.aa-atom.aa-columns')).toBe(before)
+    expect(document.activeElement).toBe(column)
+    editor.destroy()
+    host.remove()
+  })
+
   it('put pictures in order sideways: one carried to another column\'s side stands there, the column it left gone', () => {
     const pictures = writeColumns(['![A lake](lake.jpg)', '![A cup](cup.jpg)'])
     const host = document.createElement('div')
