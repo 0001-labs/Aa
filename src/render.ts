@@ -72,13 +72,33 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   if (block.number !== undefined) element.dataset.number = String(block.number)
   else delete element.dataset.number
   if (block.kind === 'callout') {
-    const icon = icons[`./icons/${block.folded ? 'toggle' : block.callout === 'tip' ? 'check' : block.callout === 'warning' || block.callout === 'caution' ? 'callout' : 'note'}.svg`]
-    element.style.setProperty('--aa-callout-icon', `url("data:image/svg+xml,${encodeURIComponent(icon.replace(/currentColor/g, 'black'))}")`)
+    // Notion's box: its emoji drawn before the words by the sheet (`data-icon`), a
+    // picture from `--aa-callout-picture`, its fill from `data-fill`. A type word
+    // alone is a Markdown alert, with the type's icon from the library.
+    const picture = block.box && block.icon && /^https?:\/\//i.test(block.icon) ? block.icon : undefined
+    element.toggleAttribute('data-box', !!block.box)
+    if (block.box && block.icon && !picture) element.dataset.icon = block.icon
+    else delete element.dataset.icon
+    element.toggleAttribute('data-picture', !!picture)
+    if (picture) element.style.setProperty('--aa-callout-picture', `url("${picture.replace(/["\\\s]/g, char => encodeURIComponent(char))}")`)
+    else element.style.removeProperty('--aa-callout-picture')
+    if (block.box && block.color) element.dataset.fill = block.color
+    else delete element.dataset.fill
+    if (block.box) element.style.removeProperty('--aa-callout-icon')
+    else {
+      const icon = icons[`./icons/${block.folded ? 'toggle' : block.callout === 'tip' ? 'check' : block.callout === 'warning' || block.callout === 'caution' ? 'callout' : 'note'}.svg`]
+      element.style.setProperty('--aa-callout-icon', `url("data:image/svg+xml,${encodeURIComponent(icon.replace(/currentColor/g, 'black'))}")`)
+    }
     element.dataset.callout = block.callout
     element.toggleAttribute('data-folded', !!block.folded)
     element.toggleAttribute('data-body-active', !!reveal && reveal.to > block.source.indexOf('\n') && block.source.includes('\n'))
   } else {
     delete element.dataset.callout
+    delete element.dataset.icon
+    delete element.dataset.fill
+    element.removeAttribute('data-box')
+    element.removeAttribute('data-picture')
+    element.style.removeProperty('--aa-callout-picture')
     element.removeAttribute('data-folded')
     element.removeAttribute('data-body-active')
   }

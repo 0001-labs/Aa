@@ -17,8 +17,14 @@ Drag a block up or down to move it; dragging along a line selects words, and goe
 - [x] Something done
   - A nested bullet: Tab indents, Shift-Tab outdents
 
-> [!tip] A callout
-> Its body stays Markdown. Click its icon or press ⌘Enter to fold it.
+> [!💡] A callout as Notion draws it
+> Its body stays Markdown, inside the box. Press the icon for another, ⌘/ for a fill, ⌘Enter to fold it.
+
+> [!📅 yellow] A callout in a colour
+> One of Notion's nine, drawn as Design system 1's pastels.
+
+> [!tip] A Markdown alert
+> A type word alone: a hairline and the type's icon. Click its icon or press ⌘Enter to fold it.
 
 > [!note]- A folded note
 > The title holds the body while it is folded.

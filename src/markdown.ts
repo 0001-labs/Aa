@@ -20,7 +20,14 @@ export type Block = {
   number?: number
   depth?: number
   indent?: number
+  /** A callout's type word (`note`, `tip`, `warning`); '' when it has none. */
   callout?: string
+  /** A callout's icon: an emoji, or a picture's address. */
+  icon?: string
+  /** A callout's fill, one of `CALLOUT_COLORS`. */
+  color?: CalloutColor
+  /** A callout drawn as Notion's box: one with an icon, a colour, or no type word. A type word alone is a Markdown alert, a hairline and the type's icon. */
+  box?: boolean
   folded?: boolean
 }
 
@@ -32,6 +39,42 @@ export const BULLET = /^ *(?:([-*+])|(\d{1,9})[.)])[ \t]+(?:\[([ xX])\][ \t]+)?/
 export const QUOTE = /^ {0,3}>[ \t]?/
 export const FENCE = /^ {0,3}(`{3,}|~{3,})/
 export const DIVIDER = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/
+
+/** The fills a callout's box can wear, Notion's names: grey when none is written; `white` is the paper in a hairline frame. */
+export const CALLOUT_COLORS = ['gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red', 'white'] as const
+export type CalloutColor = (typeof CALLOUT_COLORS)[number]
+/** What a callout's brackets say: `[!note]`, `[!💡]`, `[!💡 yellow]`, `[!https://… blue]`, `[!]`; a minus after them folds it. */
+export type CalloutHead = { kind: string; icon?: string; color?: CalloutColor; folded: boolean }
+export const CALLOUT = /^>\s*\[!([^\]\n]*)\](-)?[ \t]*/
+
+/**
+ * A callout's first line read: the words in its brackets are its type (a word
+ * in letters), its icon (an emoji, or a picture's address) and its colour (one
+ * of `CALLOUT_COLORS`), any of them in any order; `length` is how far the
+ * prefix reaches, its space included. Null for a line that is not a callout's.
+ */
+export function readCallout(line: string): (CalloutHead & { length: number }) | null {
+  const match = CALLOUT.exec(line)
+  if (!match) return null
+  let kind = '', icon: string | undefined, color: CalloutColor | undefined
+  for (const word of match[1].trim().split(/\s+/).filter(Boolean)) {
+    const lower = word.toLowerCase()
+    if ((CALLOUT_COLORS as readonly string[]).includes(lower)) color = lower as CalloutColor
+    else if (/^[a-z]+$/i.test(word)) kind = lower
+    else icon = word
+  }
+  return { kind, icon, color, folded: !!match[2], length: match[0].length }
+}
+
+/** A callout's brackets written: `> [!💡 yellow]`, `> [!note]-`, `> [!]`. */
+export function writeCallout(head: CalloutHead): string {
+  return `> [!${[head.kind, head.icon, head.color].filter(Boolean).join(' ')}]${head.folded ? '-' : ''}`
+}
+
+/** Whether a callout read as `head` is drawn as Notion's box rather than a Markdown alert. */
+export function calloutIsBox(head: { kind: string; icon?: string; color?: string }): boolean {
+  return head.icon !== undefined || head.color !== undefined || !head.kind
+}
 
 export const COLUMNS_OPEN = /^\s*<columns>\s*$/
 const COLUMNS_CLOSE = /^\s*<\/columns>\s*$/
@@ -156,9 +199,11 @@ export function parseBlocks(text: string): Placed[] {
     if (QUOTE.test(line)) {
       let j = i
       while (j + 1 < lines.length && QUOTE.test(lines[j + 1])) j++
-      const callout = /^>\s*\[!([a-z]+)\](-)?\s*/i.exec(line)
-      const titleHeading = callout ? /^(#{1,6})\s+/.exec(line.slice(callout[0].length)) : null
-      push(callout ? 'callout' : 'quote', i, j, callout ? { level: titleHeading?.[1].length, prefix: callout[0].length + (titleHeading?.[0].length ?? 0), callout: callout[1].toLowerCase(), folded: !!callout[2] } : { prefix: QUOTE.exec(line)![0].length })
+      const callout = readCallout(line)
+      const titleHeading = callout ? /^(#{1,6})\s+/.exec(line.slice(callout.length)) : null
+      push(callout ? 'callout' : 'quote', i, j, callout
+        ? { level: titleHeading?.[1].length, prefix: callout.length + (titleHeading?.[0].length ?? 0), callout: callout.kind, folded: callout.folded, ...(callout.icon !== undefined ? { icon: callout.icon } : {}), ...(callout.color ? { color: callout.color } : {}), ...(calloutIsBox(callout) ? { box: true } : {}) }
+        : { prefix: QUOTE.exec(line)![0].length })
       i = j + 1
       continue
     }

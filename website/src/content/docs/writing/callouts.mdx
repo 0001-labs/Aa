@@ -5,26 +5,36 @@ description: Callouts with a title and a body, folded callouts that hide their b
 
 import Example from "../../../components/Example.astro";
 
-A callout sets a title and its body apart with an icon; folded, it shows only its title.
+A callout sets some words apart in a box, as Notion draws one: an icon at the start of its first line, a fill in one of Notion's colours, and what it holds inside the box. Folded, it shows only its first line.
 
 <Example name="callouts" />
 
 ## Try it
 
-Choose Callout in the [slash menu](/editing/menus/), or type `> [!note]` and a space at the start of a block. The words on its first line are its title; Enter starts a line of its body under it. Press its icon, or press ⌘Enter with the caret in it, to fold it.
+Choose Callout in the [slash menu](/editing/menus/), or type `> [!💡]` and a space at the start of a block. The words on its first line are its title; Enter starts a line of its body under it, inside the box. Press the icon's square to choose another icon, or no icon; press ⌘/ for the block's commands and choose a fill. Press ⌘Enter with the caret in it to fold it.
 
-A callout stands a square in, its icon on the first square and a hairline at its start. Its title and body are formatted as any other words.
+The box has a square of padding and Design system 1's corners, on a fill that is Notion's grey unless a colour is written. Its icon stands on the first square inside, the words from the next square; without an icon the words start on the first. The fills are Design system 1's pastels: grey, brown, orange, yellow, green, blue, purple, pink and red, and white, the paper in a hairline frame. A product changes one with `--aa-callout-fill-<colour>`.
 
 ## The Markdown
 
 | What you see | How you write it | What it stores |
 | --- | --- | --- |
-| A callout | Callout in the slash menu, or `> [!note]` and a space | `> [!note] Title`, then `> The body` on each line under it |
-| A folded callout | Its icon, or ⌘Enter | `> [!note]- Title` |
+| A callout | Callout in the slash menu, or `> [!💡]` and a space | `> [!💡] Title`, then `> The body` on each line under it |
+| A callout in a colour | A fill in the block's commands (⌘/) | `> [!💡 yellow] Title` |
+| A callout with a picture | A picture's address in the brackets | `> [!https://example.com/icon.png] Title` |
+| A callout with no icon | No icon in the icon's choice | `> [!] Title` |
+| A folded callout | ⌘Enter | `> [!💡]- Title` |
+| A Markdown alert | `> [!note]` and a space | `> [!note] Title` |
 | A toggle | Toggle in the slash menu | `> [!note]- Title` |
 | A toggle heading | Toggle heading 1, 2 or 3 in the slash menu | `> [!note]- ## Title` |
 
-The word in the brackets is the callout's type, any word in letters. Its icon follows it:
+The brackets hold the callout's icon, an emoji or a picture's `https://` address, and its colour, one of `gray`, `brown`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `red` and `white`, in either order, either of them or neither. Without a colour the fill is grey; `gray` chosen from the commands is written, so a product reading the Markdown knows it was chosen. This is what Link writes for a Notion page's callouts, so a callout goes to Notion and back with its icon and colour.
+
+## Markdown alerts
+
+<Example name="callouts-alerts" />
+
+A word in letters alone in the brackets is a Markdown alert, as GitHub and Obsidian write them: the type's icon on the first square, the words on the next and a hairline at the start, no box. Given an icon or a colour, an alert becomes a callout and its type word goes.
 
 | Type | Icon |
 | --- | --- |
@@ -39,9 +49,9 @@ Every line of a callout starts with `>`, so a Markdown reader that does not know
 
 <Example name="callouts-folded" />
 
-A folded callout shows its title and hides its body. The body is kept as it was: folding and opening write or take away the one minus sign and nothing else. With the caret in a folded callout's body, the body is shown while it is edited. ⌘⌥T opens every folded callout in the editor.
+A folded callout shows its title and hides its body. The body is kept as it was: folding and opening write or take away the one minus sign and nothing else. With the caret in a folded callout's body, the body is shown while it is edited. ⌘⌥T opens every folded callout in the editor. An alert folds from its icon too.
 
-A toggle is a folded callout made from the slash menu, the same Markdown.
+A toggle is a folded alert made from the slash menu, the same Markdown.
 
 ## Toggle headings
 
@@ -57,4 +67,4 @@ A toggle heading is a callout whose title is a heading, folded to begin with: `#
 | ⌘Enter | Folds the callout the caret is in, or opens it |
 | ⌘⌥T | Opens every folded callout and toggle in the editor |
 
-From code, `editor.toggle()` folds or opens the callout the caret is in, or ticks the box it is in, and `editor.toggle(true)` opens a callout. See [Methods and events](/building/methods/).
+From code, `editor.toggle()` folds or opens the callout the caret is in, or ticks the box it is in, and `editor.toggle(true)` opens a callout. `editor.callout({ icon, color })` gives the callout the caret is in (or the one at an index) another icon or colour, `null` taking the icon away or putting the grey back; `readCallout`, `writeCallout` and `setCallout` do the same on the Markdown. See [Methods and events](/building/methods/).

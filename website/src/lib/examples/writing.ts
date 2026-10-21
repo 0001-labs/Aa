@@ -123,7 +123,18 @@ The second part starts below the line.`,
   // Callouts and toggles
   callouts: {
     title: 'Callouts',
-    hint: 'Enter starts a new line of the body. Press the icon, or ⌘Enter, to fold one.',
+    hint: 'Enter starts a new line of the body. Press the icon for another, and ⌘/ for the fills.',
+    markdown: `> [!💡] Nothing to save
+> Every change is reported as Markdown, so there is no save button.
+
+> [!📅 yellow] Before you publish
+> Check the links in the last section.
+
+> [!] A callout without an icon keeps its words on the first square.`,
+  },
+  'callouts-alerts': {
+    title: 'Markdown alerts',
+    hint: 'A type word alone: a hairline and the type\'s icon. Press the icon, or ⌘Enter, to fold one.',
     markdown: `> [!tip] Nothing to save
 > Every change is reported as Markdown, so there is no save button.
 

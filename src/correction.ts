@@ -114,7 +114,7 @@ function skeleton(source: string, atoms?: readonly AtomSyntax[]): string {
     if (part[0] === 'text' && JSON.stringify(parts[parts.length - 1]) === JSON.stringify(part)) continue
     parts.push(part)
   }
-  return JSON.stringify([block.kind, block.prefix, block.level, block.checked, block.number, block.callout, block.folded, parts])
+  return JSON.stringify([block.kind, block.prefix, block.level, block.checked, block.number, block.callout, block.icon, block.color, block.folded, parts])
 }
 
 export const pair = (old: string, text: string) => `${old}\u0000${text}`

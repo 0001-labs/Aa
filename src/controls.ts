@@ -4,12 +4,14 @@ import { createDragging } from './drag'
 import { openSheet, type SheetGroup } from './sheet'
 
 import { icons } from './icons'
-import { TEXT_COLORS } from './markdown'
+import { CALLOUT_COLORS, TEXT_COLORS, type CalloutColor } from './markdown'
+import { REACTION_EMOJIS } from './comments'
 import { initTooltips } from './ds1/0-face/tooltips'
 /** A button on the bar over selected words; `shortcut` is named in its tooltip (⌘B). */
 export type ToolbarAction = { id: string; label: string; icon: string; shortcut?: string; run(editor: Editor): void }
 /** `ink`: one of the text colours its row's mark is drawn in. */
-export type Command = ToolbarAction & { keywords?: string; ink?: string; enabled?(editor: Editor): boolean }
+/** `swatch`: a callout fill its row's mark is drawn as, a filled square. */
+export type Command = ToolbarAction & { keywords?: string; ink?: string; swatch?: CalloutColor; enabled?(editor: Editor): boolean }
 const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'paragraph', label: 'Text', icon: 'text' }, { kind: 'h1', label: 'Heading 1', icon: 'h1' },
   { kind: 'h2', label: 'Heading 2', icon: 'h2' }, { kind: 'h3', label: 'Heading 3', icon: 'h3' },
@@ -234,6 +236,43 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   cancelLink.addEventListener('click', finishLink)
   linkBar.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); finishLink() } })
   host.addEventListener('aa-link-request', requestLink)
+
+  // ----- a callout's icon -----
+  // A press on a box's icon square (editor.ts) opens the choice right under it: the
+  // sixteen emojis Aa knows, eight a row in the Context face as a comment's reactions
+  // are, and No icon; a press gives one and the choice goes.
+  let iconPicker: HTMLElement | null = null
+  const hideIconPicker = () => { iconPicker?.remove(); iconPicker = null }
+  const openIconPicker = (index: number, at: DOMRect) => {
+    hideIconPicker()
+    if (editor.readOnly) return
+    const picker = document.createElement('div')
+    picker.className = 'aa-controls aa-menu aa-reaction-picker aa-callout-icons'
+    picker.setAttribute('role', 'menu'); picker.setAttribute('aria-label', 'Callout icon')
+    const choose = (icon: string | null) => { hideIconPicker(); editor.callout({ icon }, index); editor.focus() }
+    for (const emoji of REACTION_EMOJIS) {
+      const cell = document.createElement('button')
+      cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = emoji; cell.setAttribute('aria-label', `Icon ${emoji}`)
+      cell.addEventListener('pointerdown', event => event.preventDefault())
+      cell.addEventListener('click', event => { event.preventDefault(); choose(emoji) })
+      picker.append(cell)
+    }
+    const none = document.createElement('button')
+    none.type = 'button'; none.setAttribute('role', 'menuitem'); none.className = 'aa-callout-icons-none'; none.textContent = 'No icon'
+    none.addEventListener('pointerdown', event => event.preventDefault())
+    none.addEventListener('click', event => { event.preventDefault(); choose(null) })
+    picker.append(none)
+    picker.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); hideIconPicker(); editor.focus() } })
+    overlayRoot.append(picker)
+    iconPicker = picker
+    const square = 20 * scaleOf(host), view = visible()
+    const width = 8 * square, height = 3 * square, gap = 4 * square / 20
+    picker.style.left = `${Math.max(view.left, Math.min(at.left, view.left + view.width - width))}px`
+    picker.style.top = `${at.bottom + gap + height <= view.top + view.height ? at.bottom + gap : Math.max(view.top, at.top - gap - height)}px`
+    picker.querySelector<HTMLButtonElement>('button')?.focus()
+  }
+  host.addEventListener('aa-callout-icon', event => { const detail = (event as CustomEvent<{ index: number; rect: DOMRect }>).detail; openIconPicker(detail.index, detail.rect) })
+  document.addEventListener('pointerdown', event => { if (iconPicker && !iconPicker.contains(event.target as Node)) hideIconPicker() }, true)
   let target = -1, active = 0, choices: readonly Command[] = [], slash: { from: number; to: number } | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
@@ -264,6 +303,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     list.replaceChildren(...choices.map((command, index) => {
       const node = button(command.label, command.icon, () => run(command), true)
       if (command.ink) (node.querySelector('.aa-icon') as HTMLElement | null)?.setAttribute('data-color', command.ink)
+      if (command.swatch) (node.querySelector('.aa-icon') as HTMLElement | null)?.setAttribute('data-fill', command.swatch)
       node.classList.add('note-menu-row'); node.dataset.command = command.id; node.setAttribute('role', 'menuitem');
       if (command.id === 'count') {
         node.lastElementChild!.textContent = command.label.split(',')[0]
@@ -302,6 +342,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       { id: 'indent', label: 'Indent', icon: 'indent', run: () => editor.indent(1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
       { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => editor.indent(-1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
       ...(['add-row', 'delete-row', 'add-column', 'delete-column'] as const).map(action => ({ id: action, label: action.replace('-', ' ').replace(/^./, letter => letter.toUpperCase()), icon: 'table', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'table', run: () => editor.table(action) })),
+      // A callout's fill, one of Notion's: each row's mark a square of the colour; grey is the default.
+      ...CALLOUT_COLORS.map(color => ({ id: `fill-${color}`, label: `${color === 'gray' ? 'Grey' : color[0].toUpperCase() + color.slice(1)} fill`, icon: 'color', swatch: color, keywords: 'callout colour background', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'callout', run: () => editor.callout({ color }, target) })),
       ...(options.blockCommands ?? []),
     ]
     const count = editor.stats()

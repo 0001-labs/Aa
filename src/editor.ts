@@ -5,11 +5,11 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, readPicture, serialize, writeColumns, writePicture, type AtomSyntax, type Block, type TextColor } from './markdown'
+import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, readPicture, serialize, writeColumns, writePicture, type AtomSyntax, type Block, type TextColor, type CalloutColor } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
-import { indentBlocks, renumber, toggleCallout } from './document'
+import { indentBlocks, renumber, toggleCallout, setCallout } from './document'
 import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableAction } from './table'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
@@ -194,6 +194,12 @@ export type Editor = {
   moveBlock(from: number, to: number, count?: number): void
   indent(direction: -1 | 1): void
   toggle(open?: boolean): void
+  /**
+   * Give the callout the caret is in (or the one at `index`) an icon, an emoji
+   * or a picture's address (null takes it away), or a colour of `CALLOUT_COLORS`
+   * (null the default grey): its brackets are written again, one step to undo.
+   */
+  callout(head: { icon?: string | null; color?: CalloutColor | null }, index?: number): void
   table(action: TableAction): void
   insertFile(file: File): void
   decorate(ranges: readonly Decoration[], layer?: string): void
@@ -1080,8 +1086,20 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (!element || element.parentElement !== host || readOnly) return
     const index = elements().indexOf(element)
     const block = blocks[index]
-    if (block.kind === 'callout' && event.clientX - element.getBoundingClientRect().left < parseFloat(getComputedStyle(element).paddingLeft)) {
-      event.preventDefault(); const change = toggleCallout(blocks, index); if (change) commit(change.blocks, change.caret, change.caret, 'edit'); return
+    if (block.kind === 'callout') {
+      const rect = element.getBoundingClientRect(), style = getComputedStyle(element)
+      const x = event.clientX - rect.left, y = event.clientY - rect.top, padding = parseFloat(style.paddingLeft)
+      if (block.box) {
+        // A press on a box's icon square (the square before the words on its first line; the padding's own square without an icon) asks for its icon: the controls open the choice.
+        const square = parseFloat(style.paddingTop) || padding
+        if (x >= padding - square && x < padding && y >= square && y < 2 * square) {
+          event.preventDefault()
+          host.dispatchEvent(new CustomEvent('aa-callout-icon', { bubbles: true, detail: { index, rect: new DOMRect(rect.left + padding - square, rect.top + square, square, square) } }))
+        }
+        return
+      }
+      if (x < padding) { event.preventDefault(); const change = toggleCallout(blocks, index); if (change) commit(change.blocks, change.caret, change.caret, 'edit') }
+      return
     }
     if (block.kind !== 'bullet' || block.checked === undefined) return
     const rect = element.getBoundingClientRect()
@@ -1553,6 +1571,19 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     },
     indent(direction) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = indentBlocks(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), direction); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
     toggle(open) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = toggleCallout(blocks, selection.focus.block, open) ?? toggleBox(blocks, selection.focus.block); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
+    callout(head, index) {
+      if (readOnly) return
+      const at = index ?? readSelection()?.focus.block ?? -1
+      if (at < 0 || at >= blocks.length) return
+      const change = setCallout(blocks, at, head)
+      if (!change) return
+      // The caret stays where it was in the block when it is there; otherwise at its words.
+      const selection = readSelection()
+      const keep = selection && selection.focus.block === at && selection.focus.offset >= blocks[at].prefix
+      const shift = change.blocks[at].prefix - blocks[at].prefix
+      const caret = keep ? { block: at, offset: selection.focus.offset + shift } : change.caret
+      commit(change.blocks, caret, caret, 'edit')
+    },
     table(action) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const index = selection.focus.block, block = blocks[index]; if (block.kind !== 'table') return; const rows = tableRows(block.source); let row = 0, column = 0; rows.forEach((cells, r) => cells.forEach((cell, c) => { if (selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) { row = r; column = c } })); const source = editTable(block, action, row, column); const change = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: block.source.length }, source); const pos = { block: index, offset: tableRows(source)[Math.min(row, tableRows(source).length - 1)][Math.min(column, tableRows(source)[0].length - 1)].from }; commit(change.blocks, pos, pos, 'edit') },
     insertFile(file) { if (!readOnly && !destroyed) options.onFiles?.([file]) },
     decorate(ranges, layer = 'external') {

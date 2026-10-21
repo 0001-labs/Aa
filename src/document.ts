@@ -5,7 +5,7 @@
  * bullet, and a paragraph that lost its `## ` is a paragraph.
  */
 
-import { parseBlocks, serialize, codeClosed, QUOTE, type Block } from './markdown'
+import { parseBlocks, serialize, codeClosed, QUOTE, readCallout, writeCallout, type Block, type CalloutColor } from './markdown'
 
 /** A place in the document: a block, and a character offset into its source. */
 export type Pos = { block: number; offset: number }
@@ -238,7 +238,7 @@ export function turnInto(blocks: readonly Block[], selection: BlockSelection, ki
       text = lines.join('\n')
     } else if (block.kind === 'quote' || block.kind === 'callout') text = block.source.split('\n').map((line, i) => i === 0 ? line.slice(block.prefix) : line.replace(QUOTE, '')).join('\n')
     else if (block.kind === 'divider') text = ''
-    const prefix = { paragraph: '', h1: '# ', h2: '## ', h3: '### ', todo: '- [ ] ', bullet: '- ', numbered: `${index - first + 1}. `, quote: '> ', code: '', divider: '', callout: '> [!note] ', toggle: '> [!note]- ', 'toggle-h1': '> [!note]- # ', 'toggle-h2': '> [!note]- ## ', 'toggle-h3': '> [!note]- ### ', table: '', equation: '' }[kind]
+    const prefix = { paragraph: '', h1: '# ', h2: '## ', h3: '### ', todo: '- [ ] ', bullet: '- ', numbered: `${index - first + 1}. `, quote: '> ', code: '', divider: '', callout: '> [!💡] ', toggle: '> [!note]- ', 'toggle-h1': '> [!note]- # ', 'toggle-h2': '> [!note]- ## ', 'toggle-h3': '> [!note]- ### ', table: '', equation: '' }[kind]
     const fence = '`'.repeat(Math.max(3, ...Array.from(text.matchAll(/`+/g), match => match[0].length + 1)))
     const source = kind === 'code' ? `${fence}\n${text}\n${fence}` : kind === 'divider' ? '---' : kind === 'equation' ? `$$\n${text}\n$$` : kind === 'table' ? '| Column 1 | Column 2 |\n| --- | --- |\n|  |  |' : kind === 'callout' || kind.startsWith('toggle') ? prefix + text.split('\n').join('\n> ') : text.split('\n').map(line => prefix + line).join('\n')
     return parseBlocks(source).map(({ start: _start, ...converted }) => converted)
@@ -306,8 +306,32 @@ export function toggleCallout(blocks: readonly Block[], index: number, open?: bo
   const block = blocks[index]
   if (block.kind !== 'callout') return null
   const folded = open === undefined ? !block.folded : !open
-  const source = block.source.replace(/^(>\s*\[![a-z]+\])-?/i, `$1${folded ? '-' : ''}`)
+  const source = block.source.replace(/^(>\s*\[![^\]\n]*\])-?/, `$1${folded ? '-' : ''}`)
   const next = [...blocks]
   next[index] = { ...block, source, folded, prefix: block.prefix + source.length - block.source.length }
+  return { blocks: next, caret: { block: index, offset: next[index].prefix } }
+}
+
+/**
+ * The callout at `index` given an icon (an emoji or a picture's address; null
+ * takes it away) or a colour (`gray` written as such, so a product reading the
+ * Markdown knows it was chosen; null takes the word away, which draws grey
+ * too), or both: its brackets are written again and nothing else changes. An
+ * alert (`[!note]`) given either becomes a box, and its type word goes.
+ */
+export function setCallout(blocks: readonly Block[], index: number, head: { icon?: string | null; color?: CalloutColor | null }): Change | null {
+  const block = blocks[index]
+  if (block.kind !== 'callout') return null
+  const current = readCallout(block.source)
+  if (!current) return null
+  const icon = head.icon === undefined ? current.icon : head.icon ?? undefined
+  const color = head.color === undefined ? current.color : head.color ?? undefined
+  const kind = icon !== undefined || color !== undefined ? '' : current.kind
+  const written = writeCallout({ kind, icon, color, folded: current.folded })
+  const rest = block.source.slice(current.length)
+  const tail = /[ \t]*$/.exec(block.source.slice(0, current.length))![0] || (rest && !rest.startsWith('\n') ? ' ' : '')
+  const source = written + tail + rest
+  const next = [...blocks]
+  next[index] = parseBlocks(source).map(({ start: _start, ...parsed }) => parsed)[0]
   return { blocks: next, caret: { block: index, offset: next[index].prefix } }
 }

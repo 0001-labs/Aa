@@ -344,11 +344,46 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-find-match, .aa-highlight { background: var(--aa-highlight, var(--ds-yellow, var(--yellow, Highlight))); color: var(--aa-highlight-ink, var(--ds-black, inherit)); }
 .aa-block[data-kind="bullet"] { margin-left: calc(var(--aa-depth, 0) * var(--aa-indent, var(--aa-unit))); }
 .aa-block[data-kind="bullet"][data-number]::before { content: attr(data-number) "."; }
-/* A callout: its icon on the first square, the words on the next, a hairline
-   at its start. */
+/* A callout with a type word alone (`> [!note]`) is a Markdown alert: its
+   type's icon on the first square, the words on the next, a hairline at its
+   start; folded, it is a toggle. */
 .aa-block[data-kind="callout"] { padding-left: var(--aa-unit); box-shadow: inset 1px 0 var(--aa-rule-color); }
 .aa-block[data-kind="callout"]::before { content: ""; position: absolute; left: 0; top: 0; width: var(--aa-unit); height: var(--aa-unit); background: currentColor; mask: var(--aa-callout-icon) 50% 100% / calc(16px * var(--aa-sf)) no-repeat; cursor: pointer; }
 .aa-block[data-folded]:not([data-body-active]) .aa-callout-body { display: none; }
+/* A callout with an icon or a colour (`> [!💡 yellow]`, `> [!]`) is Notion's
+   box: a square of padding on the paper's fill in one of Notion's colours,
+   Design system 1's pastels, with the system's corners; its icon, an emoji or a
+   picture, on the sixteen of the first square inside, the words from the next
+   square; what it holds stays inside the box. A press on the icon's square
+   offers another. The fills are the `--aa-callout-fill-<colour>` properties. */
+[data-fill="gray"] { --aa-callout-fill: var(--aa-callout-fill-gray, color-mix(in srgb, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)) 50%, transparent)); }
+[data-fill="brown"] { --aa-callout-fill: var(--aa-callout-fill-brown, var(--one-sand-pastel, light-dark(#f3ecd8, #403926))); }
+[data-fill="orange"] { --aa-callout-fill: var(--aa-callout-fill-orange, var(--one-orange-pastel, light-dark(#fff2cc, #4c3f1a))); }
+[data-fill="yellow"] { --aa-callout-fill: var(--aa-callout-fill-yellow, var(--one-yellow-pastel, light-dark(#fbffcc, #484c1a))); }
+[data-fill="green"] { --aa-callout-fill: var(--aa-callout-fill-green, var(--one-apple-green-pastel, light-dark(#daffcc, #284c1a))); }
+[data-fill="blue"] { --aa-callout-fill: var(--aa-callout-fill-blue, var(--one-sharp-blue-pastel, light-dark(#ccccff, #1d1a4c))); }
+[data-fill="purple"] { --aa-callout-fill: var(--aa-callout-fill-purple, var(--one-purple-pastel, light-dark(#f9d2ed, #46203a))); }
+[data-fill="pink"] { --aa-callout-fill: var(--aa-callout-fill-pink, var(--one-pink-pastel, light-dark(#fad1e6, #471f34))); }
+[data-fill="red"] { --aa-callout-fill: var(--aa-callout-fill-red, var(--one-tuned-red-pastel, light-dark(#ffcccc, #4c1a1a))); }
+[data-fill="white"] { --aa-callout-fill: var(--aa-callout-fill-white, transparent); }
+.aa-block[data-kind="callout"][data-box] {
+  --aa-callout-fill: var(--aa-callout-fill-gray, color-mix(in srgb, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c)) 50%, transparent));
+  box-sizing: border-box;
+  padding: var(--aa-unit);
+  border-radius: var(--ds-radius, calc(4px * var(--aa-sf)));
+  background: var(--aa-callout-fill);
+  box-shadow: none;
+}
+.aa-block[data-kind="callout"][data-box][data-fill="white"] { box-shadow: inset 0 0 0 1px var(--aa-rule-color); }
+.aa-block[data-kind="callout"][data-box][data-icon], .aa-block[data-kind="callout"][data-box][data-picture] { padding-left: calc(2 * var(--aa-unit)); }
+.aa-block[data-kind="callout"][data-box]::before { content: none; left: var(--aa-unit); top: var(--aa-unit); background: none; mask: none; }
+.aa-block[data-kind="callout"][data-box][data-icon]::before { content: attr(data-icon); box-sizing: border-box; padding-top: calc(4px * var(--aa-sf)); font-size: var(--aa-size, var(--ds-type-size-default, calc(14px * var(--aa-sf)))); line-height: calc(16px * var(--aa-sf)); letter-spacing: 0; text-align: start; white-space: nowrap; overflow: hidden; -webkit-user-select: none; user-select: none; }
+.aa-block[data-kind="callout"][data-box][data-picture]::before { content: ""; background: var(--aa-callout-picture) 0 100% / calc(16px * var(--aa-sf)) calc(16px * var(--aa-sf)) no-repeat; }
+/* Selected or carried, the box darkens its own fill rather than taking the selection grey over it. */
+.aa-block[data-kind="callout"][data-box][data-selected], .aa-block[data-kind="callout"][data-box][data-lifted] { background: color-mix(in srgb, currentColor 15%, var(--aa-callout-fill)); }
+/* A fill's row in the block menu: its mark a square of the colour, in the system's corners. */
+.aa-icon[data-fill] { mask: none; -webkit-mask: none; border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: var(--aa-callout-fill); }
+.aa-icon[data-fill="white"] { box-shadow: inset 0 0 0 1px var(--aa-rule-color); }
 .aa-block[data-kind="table"] { white-space: normal; }
 /* A table is prose.css's: each row two squares, the words on one square with
    half a square around them, a hairline at its foot, no box and no column
@@ -691,6 +726,9 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-reaction:focus-visible { outline: 2px solid var(--ds-focus-ring, #594dff); outline-offset: 1px; }
 .aa-reaction-picker { display: grid; grid-template-columns: repeat(8, var(--aa-square)); width: calc(8 * var(--aa-square)); gap: 1px; }
 .aa-reaction-picker button { width: calc(var(--aa-square) - 1px); min-width: 0; justify-content: center; padding: 0; }
+/* A callout's icons on offer: the same sixteen under the icon's square, and No icon on a row of its own. */
+.aa-callout-icons { position: fixed; }
+.aa-callout-icons .aa-callout-icons-none { grid-column: 1 / -1; width: auto; justify-content: flex-start; padding: 0 calc(4px * var(--aa-sf)); }
 .aa-thread-resolved { margin: 0 0 0 var(--aa-unit); min-height: var(--aa-unit); color: var(--aa-muted); }
 .aa-comments-error { margin: 0 0 0 var(--aa-unit); min-height: var(--aa-unit); color: var(--ds-tuned-red, var(--tuned-red, #ff5f5f)); }
 /* The avatar is Design system 1's `.ds-avatar` mark, as Ezo draws a person: round, one control

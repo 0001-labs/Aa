@@ -58,6 +58,7 @@ Each acts on the selection, or on the selected blocks.
 | `moveBlock(from, to, count?)` | Moves `count` blocks (one unless given) from index `from` so the first stands at `to`. They stay selected and the editor keeps the focus. |
 | `indent(direction)` | Nests list items one level in with `1`, out with `-1`. |
 | `toggle(open?)` | Opens or folds the callout or toggle the caret is in, `open` saying which and otherwise the other way; in a box, ticks or unticks it. |
+| `callout({ icon, color }, index?)` | Gives the callout the caret is in, or the one at `index`, another icon (an emoji or a picture's address; `null` takes it away) or fill (one of `CALLOUT_COLORS`; `null` takes the word away, grey): its brackets written again, one step to undo. |
 | `table(action)` | In a table: `'add-row'`, `'delete-row'`, `'add-column'` or `'delete-column'`, at the caret's cell. |
 
 ## Decorations and counts
