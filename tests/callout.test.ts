@@ -4,6 +4,7 @@ import { parseBlocks, serialize, readCallout, writeCallout, calloutIsBox, CALLOU
 import { fromMarkdown, setCallout, toggleCallout, turnInto } from '../src/document'
 import { readBlock, renderBlock } from '../src/render'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 let editor: Editor | undefined, host: HTMLElement | undefined
 function setup(value: string, options = {}) {
@@ -49,7 +50,7 @@ describe('a callout as Notion draws it', () => {
   })
 
   it('lets a written fill win over the grey: the box rule only falls back to it', () => {
-    const css = readFileSync(new URL('../src/aa.css', import.meta.url), 'utf8')
+    const css = readFileSync(join(process.cwd(), 'src/aa.css'), 'utf8')
     const box = css.slice(css.indexOf('.aa-block[data-kind="callout"][data-box] {'), css.indexOf('}', css.indexOf('.aa-block[data-kind="callout"][data-box] {')))
     expect(box).not.toMatch(/--aa-callout-fill:/)
     expect(box).toContain('background: var(--aa-callout-fill, var(--aa-callout-grey))')
