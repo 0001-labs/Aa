@@ -59,8 +59,7 @@
   "sideEffects": [
     "./src/element.ts",
     "./src/aa.css",
-    "./dist/aa.js",
-    "./playground.ts"
+    "./dist/aa.js"
   ],
   "scripts": {
     "dev": "vp dev",

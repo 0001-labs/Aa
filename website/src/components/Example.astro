@@ -12,7 +12,8 @@ const { title, hint, source = true, ...options } = example;
   {(title || hint) && <figcaption>{title && <p class="aa-example-title">{title}</p>}{hint && <p class="aa-example-hint">{hint}</p>}</figcaption>}
   <div class="aa-example-panes">
     <div class="aa-example-editor"></div>
-    {source && <div class="aa-example-stored"><p class="aa-example-label">What it stores</p><aside class="aa-example-comments" hidden></aside><pre class="aa-example-source"></pre></div>}
+    {source && <p class="aa-example-label">What it stores</p>}
+    {source && <div class="aa-example-stored"><aside class="aa-example-comments" hidden></aside><pre class="aa-example-source"></pre></div>}
   </div>
 </figure>
 
@@ -27,9 +28,13 @@ const { title, hint, source = true, ...options } = example;
   figcaption p { margin: 0; }
   .aa-example-title { font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
   .aa-example-hint { color: var(--ds-text-color-muted); }
-  .aa-example-panes { display: grid; grid-template-columns: minmax(0, 1fr); gap: calc(2 * var(--grid)); }
-  .aa-example[data-source] .aa-example-panes { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
-  @media (max-width: 1100px) { .aa-example[data-source] .aa-example-panes { grid-template-columns: minmax(0, 1fr); } }
+  /* The editor and what it stores start on the same line; the label stands over the Markdown alone. */
+  .aa-example-panes { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: calc(2 * var(--grid)); }
+  .aa-example[data-source] .aa-example-panes { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-areas: ". label" "editor stored"; }
+  .aa-example-editor { grid-area: editor; }
+  .aa-example-label { grid-area: label; }
+  .aa-example-stored { grid-area: stored; }
+  @media (max-width: 1100px) { .aa-example[data-source] .aa-example-panes { grid-template-columns: minmax(0, 1fr); grid-template-areas: "editor" "label" "stored"; } .aa-example-label { margin-top: calc(2 * var(--grid)); } }
   .aa-example-editor { min-width: 0; min-height: calc(4 * var(--grid)); }
   .aa-example-label { margin: 0 0 var(--grid); color: var(--ds-text-color-muted); }
   .aa-example-comments { margin-bottom: var(--grid); }

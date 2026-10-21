@@ -1,47 +1,73 @@
 ---
-// The front page: the editor itself, every feature in one note, beside the Markdown it stores, and
-// two editors sharing one document. Run by the playground's own script (../playground.ts), so the
-// page and `vp run dev` are the same editor.
+// The front page: the editor itself, twice. First a note as anyone writes one; then a page as
+// Notion's are, with pictures, a table, boxes, a toggle, columns and a diagram to carry about,
+// its bar of Read only, Undo and Redo, and Open comments. Each beside the Markdown it stores.
+import Example from './Example.astro';
+import commentIcon from '../../../src/icons/comment.svg?raw';
 ---
 
-<div class="playground not-content" data-ds-not-prose>
-  <section>
-    <div class="bar"><button id="readonly" aria-pressed="false">Read only</button><button id="undo">Undo</button><button id="redo">Redo</button><button id="comments-beside" aria-pressed="false">Comments beside</button></div>
-    <aa-editor id="editor" placeholder="Write" toolbar></aa-editor>
-  </section>
-  <section class="side">
-    <div class="bar"><p class="name">What it stores</p></div>
-    <!-- The comments stand beside the text when asked; otherwise each thread opens at its words. -->
-    <aside id="comments" class="comments" hidden></aside>
-    <pre id="source"></pre>
-  </section>
-  <section>
-    <div class="bar"><p class="name">Shared editing</p><button id="share">Try two editors</button></div>
-    <div id="shared-first"></div>
-  </section>
-  <section><div class="bar"><p class="name">Second editor</p></div><div id="shared-second"></div></section>
+<div class="front">
+  <Example name="front-simple" />
+
+  <figure class="advanced not-content" data-ds-not-prose data-front>
+    <figcaption>
+      <p class="title">A page, as in Notion</p>
+      <p class="hint">Carry a picture or a block somewhere else by pressing it and holding it still. Carry a picture to another's side for columns. Type / for every kind of block, Space in an empty line to ask AI.</p>
+    </figcaption>
+    <div class="bar">
+      <button data-front="readonly" aria-pressed="false">Read only</button>
+      <span class="split" role="group" aria-label="History"><button data-front="undo">Undo</button><button data-front="redo">Redo</button></span>
+      <button data-front="comments" class="with-icon" aria-pressed="false"><span class="icon" aria-hidden="true" set:html={commentIcon}></span>Open comments</button>
+    </div>
+    <div class="panes">
+      <div class="front-editor"></div>
+      <p class="label">What it stores</p>
+      <div class="stored">
+        <aside class="front-comments" hidden></aside>
+        <pre class="front-source"></pre>
+      </div>
+    </div>
+  </figure>
 </div>
 
 <script>
-  import '../../../playground';
+  import { mountFront } from '../lib/front';
+  const root = document.querySelector<HTMLElement>('[data-front]');
+  if (root) mountFront(root);
 </script>
 
 <style>
-  .playground { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2 * var(--grid)); }
-  /* One column on a narrow screen; minmax(0, 1fr), so a diagram wider than the screen scrolls within itself. */
-  @media (max-width: 1100px) { .playground { grid-template-columns: minmax(0, 1fr); } }
-  .name { margin: 0; color: var(--ds-text-color); font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
-  .side { color: var(--ds-text-color-muted); }
-  aa-editor { display: block; min-height: calc(20 * var(--grid)); }
-  .comments { margin-bottom: calc(2 * var(--grid)); color: var(--ds-text-color); }
-  .comments[hidden] { display: none; }
-  pre { margin: 0; padding: 0; background: none; font-family: var(--typeface-mono); font-size: calc(13px * var(--sf, 1)); line-height: var(--grid); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-  /* A row of one square, its words and buttons on the lower sixteen. */
-  .bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 var(--grid); min-height: var(--grid); margin-bottom: var(--grid); line-height: calc(16px * var(--sf, 1)); white-space: nowrap; }
-  button { display: inline-block; height: var(--ds-control-height); padding: 0 calc(4px * var(--sf, 1)); border: 0; border-radius: var(--ds-radius); background: var(--ds-fill); color: inherit; font: inherit; line-height: var(--ds-control-height); cursor: pointer; }
+  .advanced { margin: var(--grid) 0 calc(2 * var(--grid)); padding: var(--grid); border-radius: calc(4px * var(--sf, 1)); box-shadow: inset 0 0 0 1px var(--ds1-docs-divider); }
+  figcaption { margin-bottom: var(--grid); }
+  figcaption p { margin: 0; }
+  .title { font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
+  .hint, .label { color: var(--ds-text-color-muted); }
+  .label { margin: 0 0 var(--grid); }
+  /* The page and what it stores start on the same line; the label stands over the Markdown alone. */
+  .panes { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-areas: ". label" "editor stored"; column-gap: calc(2 * var(--grid)); }
+  .front-editor { grid-area: editor; }
+  .label { grid-area: label; }
+  .stored { grid-area: stored; }
+  @media (max-width: 1100px) { .panes { grid-template-columns: minmax(0, 1fr); grid-template-areas: "editor" "label" "stored"; } .label { margin-top: calc(2 * var(--grid)); } }
+  .front-editor { min-width: 0; min-height: calc(20 * var(--grid)); }
+  .front-comments { margin-bottom: calc(2 * var(--grid)); color: var(--ds-text-color); }
+  .front-comments[hidden] { display: none; }
+  .front-source { margin: 0; padding: 0; background: none; color: var(--ds-text-color-muted); font-family: var(--typeface-mono); font-size: calc(13px * var(--sf, 1)); line-height: var(--grid); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* A row of one square, its buttons on the lower sixteen, a square apart. */
+  .bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 var(--grid); min-height: var(--grid); margin-bottom: var(--grid); }
+  button { display: inline-flex; align-items: center; height: var(--ds-control-height); padding: 0 calc(5px * var(--sf, 1)); border: 0; border-radius: var(--ds-radius); background: var(--ds-fill); color: var(--ds-text-color); font: inherit; line-height: var(--ds-control-height); white-space: nowrap; cursor: pointer; }
   button:hover { background: var(--ds-fill-hover); }
   button[aria-pressed="true"] { background: var(--ds-accent-color); color: var(--ds-button-text-color-on-accent); }
-  button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 1px; }
-  /* The front page takes the width the editor and its Markdown need, with no On this page beside it. */
-  :global(:root:has(.playground)) { --sl-content-width: calc(56 * var(--grid)); }
+  button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 1px; position: relative; }
+  /* Undo and Redo as Design system 1's split button: one control, a pixel between its halves, corners at its ends alone. */
+  .split { display: inline-flex; gap: 1px; }
+  .split button { border-radius: 0; }
+  .split button:first-child { border-start-start-radius: var(--ds-radius); border-end-start-radius: var(--ds-radius); }
+  .split button:last-child { border-start-end-radius: var(--ds-radius); border-end-end-radius: var(--ds-radius); }
+  /* An icon with its words: the icon's own room replaces the padding on its side. */
+  .with-icon { padding-inline-start: 0; }
+  .icon { display: inline-flex; width: var(--ds-control-height); height: var(--ds-control-height); align-items: center; justify-content: center; }
+  .icon :global(svg) { width: calc(16px * var(--sf, 1)); height: calc(16px * var(--sf, 1)); }
+  /* The front page takes the width a page and its Markdown need, with no On this page beside it. */
+  :global(:root:has(.front)) { --sl-content-width: calc(56 * var(--grid)); }
 </style>

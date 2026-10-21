@@ -30,12 +30,17 @@
   button:hover, .link-button:hover { background: var(--ds-fill-hover); }
   button[aria-pressed="true"] { background: var(--ds-accent-color); color: var(--ds-button-text-color-on-accent); }
   button:focus-visible, .link-button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 1px; }
+  /* Undo and Redo as Design system 1's split button: a pixel between its halves, corners at its ends alone. */
+  .split { display: inline-flex; gap: 1px; }
+  .split button { border-radius: 0; }
+  .split button:first-child { border-start-start-radius: var(--ds-radius); border-end-start-radius: var(--ds-radius); }
+  .split button:last-child { border-start-end-radius: var(--ds-radius); border-end-end-radius: var(--ds-radius); }
 </style>
 </head>
 <body>
 <main>
   <section>
-    <div class="bar"><h1>Aa</h1><button id="readonly" aria-pressed="false">Read only</button><button id="undo">Undo</button><button id="redo">Redo</button><button id="comments-beside" aria-pressed="false">Comments beside</button></div>
+    <div class="bar"><h1>Aa</h1><button id="readonly" aria-pressed="false">Read only</button><span class="split" role="group" aria-label="History"><button id="undo">Undo</button><button id="redo">Redo</button></span><button id="comments-beside" aria-pressed="false">Open comments</button></div>
     <aa-editor id="editor" placeholder="Write" toolbar></aa-editor>
   </section>
   <section class="side">
