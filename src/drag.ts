@@ -190,6 +190,12 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     return true
   }
 
+  /** A block that is pictures alone: no words to select, so a press carries it whichever way it moves. */
+  function wordless(block: HTMLElement): boolean {
+    const placed = parseBlocks(editor.value)[children().indexOf(block)]
+    return !!placed && /^(?:!\[[^\]\n]*\]\([^)\n]*\)\s*)+$/.test(placed.source.trim())
+  }
+
   /** The block at `from` stands at a side of the one at `to`, in columns, as one step to undo. False where it cannot. */
   function placeBeside(from: number, to: number, at: 'start' | 'end'): boolean {
     if (parseBlocks(editor.value).length !== children().length) return false
@@ -222,7 +228,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       x: event.clientX, y: event.clientY,
     }
     // A press on selected blocks, or a block in hand, does not put the caret in it unless it is let go where it began.
-    if ((selected.length || grabbed) && press.mouse && press.plain && !press.own && !press.inSelection && movable()) event.preventDefault()
+    // The press is the block's, not the browser's selecting: the selected, the one in hand, and a picture.
+    if ((selected.length || grabbed || wordless(block)) && press.mouse && press.plain && !press.own && !press.inSelection && movable()) event.preventDefault()
   }
   window.addEventListener('pointerdown', down, true)
 
@@ -237,9 +244,10 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
         element: block,
         id: `aa-block-${++count}`,
         type: 'aa-block',
-        // Selected blocks and a block in hand go as soon as the press moves; any other when the press moves up
-        // or down, or after a still press, so a press moving along a line selects words.
-        text: { hold: () => press?.block === block && (press.selected.length || press.grabbed) ? 0 : HOLD, axis: 'y' },
+        // Selected blocks, a block in hand and a picture, which has no words to select, go as soon as the press
+        // moves, whichever way; any other when the press moves up or down, or after a still press, so a press
+        // moving along a line selects words.
+        text: { hold: () => press?.block === block && (press.selected.length || press.grabbed || wordless(block)) ? 0 : HOLD, axis: 'y' },
         canDrag: ({ input }) => input === 'mouse' && movable() && !!press && press.block === block && press.mouse && press.plain && !press.own && !press.inSelection,
       }))
     }
