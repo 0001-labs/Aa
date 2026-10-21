@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createPlainEditor } from '../src/plain'
 
 describe('plain editor', () => {
@@ -24,4 +24,41 @@ it('works in another document (a frame), making its block there', () => {
   expect(block.ownerDocument).toBe(other)
   expect(editor.value).toBe('Blue Raft')
   editor.destroy()
+})
+
+describe('speaking into a plain field', () => {
+  it('says its placeholder, listens on Space when empty, writes in what is heard and stops on another key', () => {
+    let speech: { onresult: ((event: unknown) => void) | null; onend: (() => void) | null; started: boolean } | null = null
+    class Speech { lang = ''; continuous = false; interimResults = false; onresult = null; onend = null; onerror = null; started = false
+      constructor() { speech = this as never }
+      start() { this.started = true } stop() { (this as never as { onend?: () => void }).onend?.() } abort() { this.stop() } }
+    vi.stubGlobal('webkitSpeechRecognition', Speech)
+    try {
+      const host = document.createElement('div'); document.body.append(host)
+      const changes: string[] = []
+      const editor = createPlainEditor(host, { placeholder: 'What is wrong?', speak: true, onChange: value => changes.push(value) })
+      const block = host.querySelector<HTMLElement>('.aa-block')!
+      expect(host.hasAttribute('data-empty')).toBe(true)
+      expect(block.dataset.placeholder).toBe('Press space to speak, or what is wrong?')
+      block.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }))
+      expect(speech!.started).toBe(true)
+      expect(editor.listening).toBe(true)
+      expect(block.dataset.placeholder).toBe('Listening…')
+      expect(block.querySelector('.aa-prompt-caret')).not.toBeNull()
+      speech!.onresult!({ resultIndex: 0, results: [Object.assign([{ transcript: 'The price is wrong' }], { isFinal: true })] })
+      expect(block.textContent).toBe('The price is wrong')
+      expect(changes.at(-1)).toBe('The price is wrong')
+      expect(host.hasAttribute('data-empty')).toBe(false)
+      block.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }))
+      expect(editor.listening).toBe(false)
+      expect(block.querySelector('.aa-prompt-caret')).toBeNull()
+      expect(block.dataset.placeholder).toBe('Press space to speak, or what is wrong?')
+      editor.destroy(); host.remove()
+    } finally { vi.unstubAllGlobals() }
+  })
+  it('only says its placeholder where the browser cannot listen', () => {
+    const host = document.createElement('div')
+    createPlainEditor(host, { placeholder: 'Note', speak: true })
+    expect(host.querySelector<HTMLElement>('.aa-block')!.dataset.placeholder).toBe('Note')
+  })
 })

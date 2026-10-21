@@ -423,6 +423,10 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 /* A plain specimen inherits its surrounding face and size without controls. */
 :where(.aa-plain) { font: inherit; font-feature-settings: inherit; letter-spacing: inherit; color: inherit; }
 :where(.aa-plain) > .aa-block { font: inherit; letter-spacing: inherit; }
+/* An empty plain field says its placeholder in the muted ink; listening, it says so in the prompt's colour, the dot after it. */
+.aa-plain[data-empty] > .aa-block[data-placeholder]::before { content: attr(data-placeholder); color: var(--ds-text-color-muted, #8a8a8a); pointer-events: none; }
+.aa-plain[data-listening] > .aa-block { caret-color: transparent; }
+.aa-plain[data-listening] > .aa-block[data-placeholder]::before { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); margin-inline-end: 0.25em; }
 
 /* A correction's words shimmer once: a band of the accent colour passes through their letters (`shimmer.ts`).
    Screen on a light page and multiply on a dark one colour the letters and leave the paper as it is. */

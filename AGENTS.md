@@ -54,6 +54,8 @@ Toolbar, slash menu, block selection, block dragging with no handle on Drag's so
 
 `createPlainEditor(host, { value, readOnly, onChange })` provides one native plain-text block for short specimens and simple writing surfaces. It shares Aa's rounded native-selection painter and inherits the surrounding typography. It has no Markdown conversion, toolbar, menus, atoms or document model; the browser owns multiline input, clipboard, IME and undo. This single-block mode is an intentional exception to the Markdown document/history rules. Use `createEditor` for documents.
 
+With `placeholder` the empty field says it in the muted ink. With `speak`, where the browser can listen, it says "Press space to speak, or …" and Space in the empty field dictates into it as a comment's reply does (`dictate` in `src/prompt.ts`): the words heard written in as they come, the prompt's breathing dot after them and "Listening…" before any, Escape stopping and any other key stopping and typing on. `listening` says whether it is. Team CMS's and Link's Report take it first.
+
 ## Using it in a product
 
 ```ts
