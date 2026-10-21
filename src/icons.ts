@@ -39,6 +39,7 @@ import icon32 from "./icons/connect.svg?raw"
 import icon33 from "./icons/slash.svg?raw"
 import icon34 from "./icons/underline.svg?raw"
 import icon35 from "./icons/color.svg?raw"
+import icon36 from "./icons/tabs.svg?raw"
 export const icons: Record<string, string> = {
   "./icons/check.svg": checkIcon,
   "./icons/note.svg": noteIcon,
@@ -81,4 +82,5 @@ export const icons: Record<string, string> = {
   "./icons/slash.svg": icon33,
   "./icons/underline.svg": icon34,
   "./icons/color.svg": icon35,
+  "./icons/tabs.svg": icon36,
 }

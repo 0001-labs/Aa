@@ -431,8 +431,7 @@ body {
 }
 
 .header.dragging {
-  outline: calc(var(--outline-stroke) * var(--sf)) solid var(--black);
-  outline-offset: calc(var(--outline-stroke-offset) * var(--sf));
+  outline: calc(1px * var(--sf)) solid var(--black);
   background-color: var(--white);
 }
 
@@ -448,7 +447,7 @@ body {
   margin-right: var(--margin-correction);
   outline: var(--outline-stroke);
   background-color: light-dark(var(--white), var(--slate-dark));
-  color: var(--text-color-primary);
+  color: var(--text-color);
 }
 
 .mobile .card {
@@ -469,7 +468,7 @@ body {
   z-index: 99;
   margin-bottom: 2px;
   padding-left: calc(3px * var(--sf));
-  color: var(--text-color-primary);
+  color: var(--text-color);
   outline: var(--outline-stroke);
   background-color: transparent;
 }

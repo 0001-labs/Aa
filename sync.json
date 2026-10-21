@@ -15,7 +15,8 @@
           "chevron-up",
           "chevron-down",
           "underline",
-          "color"
+          "color",
+          "tabs"
         ]
       },
       "root": {
