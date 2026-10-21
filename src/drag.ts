@@ -21,7 +21,9 @@
  * As Notion places pictures, a block carried to another block's side (its
  * first or last fifth, four squares at most) shows a line down that side,
  * and let go there it stands beside it: the two become columns, or it is one
- * more column of columns already there.
+ * more column of columns already there. Carried out of its column over
+ * another column of the same columns, it stands at that column's nearer side
+ * as a column of its own, so pictures in columns are put in order sideways.
  */
 import type { Editor, EditorOptions } from './editor'
 import { createSortable } from './vendor/drag/sortable'
@@ -36,6 +38,8 @@ const DRIFT = 8
 
 /** What a press inside a block is for itself: a field, a caption, a player, a diagram's board. */
 const OWN = 'button, input, textarea, select, video, audio, .aa-caption, [data-aa-interactive]'
+/** Whether a press is a field's, a caption's or a player's in this block: what stands round this editor (columns drawing it) does not count. */
+const ownPress = (target: Element | null, block: HTMLElement) => { const own = target?.closest(OWN); return !!own && block.contains(own) }
 /** What the lifted block carries from the editor to the overlay it is drawn in. */
 const CARRIED = ['--aa-unit', '--aa-sf', '--aa-rule-color', '--aa-gap', '--aa-indent']
 
@@ -47,6 +51,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   root.append(sideLine)
   /** The block's side the carried block would stand at, while it is over one. */
   let side: { index: number; at: 'start' | 'end' } | null = null
+  /** In columns: the other column the carried block would stand beside, and at which side. */
+  let across: { column: number; at: 'start' | 'end' } | null = null
   const children = () => Array.from(host.children) as HTMLElement[]
   const movable = () => !editor.readOnly && options.menus !== false
   host.toggleAttribute('data-movable', options.menus !== false)
@@ -104,13 +110,18 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       const { caret, group } = carried ?? { caret: null, group: [] as HTMLElement[] }
       carried = null
       document.removeEventListener('pointermove', besides, true)
-      const beside = side
-      side = null; sideLine.hidden = true
+      const beside = side, over = across
+      side = null; across = null; sideLine.hidden = true
       for (const element of host.querySelectorAll(':scope > [data-ghost]')) element.removeAttribute('data-ghost')
       host.removeAttribute('data-dragging')
       document.removeEventListener('selectionchange', keepClear)
       const all = children(), from = result.source.index, to = result.destination?.index
       if (result.reason === 'DROP' && beside && group.length <= 1 && movable() && placeBeside(from, beside.index, beside.at)) return
+      // Out of its column, beside another: the columns move it, as one step to undo of the page around them.
+      if (result.reason === 'DROP' && over && group.length <= 1 && movable()) {
+        host.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from, column: over.column, at: over.at } }))
+        return
+      }
       if (result.reason === 'DROP' && to !== undefined && movable()) {
         if (group.length > 1) {
           // The others go where the one carried went: after as many unchosen blocks as stood before it.
@@ -132,6 +143,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   /** Follows the carried block over the others: near one's side, the line down that side shows where it would stand. */
   function besides(event: PointerEvent) {
     if (!carried || carried.group.length > 1) return
+    if (acrossColumns(event)) return
     const all = children()
     const target = document.elementsFromPoint(event.clientX, event.clientY)
       .map(element => element.closest?.('.aa-block') as HTMLElement | null)
@@ -151,6 +163,31 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     sideLine.style.height = `${rect.height}px`
     sideLine.style.width = ''
     sideLine.hidden = false
+  }
+
+  /**
+   * In a column of columns, over another column: the line down that column's nearer side, where the
+   * carried block would stand as a column of its own. False anywhere else, the column's own blocks included.
+   */
+  function acrossColumns(event: PointerEvent): boolean {
+    across = null
+    const row = host.parentElement
+    if (!host.classList.contains('aa-column') || !row?.classList.contains('aa-columns')) return false
+    const columns = Array.from(row.children).filter(child => child.classList.contains('aa-column')) as HTMLElement[]
+    const box = row.getBoundingClientRect()
+    if (event.clientY < box.top || event.clientY > box.bottom) return false
+    const column = columns.findIndex(element => { const rect = element.getBoundingClientRect(); return event.clientX >= rect.left && event.clientX <= rect.right })
+    if (column < 0 || columns[column] === host) return false
+    const rect = columns[column].getBoundingClientRect()
+    const at = event.clientX < rect.left + rect.width / 2 ? 'start' : 'end'
+    across = { column, at }
+    side = null
+    sideLine.style.left = `${at === 'start' ? rect.left : rect.right}px`
+    sideLine.style.top = `${box.top}px`
+    sideLine.style.height = `${box.height}px`
+    sideLine.style.width = ''
+    sideLine.hidden = false
+    return true
   }
 
   /** The block at `from` stands at a side of the one at `to`, in columns, as one step to undo. False where it cannot. */
@@ -177,7 +214,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       block,
       mouse: event.pointerType === 'mouse' && event.button === 0,
       plain: !event.shiftKey && !event.altKey && !event.metaKey && !event.ctrlKey,
-      own: !!target?.closest(OWN),
+      own: ownPress(target, block),
       // Words already selected are dragged the browser's way.
       inSelection: insideSelection(event.clientX, event.clientY),
       selected,
@@ -236,7 +273,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     if (event.pointerType !== 'mouse' || event.buttons || sortable.isDragging() || !movable()) { stopResting(); return }
     const target = event.target instanceof Element ? event.target : null
     const block = target?.closest?.('.aa-block') as HTMLElement | null
-    if (!block || block.parentElement !== host || target?.closest(OWN)) { stopResting(); return }
+    if (!block || block.parentElement !== host || ownPress(target, block)) { stopResting(); return }
     if (resting?.block === block && Math.hypot(event.clientX - resting.x, event.clientY - resting.y) < DRIFT) return
     stopResting()
     const timer = setTimeout(() => {

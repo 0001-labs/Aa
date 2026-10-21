@@ -5,7 +5,7 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, fencedAtom, readColumns, writeColumns, type AtomSyntax, type Block, type TextColor } from './markdown'
+import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, serialize, writeColumns, type AtomSyntax, type Block, type TextColor } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
@@ -184,30 +184,54 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   function drawColumns(element: HTMLElement, source: string) {
     element.classList.add('aa-columns')
     element.setAttribute('data-aa-interactive', '')
-    const values = readColumns(source)
-    element.style.setProperty('--aa-columns', String(values.length))
-    const editors = values.map((value, index) => {
-      const column = document.createElement('div')
-      column.className = 'aa-column'
-      element.append(column)
-      const editor = createEditor(column, {
-        value,
-        readOnly,
-        atoms: options.atoms,
-        drawEquation: options.drawEquation,
-        // Files are the page's: they land on its line beside the columns, from where they are carried in.
-        blockPlaceholder: '',
-        onChange(next) {
-          values[index] = next
-          const written = writeColumns(values)
-          element.dataset.source = written
-          element.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, detail: { source: written } }))
-        },
+    let values = readColumns(source)
+    let editors: Editor[] = []
+    const changed = () => {
+      const written = writeColumns(values)
+      element.dataset.source = written
+      element.dispatchEvent(new CustomEvent('aa-atom-change', { bubbles: true, detail: { source: written } }))
+    }
+    const build = () => {
+      editors.forEach(editor => { columnEditors.delete(editor); editor.destroy() })
+      element.querySelectorAll(':scope > .aa-column').forEach(column => column.remove())
+      element.style.setProperty('--aa-columns', String(values.length))
+      editors = values.map((value, index) => {
+        const column = document.createElement('div')
+        column.className = 'aa-column'
+        element.append(column)
+        const editor = createEditor(column, {
+          value,
+          readOnly,
+          atoms: options.atoms,
+          drawEquation: options.drawEquation,
+          // Files are the page's: they land on its line beside the columns, from where they are carried in.
+          blockPlaceholder: '',
+          onChange(next) { values[index] = next; changed() },
+        })
+        columnEditors.add(editor)
+        return editor
       })
-      columnEditors.add(editor)
-      return editor
-    })
-    return () => editors.forEach(editor => { columnEditors.delete(editor); editor.destroy() })
+    }
+    // A block carried out of its column to another's side: it stands there as a column of its own,
+    // and the column it left goes when nothing is left in it. Pictures are put in order sideways.
+    const carry = (event: Event) => {
+      const { from, column, at } = (event as CustomEvent<{ from: number; column: number; at: 'start' | 'end' }>).detail
+      const source = (event.target as HTMLElement).closest('.aa-column')
+      const origin = Array.from(element.querySelectorAll(':scope > .aa-column')).indexOf(source as Element)
+      if (origin < 0 || column === origin) return
+      event.stopPropagation()
+      const blocks = parseBlocks(values[origin]), block = blocks[from]
+      if (!block) return
+      const rest = serialize(blocks.filter((_, index) => index !== from))
+      const next = values.map((value, index) => (index === origin ? rest : value))
+      next.splice(at === 'start' ? column : column + 1, 0, block.source)
+      values = next.filter(value => value.trim())
+      build()
+      changed()
+    }
+    element.addEventListener('aa-column-carry', carry)
+    build()
+    return () => { element.removeEventListener('aa-column-carry', carry); editors.forEach(editor => { columnEditors.delete(editor); editor.destroy() }) }
   }
   const drawn = new Map<HTMLElement, (() => void) | void>()
   const drawAtom = (name: string, source: string) => {
