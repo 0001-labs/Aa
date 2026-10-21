@@ -210,8 +210,20 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 
 /* An atom: one thing to the caret, drawn by the product or as its own words. */
 .aa-atom { -webkit-user-modify: read-only; cursor: default; }
-.aa-atom[data-atom="image"] { display: inline-block; max-width: 100%; vertical-align: top; }
+.aa-atom[data-atom="image"] { position: relative; display: inline-block; max-width: 100%; vertical-align: top; }
 .aa-atom[data-atom="image"] img { display: block; max-width: 100%; height: auto; border-radius: var(--aa-picture-radius, var(--ds-radius, calc(4px * var(--aa-sf)))); }
+/* A picture is its own size, up to sixteen squares, until it is given a width; then that many whole
+   squares, never wider than its line. */
+.aa-atom[data-atom="image"]:not([data-width]) { max-width: min(100%, calc(var(--aa-picture-default, 16) * var(--aa-unit))); }
+.aa-atom[data-atom="image"][data-width] { width: calc(var(--aa-picture-width) * var(--aa-unit)); }
+.aa-atom[data-atom="image"][data-width] img { width: 100%; }
+/* The grip on its end edge, seen while the pointer is over the picture or it is being sized: a short
+   bar a square in from the edge, pulled sideways, in whole squares. */
+.aa-picture-grip { position: absolute; top: 50%; inset-inline-end: calc(6px * var(--aa-sf)); width: calc(4px * var(--aa-sf)); height: min(40%, calc(2 * var(--aa-unit))); border-radius: calc(2px * var(--aa-sf)); background: rgb(0 0 0 / 0.55); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.8); cursor: ew-resize; opacity: 0; transform: translateY(-50%); transition: opacity 120ms ease-out; touch-action: none; }
+.aa-atom[data-atom="image"]:hover .aa-picture-grip, .aa-atom[data-atom="image"][data-sizing] .aa-picture-grip { opacity: 1; }
+.aa-block[data-readonly="true"] .aa-picture-grip { display: none; }
+@media (hover: none) { .aa-picture-grip { display: none; } }
+@media (prefers-reduced-motion: reduce) { .aa-picture-grip { transition: none; } }
 
 /* Controls share the page's square. */
 .aa-controls {
@@ -742,6 +754,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-drop-line.aa-drop-side[data-swap] { background: none; box-shadow: inset 0 0 0 calc(2px * var(--aa-sf)) var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight))); border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); }
 
 /* Pictures in columns fill their column, a square apart down it, as Notion lays out a set of pictures. */
-.aa-column .aa-atom:has(> img),
-.aa-column .aa-atom[data-atom="image"] { display: block; width: 100%; }
+.aa-column .aa-atom:has(> img):not([data-width]),
+.aa-column .aa-atom[data-atom="image"]:not([data-width]) { display: block; width: 100%; max-width: 100%; }
+.aa-column .aa-atom[data-atom="image"][data-width] { display: block; }
 .aa-column .aa-atom > img { width: 100%; }

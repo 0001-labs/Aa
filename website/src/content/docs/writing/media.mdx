@@ -13,6 +13,16 @@ A picture is written as a Markdown image, `![caption](address)`, and drawn in pl
 
 A picture's caption is its alt text. Write under the picture to change it; the Markdown follows. A picture without one says "Add a caption" where it would be.
 
+## Size
+
+A picture is its own size, up to sixteen squares wide, until it is given a width of its own. Rest the pointer on it and a grip shows on its end edge: pull it, and the picture is a whole number of squares wide, from four to as many as its line holds. Let go, and the width is written into the Markdown as the picture's title, one step to undo:
+
+```md
+![A mountain reflected in a still lake](lake.jpg "w24")
+```
+
+A double press on the grip gives the picture back its own size. In [columns](/writing/columns/) a picture without a width fills its column.
+
 ## Sound and film
 
 An image whose address ends in `mp4`, `webm` or `mov` is drawn as a film, and one ending in `mp3`, `wav`, `ogg` or `m4a` as sound, each with the browser's controls. A data address of an audio or video type is drawn the same way.

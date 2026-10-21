@@ -5,7 +5,7 @@
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, serialize, writeColumns, type AtomSyntax, type Block, type TextColor } from './markdown'
+import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, readPicture, serialize, writeColumns, writePicture, type AtomSyntax, type Block, type TextColor } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
@@ -32,11 +32,65 @@ export type Atom = AtomSyntax & {
   insert?: { label: string; icon: string; source: string; keywords?: string }
 }
 
-/** A picture drawn as itself. */
+/** The narrowest a picture is sized to, in squares. */
+const PICTURE_MIN = 4
+
+/** One square in pixels where it is drawn, at the page's scale. */
+function squareIn(element: HTMLElement): number {
+  const probe = document.createElement('span')
+  probe.style.cssText = 'position:absolute;visibility:hidden;width:var(--aa-unit, 20px)'
+  element.append(probe)
+  const width = probe.getBoundingClientRect().width
+  probe.remove()
+  return width || 20
+}
+
+/**
+ * The grip on a picture's end edge: pulled, the picture is a whole number of squares wide, from four
+ * to as many as its line holds, and let go, its width is written into its Markdown as one step to undo
+ * (`aa-atom-source`, handed to the editor). A double press gives the picture back its own size.
+ */
+function pictureGrip(element: HTMLElement, alt: string, src: string, width: number | null) {
+  const grip = document.createElement('span')
+  grip.className = 'aa-picture-grip'
+  grip.setAttribute('data-aa-interactive', '')
+  grip.setAttribute('role', 'separator')
+  grip.setAttribute('aria-orientation', 'vertical')
+  grip.setAttribute('aria-label', 'Picture width')
+  grip.contentEditable = 'false'
+  const write = (squares: number | null) => element.dispatchEvent(new CustomEvent('aa-atom-source', { bubbles: true, detail: { source: writePicture(alt, src, squares) } }))
+  grip.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || element.closest('.aa-block')?.getAttribute('data-readonly') === 'true') return
+    event.preventDefault(); event.stopPropagation()
+    const unit = squareIn(element)
+    const start = event.clientX, from = element.getBoundingClientRect().width
+    const line = (element.closest('.aa-block') as HTMLElement | null)?.clientWidth ?? from
+    const most = Math.max(PICTURE_MIN, Math.floor(line / unit))
+    let squares = Math.round(from / unit)
+    grip.setPointerCapture(event.pointerId)
+    element.setAttribute('data-sizing', '')
+    const move = (moved: PointerEvent) => {
+      squares = Math.min(most, Math.max(PICTURE_MIN, Math.round((from + moved.clientX - start) / unit)))
+      element.style.setProperty('--aa-picture-width', String(squares))
+      element.setAttribute('data-width', String(squares))
+    }
+    const up = () => {
+      grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up)
+      element.removeAttribute('data-sizing')
+      if (squares !== width) write(squares)
+    }
+    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up)
+  })
+  grip.addEventListener('dblclick', event => { event.preventDefault(); event.stopPropagation(); if (width !== null) write(null) })
+  element.append(grip)
+}
+
+/** A picture drawn as itself, as wide as its Markdown says in squares, or its own size up to sixteen. */
 export const imageAtom: Atom = {
   ...IMAGE,
   draw(element, source) {
-    const [, alt = '', src = ''] = /^!\[([^\]]*)\]\(([^)]*)\)$/.exec(source) ?? []
+    const { alt, src, width } = readPicture(source)
+    if (width) { element.dataset.width = String(width); element.style.setProperty('--aa-picture-width', String(width)) }
     const extension = src.split(/[?#]/)[0].split('.').pop()?.toLowerCase()
     if (/^data:(audio|video)\//.test(src) || (extension && /^(mp4|webm|mov|mp3|wav|ogg|m4a)$/.test(extension))) {
       const media = document.createElement(/^data:video\//.test(src) || /^(mp4|webm|mov)$/.test(extension ?? '') ? 'video' : 'audio')
@@ -47,6 +101,7 @@ export const imageAtom: Atom = {
       const image = document.createElement('img')
       image.src = src; image.alt = alt; image.loading = 'lazy'; image.draggable = false
       element.append(image)
+      pictureGrip(element, alt, src, width)
     }
     const caption = document.createElement('span'); caption.className = 'aa-caption'; caption.textContent = alt; caption.contentEditable = 'true'; caption.dataset.placeholder = 'Add a caption'; element.append(caption)
   },
@@ -1088,6 +1143,26 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     options.onChange?.(toMarkdown(blocks))
     host.dispatchEvent(new Event('aa-change'))
   }
+  /** A picture sized on its grip: its own source within its block written again, as one step of undo. */
+  const onAtomSource = (event: Event) => {
+    const source = (event as CustomEvent<{ source?: unknown }>).detail?.source
+    const atom = (event.target as HTMLElement | null)?.closest?.('.aa-atom') as HTMLElement | null
+    const element = atom?.closest('.aa-block') as HTMLElement | null
+    if (destroyed || readOnly || typeof source !== 'string' || !atom || !element || element.parentElement !== host) return
+    event.stopPropagation()
+    const index = elements().indexOf(element)
+    if (index < 0) return
+    atom.dataset.source = source
+    const next = [...blocks]
+    next[index] = { ...blocks[index], source: readBlock(element) }
+    const { blocks: drawn } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, next[index].source)
+    clearBlocks()
+    syncDom(renumber(drawn))
+    const at = { block: index, offset: 0 }
+    history.record(snapshot(at, at), 'edit')
+    options.onChange?.(toMarkdown(blocks))
+    host.dispatchEvent(new Event('aa-change'))
+  }
   /** An atom that had the keys gives them back: the caret goes on to the start of the block after it, or back to the end of the one before. */
   const onAtomLeave = (event: Event) => {
     const forward = (event as CustomEvent<{ forward?: unknown }>).detail?.forward !== false
@@ -1373,6 +1448,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   host.addEventListener('drop', onDrop)
   host.addEventListener('paste', onPaste)
   host.addEventListener('aa-atom-change', onAtomChange)
+  host.addEventListener('aa-atom-source', onAtomSource)
   host.addEventListener('aa-atom-leave', onAtomLeave)
   host.addEventListener('aa-atom-prompt', onAtomPrompt)
   host.addEventListener('compositionstart', onCompositionStart)
@@ -1540,6 +1616,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       host.removeEventListener('drop', onDrop)
       host.removeEventListener('paste', onPaste)
       host.removeEventListener('aa-atom-change', onAtomChange)
+      host.removeEventListener('aa-atom-source', onAtomSource)
       host.removeEventListener('aa-atom-leave', onAtomLeave)
       host.removeEventListener('aa-atom-prompt', onAtomPrompt)
       asking?.close()

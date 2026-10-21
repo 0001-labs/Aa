@@ -257,7 +257,22 @@ export function atomPattern(name: string, pattern: RegExp, accept?: (match: RegE
 }
 
 /** A Markdown picture, `![name](address)`. */
-export const IMAGE = atomPattern('image', /!\[[^\]\n]*\]\([^\s()]+\)/)
+/**
+ * A picture, `![caption](address)`, with its width in squares as the image's title where it has one,
+ * `![caption](address "w12")`: a title every Markdown reader takes, so the picture reads anywhere.
+ */
+export const IMAGE = atomPattern('image', /!\[[^\]\n]*\]\([^\s()]+(?: "w\d+")?\)/)
+
+/** A picture's source read: its caption, address and width in squares (none where it has no width of its own). */
+export function readPicture(source: string): { alt: string; src: string; width: number | null } {
+  const [, alt = '', src = '', width] = /^!\[([^\]]*)\]\(([^\s)]*)(?: "w(\d+)")?\)$/.exec(source) ?? []
+  return { alt, src, width: width ? Number(width) : null }
+}
+
+/** A picture's source written: its width in squares as the title, or none. */
+export function writePicture(alt: string, src: string, width: number | null): string {
+  return `![${alt}](${src}${width ? ` "w${width}"` : ''})`
+}
 export const EQUATION = atomPattern('equation', /\$(?!\$)(?:\\.|[^$\n])+\$/)
 
 /** The atoms an editor reads unless it is given others. */
