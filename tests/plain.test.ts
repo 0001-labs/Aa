@@ -13,3 +13,15 @@ describe('plain editor', () => {
     editor.destroy()
   })
 })
+
+it('works in another document (a frame), making its block there', () => {
+  const other = document.implementation.createHTMLDocument('frame')
+  const host = other.createElement('h1')
+  host.textContent = 'Blue Raft'
+  other.body.append(host)
+  const editor = createPlainEditor(host)
+  const block = host.querySelector('.aa-block')!
+  expect(block.ownerDocument).toBe(other)
+  expect(editor.value).toBe('Blue Raft')
+  editor.destroy()
+})

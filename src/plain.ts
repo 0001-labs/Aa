@@ -8,7 +8,8 @@ export type PlainEditorOptions = {
 
 /** A single plain-text block, with native editing and Aa's rounded selection. */
 export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions = {}) {
-  const block = document.createElement('div')
+  // Made in the host's own document, so the editor works in a frame too.
+  const block = host.ownerDocument.createElement('div')
   block.className = 'aa-block'
   block.contentEditable = options.readOnly ? 'false' : 'plaintext-only'
   block.spellcheck = false

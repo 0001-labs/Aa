@@ -60,9 +60,11 @@ function roundedPolygon(input: Point[], radius: number): string {
 }
 
 export function paintSelection(host: HTMLElement): () => void {
+  // The host's own document and window: an editor in a frame (Team CMS's page editor) selects there, not in the page that made it.
+  const doc = host.ownerDocument, view = doc.defaultView ?? window
   let frame = 0, stopped = false, composing = false
   const painted = new Set<HTMLElement>()
-  const forcedColors = window.matchMedia('(forced-colors: active)')
+  const forcedColors = view.matchMedia('(forced-colors: active)')
   const clear = () => {
     for (const block of painted) {
       block.removeAttribute('data-aa-selection')
@@ -76,17 +78,17 @@ export function paintSelection(host: HTMLElement): () => void {
   const draw = () => {
     frame = 0
     clear()
-    const selection = window.getSelection()
+    const selection = view.getSelection()
     if (stopped || composing || forcedColors.matches || !selection?.rangeCount || selection.isCollapsed || !host.contains(selection.anchorNode) || !host.contains(selection.focusNode)) return
     const selected = selection.getRangeAt(0)
     for (const block of Array.from(host.children) as HTMLElement[]) {
       if (!block.classList.contains('aa-block') || block.dataset.kind === 'table' || !selected.intersectsNode(block)) continue
-      const range = document.createRange()
+      const range = doc.createRange()
       range.selectNodeContents(block)
       if (selected.compareBoundaryPoints(Range.START_TO_START, range) > 0) range.setStart(selected.startContainer, selected.startOffset)
       if (selected.compareBoundaryPoints(Range.END_TO_END, range) < 0) range.setEnd(selected.endContainer, selected.endOffset)
       if (range.collapsed || typeof range.getClientRects !== 'function') continue
-      const box = block.getBoundingClientRect(), style = getComputedStyle(block)
+      const box = block.getBoundingClientRect(), style = view.getComputedStyle(block)
       // Keep vertical writing and transformed/zoomed surfaces native.
       if (style.writingMode && style.writingMode !== 'horizontal-tb' || Math.abs(box.width - block.offsetWidth) > 1) continue
       const line = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2
@@ -106,33 +108,33 @@ export function paintSelection(host: HTMLElement): () => void {
       painted.add(block)
     }
   }
-  const schedule = () => { if (!stopped && !frame) frame = requestAnimationFrame(draw) }
+  const schedule = () => { if (!stopped && !frame) frame = view.requestAnimationFrame(draw) }
   const startComposition = () => { composing = true; clear() }
   const endComposition = () => { composing = false; schedule() }
-  const resize = new ResizeObserver(schedule)
+  const resize = new (view.ResizeObserver ?? ResizeObserver)(schedule)
   resize.observe(host)
-  const changes = new MutationObserver(schedule)
+  const changes = new (view.MutationObserver ?? MutationObserver)(schedule)
   changes.observe(host, { childList: true, subtree: true, characterData: true })
-  document.addEventListener('selectionchange', schedule)
-  document.addEventListener('scroll', schedule, true)
-  window.addEventListener('resize', schedule)
+  doc.addEventListener('selectionchange', schedule)
+  doc.addEventListener('scroll', schedule, true)
+  view.addEventListener('resize', schedule)
   host.addEventListener('compositionstart', startComposition)
   host.addEventListener('compositionend', endComposition)
   host.addEventListener('load', schedule, true)
-  document.fonts?.addEventListener('loadingdone', schedule)
+  doc.fonts?.addEventListener('loadingdone', schedule)
   forcedColors.addEventListener?.('change', schedule)
   return () => {
     stopped = true
-    cancelAnimationFrame(frame)
+    view.cancelAnimationFrame(frame)
     clear()
     resize.disconnect(); changes.disconnect()
-    document.removeEventListener('selectionchange', schedule)
-    document.removeEventListener('scroll', schedule, true)
-    window.removeEventListener('resize', schedule)
+    doc.removeEventListener('selectionchange', schedule)
+    doc.removeEventListener('scroll', schedule, true)
+    view.removeEventListener('resize', schedule)
     host.removeEventListener('compositionstart', startComposition)
     host.removeEventListener('compositionend', endComposition)
     host.removeEventListener('load', schedule, true)
-    document.fonts?.removeEventListener('loadingdone', schedule)
+    doc.fonts?.removeEventListener('loadingdone', schedule)
     forcedColors.removeEventListener?.('change', schedule)
   }
 }
