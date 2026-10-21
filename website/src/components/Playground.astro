@@ -1,0 +1,47 @@
+---
+// The front page: the editor itself, every feature in one note, beside the Markdown it stores, and
+// two editors sharing one document. Run by the playground's own script (../playground.ts), so the
+// page and `vp run dev` are the same editor.
+---
+
+<div class="playground not-content" data-ds-not-prose>
+  <section>
+    <div class="bar"><button id="readonly" aria-pressed="false">Read only</button><button id="undo">Undo</button><button id="redo">Redo</button><button id="comments-beside" aria-pressed="false">Comments beside</button></div>
+    <aa-editor id="editor" placeholder="Write" toolbar></aa-editor>
+  </section>
+  <section class="side">
+    <div class="bar"><p class="name">What it stores</p></div>
+    <!-- The comments stand beside the text when asked; otherwise each thread opens at its words. -->
+    <aside id="comments" class="comments" hidden></aside>
+    <pre id="source"></pre>
+  </section>
+  <section>
+    <div class="bar"><p class="name">Shared editing</p><button id="share">Try two editors</button></div>
+    <div id="shared-first"></div>
+  </section>
+  <section><div class="bar"><p class="name">Second editor</p></div><div id="shared-second"></div></section>
+</div>
+
+<script>
+  import '../../../playground';
+</script>
+
+<style>
+  .playground { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(2 * var(--grid)); }
+  /* One column on a narrow screen; minmax(0, 1fr), so a diagram wider than the screen scrolls within itself. */
+  @media (max-width: 1100px) { .playground { grid-template-columns: minmax(0, 1fr); } }
+  .name { margin: 0; color: var(--ds-text-color); font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
+  .side { color: var(--ds-text-color-muted); }
+  aa-editor { display: block; min-height: calc(20 * var(--grid)); }
+  .comments { margin-bottom: calc(2 * var(--grid)); color: var(--ds-text-color); }
+  .comments[hidden] { display: none; }
+  pre { margin: 0; padding: 0; background: none; font-family: var(--typeface-mono); font-size: calc(13px * var(--sf, 1)); line-height: var(--grid); letter-spacing: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  /* A row of one square, its words and buttons on the lower sixteen. */
+  .bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 var(--grid); min-height: var(--grid); margin-bottom: var(--grid); line-height: calc(16px * var(--sf, 1)); white-space: nowrap; }
+  button { display: inline-block; height: var(--ds-control-height); padding: 0 calc(4px * var(--sf, 1)); border: 0; border-radius: var(--ds-radius); background: var(--ds-fill); color: inherit; font: inherit; line-height: var(--ds-control-height); cursor: pointer; }
+  button:hover { background: var(--ds-fill-hover); }
+  button[aria-pressed="true"] { background: var(--ds-accent-color); color: var(--ds-button-text-color-on-accent); }
+  button:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: 1px; }
+  /* The front page takes the width the editor and its Markdown need, with no On this page beside it. */
+  :global(:root:has(.playground)) { --sl-content-width: calc(56 * var(--grid)); }
+</style>

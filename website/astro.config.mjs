@@ -4,7 +4,7 @@ import starlight from "@astrojs/starlight";
 
 // Aa's documentation, drawn as Design system 1's is: the features down the left in groups, each
 // page a feature with the editor itself to try, and the Markdown it stores beside it.
-// Built into dist/, then copied into ../site, the playground on the front page (`vp run site:build`).
+// Built into dist/, then copied into ../site (`vp run site:build`); the front page is the editor itself.
 export default defineConfig({
   site: "https://aa.0001.dev",
   // Design system 1's root stylesheet and faces, copied with Sync 1 into the package's public/ds1.
@@ -46,6 +46,8 @@ export default defineConfig({
       },
       customCss: ["./src/styles/custom.css"],
       sidebar: [
+        // The editor itself first, on the front page.
+        { label: "Editor", link: "/" },
         {
           label: "Start here",
           items: [
