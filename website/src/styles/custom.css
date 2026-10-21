@@ -16,7 +16,7 @@
   --ds1-docs-sidebar-bg: light-dark(#fafafa, #1f1f1f);
 
   --sl-content-width: calc(36 * var(--grid));
-  --sl-sidebar-width: calc(12 * var(--grid));
+  --sl-sidebar-width: calc(8 * var(--grid));
   --sl-nav-height: calc(3 * var(--grid));
   --sl-text-code: calc(13px * var(--sf, 1));
   --sl-line-height: 1.4286;
@@ -62,7 +62,8 @@ body {
 /* Design system 1's root sheet has a .header of its own, a square item; Starlight's header is the page's width. */
 header.header { box-sizing: border-box; display: block; width: 100%; height: calc(3 * var(--grid)); border-bottom: 0; box-shadow: inset 0 -1px var(--ds1-docs-divider); padding: 0 var(--grid); }
 .sidebar-pane { border-inline-end: 0; box-shadow: inset -1px 0 var(--ds1-docs-divider); }
-.sidebar-content { padding: 0; }
+.sidebar-content { padding: 0; height: 100%; }
+.sidebar-pane .sl-scroll, .sidebar-pane > .sidebar-content { height: 100%; }
 
 /* The page's title is .ds-text--display (src/components/Heading.astro): 20 on two squares. */
 h1#_top {

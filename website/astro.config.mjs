@@ -4,11 +4,13 @@ import starlight from "@astrojs/starlight";
 
 // Aa's documentation, drawn as Design system 1's is: the features down the left in groups, each
 // page a feature with the editor itself to try, and the Markdown it stores beside it.
-// Built into dist/, then copied into ../site with the playground under /playground/ (`vp run site:build`).
+// Built into dist/, then copied into ../site, the playground on the front page (`vp run site:build`).
 export default defineConfig({
   site: "https://aa.0001.dev",
   // Design system 1's root stylesheet and faces, copied with Sync 1 into the package's public/ds1.
   publicDir: "../public",
+  // The front page is the editor itself, the playground; the old address goes to it.
+  redirects: { "/playground/": "/" },
   devToolbar: { enabled: false },
   vite: {
     // The examples run the editor from its own source, in ../src.
@@ -47,7 +49,7 @@ export default defineConfig({
         {
           label: "Start here",
           items: [
-            { label: "Overview", link: "/" },
+            { label: "Overview", slug: "start-here/overview" },
             { label: "Install", slug: "start-here/install" },
             { label: "React", slug: "start-here/react" },
             { label: "Design system 1", slug: "start-here/design-system-1" },
@@ -58,22 +60,22 @@ export default defineConfig({
           items: [
             { label: "Formatting", slug: "writing/formatting" },
             { label: "Links", slug: "writing/links" },
-            { label: "Headings and paragraphs", slug: "writing/headings" },
+            { label: "Headings", slug: "writing/headings" },
             { label: "Lists and boxes", slug: "writing/lists" },
             { label: "Quotes and code", slug: "writing/quotes-and-code" },
-            { label: "Callouts and toggles", slug: "writing/callouts" },
+            { label: "Callouts", slug: "writing/callouts" },
             { label: "Tables", slug: "writing/tables" },
             { label: "Columns", slug: "writing/columns" },
             { label: "Equations", slug: "writing/equations" },
-            { label: "Pictures and media", slug: "writing/media" },
+            { label: "Media", slug: "writing/media" },
           ],
         },
         {
           label: "Editing",
           items: [
             { label: "Toolbar", slug: "editing/toolbar" },
-            { label: "Slash and block menus", slug: "editing/menus" },
-            { label: "Selecting and moving", slug: "editing/selecting" },
+            { label: "Menus", slug: "editing/menus" },
+            { label: "Selecting", slug: "editing/selecting" },
             { label: "Undo", slug: "editing/undo" },
             { label: "Find and replace", slug: "editing/find" },
             { label: "Keyboard", slug: "editing/keyboard" },
@@ -83,8 +85,8 @@ export default defineConfig({
         {
           label: "AI",
           items: [
-            { label: "Asking AI", slug: "ai/asking" },
-            { label: "Correction while writing", slug: "ai/correction" },
+            { label: "Asking", slug: "ai/asking" },
+            { label: "Correction", slug: "ai/correction" },
           ],
         },
         {
@@ -98,7 +100,7 @@ export default defineConfig({
           label: "Diagrams",
           items: [
             { label: "Diagrams", slug: "diagrams/diagrams" },
-            { label: "Drawing on the board", slug: "diagrams/board" },
+            { label: "The board", slug: "diagrams/board" },
             { label: "The language", slug: "diagrams/language" },
           ],
         },
@@ -106,7 +108,7 @@ export default defineConfig({
           label: "Building",
           items: [
             { label: "Options", slug: "building/options" },
-            { label: "Methods and events", slug: "building/methods" },
+            { label: "Methods", slug: "building/methods" },
             { label: "Atoms", slug: "building/atoms" },
             { label: "Commands", slug: "building/commands" },
             { label: "Decorations", slug: "building/decorations" },
@@ -114,7 +116,6 @@ export default defineConfig({
             { label: "Plain text", slug: "building/plain-text" },
           ],
         },
-        { label: "Playground", link: "/playground/" },
       ],
     }),
   ],

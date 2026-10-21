@@ -2,7 +2,7 @@
   "name": "aa",
   "account_id": "ce6189d5ac975158991e207a3c4e1cd5",
   "compatibility_date": "2026-10-19",
-  // The documentation (website/) and the playground (index.html, under /playground/), built by
+  // The playground (index.html) on the front page and the documentation (website/) around it, built by
   // `vp run site:build` into site/, served as static assets.
   "assets": { "directory": "./site" },
   "routes": [{ "pattern": "aa.0001.dev", "custom_domain": true }]
