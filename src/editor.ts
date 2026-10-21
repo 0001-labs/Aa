@@ -212,20 +212,21 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         return editor
       })
     }
-    // A block carried out of its column to another's side: it stands there as a column of its own,
-    // and the column it left goes when nothing is left in it. Pictures are put in order sideways.
+    // A block carried out of its column, let go anywhere along the row: it stands in the place it was let go
+    // as a column of its own, and the column it left goes when nothing is left in it. Pictures are put in order sideways.
     const carry = (event: Event) => {
-      const { from, column, at } = (event as CustomEvent<{ from: number; column: number; at: 'start' | 'end' }>).detail
-      const source = (event.target as HTMLElement).closest('.aa-column')
-      const origin = Array.from(element.querySelectorAll(':scope > .aa-column')).indexOf(source as Element)
-      if (origin < 0 || column === origin) return
+      const { from, slot } = (event as CustomEvent<{ from: number; slot: number }>).detail
+      const columns = Array.from(element.querySelectorAll(':scope > .aa-column'))
+      const origin = columns.indexOf((event.target as HTMLElement).closest('.aa-column') as Element)
+      if (origin < 0) return
       event.stopPropagation()
       const blocks = parseBlocks(values[origin]), block = blocks[from]
       if (!block) return
       const rest = serialize(blocks.filter((_, index) => index !== from))
-      const next = values.map((value, index) => (index === origin ? rest : value))
-      next.splice(at === 'start' ? column : column + 1, 0, block.source)
-      values = next.filter(value => value.trim())
+      // The place among the other columns, its own left out when nothing else is in it.
+      const next = rest.trim() ? values.map((value, index) => (index === origin ? rest : value)) : values.filter((_, index) => index !== origin)
+      next.splice(Math.max(0, Math.min(slot, next.length)), 0, block.source)
+      values = next
       build()
       changed()
     }

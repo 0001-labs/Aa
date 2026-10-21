@@ -51,8 +51,8 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   root.append(sideLine)
   /** The block's side the carried block would stand at, while it is over one. */
   let side: { index: number; at: 'start' | 'end' } | null = null
-  /** In columns: the other column the carried block would stand beside, and at which side. */
-  let across: { column: number; at: 'start' | 'end' } | null = null
+  /** In columns: where among the columns the carried block would stand as a column of its own. */
+  let across: { slot: number } | null = null
   const children = () => Array.from(host.children) as HTMLElement[]
   const movable = () => !editor.readOnly && options.menus !== false
   host.toggleAttribute('data-movable', options.menus !== false)
@@ -119,7 +119,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       if (result.reason === 'DROP' && beside && group.length <= 1 && movable() && placeBeside(from, beside.index, beside.at)) return
       // Out of its column, beside another: the columns move it, as one step to undo of the page around them.
       if (result.reason === 'DROP' && over && group.length <= 1 && movable()) {
-        host.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from, column: over.column, at: over.at } }))
+        host.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from, slot: over.slot } }))
         return
       }
       if (result.reason === 'DROP' && to !== undefined && movable()) {
@@ -166,23 +166,35 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   }
 
   /**
-   * In a column of columns, over another column: the line down that column's nearer side, where the
-   * carried block would stand as a column of its own. False anywhere else, the column's own blocks included.
+   * In a column of columns, carried out of its own column anywhere along the row (over another
+   * column, in the gap between two, or past either end): the line where it would stand as a column
+   * of its own, halfway across the gap it would land in, and that place among the columns. A block
+   * alone in its column leaves it, so its column is not counted and its own place shows no line.
+   * False over its own column, where it moves up and down as any block does.
    */
   function acrossColumns(event: PointerEvent): boolean {
     across = null
     const row = host.parentElement
     if (!host.classList.contains('aa-column') || !row?.classList.contains('aa-columns')) return false
-    const columns = Array.from(row.children).filter(child => child.classList.contains('aa-column')) as HTMLElement[]
+    const unit = parseFloat(getComputedStyle(host).getPropertyValue('--aa-unit')) || 20
     const box = row.getBoundingClientRect()
-    if (event.clientY < box.top || event.clientY > box.bottom) return false
-    const column = columns.findIndex(element => { const rect = element.getBoundingClientRect(); return event.clientX >= rect.left && event.clientX <= rect.right })
-    if (column < 0 || columns[column] === host) return false
-    const rect = columns[column].getBoundingClientRect()
-    const at = event.clientX < rect.left + rect.width / 2 ? 'start' : 'end'
-    across = { column, at }
+    if (event.clientY < box.top - unit || event.clientY > box.bottom + unit) return false
+    const own = host.getBoundingClientRect()
+    if (event.clientX >= own.left && event.clientX <= own.right) return false
+    const columns = Array.from(row.children).filter(child => child.classList.contains('aa-column')) as HTMLElement[]
+    const origin = columns.indexOf(host)
+    const alone = host.querySelectorAll(':scope > .aa-block').length <= 1
+    const others = alone ? columns.filter(column => column !== host) : columns
+    const rects = others.map(column => column.getBoundingClientRect())
+    const slot = rects.filter(rect => rect.left + rect.width / 2 < event.clientX).length
+    sideLine.hidden = true
+    // Let go where it already stands, nothing moves: no line.
+    if (alone && slot === origin) return true
+    across = { slot }
+    const gap = rects.length > 1 ? rects[1].left - rects[0].right : 2 * unit
+    const x = slot === 0 ? rects[0].left - gap / 2 : slot === rects.length ? rects[rects.length - 1].right + gap / 2 : (rects[slot - 1].right + rects[slot].left) / 2
     side = null
-    sideLine.style.left = `${at === 'start' ? rect.left : rect.right}px`
+    sideLine.style.left = `${x}px`
     sideLine.style.top = `${box.top}px`
     sideLine.style.height = `${box.height}px`
     sideLine.style.width = ''

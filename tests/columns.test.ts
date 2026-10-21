@@ -44,7 +44,7 @@ describe('columns', () => {
     const editor = createEditor(host, { value: pictures })
     const drawn = host.querySelector<HTMLElement>('.aa-atom.aa-columns')!
     const first = drawn.querySelector<HTMLElement>(':scope > .aa-column')!
-    first.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from: 0, column: 1, at: 'end' } }))
+    first.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from: 0, slot: 1 } }))
     expect(readColumns(parseBlocks(editor.value)[0].source)).toEqual(['![A cup](cup.jpg)', '![A lake](lake.jpg)'])
     expect(drawn.querySelectorAll(':scope > .aa-column')).toHaveLength(2)
     // One step to undo.
@@ -59,7 +59,7 @@ describe('columns', () => {
     document.body.append(host)
     const editor = createEditor(host, { value: writeColumns(['![A lake](lake.jpg)\n\nUnder the lake.', '![A cup](cup.jpg)']) })
     const first = host.querySelector<HTMLElement>('.aa-atom.aa-columns > .aa-column')!
-    first.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from: 0, column: 1, at: 'start' } }))
+    first.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from: 0, slot: 1 } }))
     expect(readColumns(parseBlocks(editor.value)[0].source)).toEqual(['Under the lake.', '![A lake](lake.jpg)', '![A cup](cup.jpg)'])
     editor.destroy()
     host.remove()
