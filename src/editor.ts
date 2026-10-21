@@ -85,12 +85,21 @@ function pictureGrip(element: HTMLElement, alt: string, src: string, width: numb
   element.append(grip)
 }
 
+/**
+ * A drawn picture made sizable: as wide as its Markdown says in squares (`![caption](address "w12")`),
+ * or its own size up to sixteen, with the grip that sizes it. For a product's own picture atom too.
+ */
+export function sizePicture(element: HTMLElement, source: string) {
+  const { alt, src, width } = readPicture(source)
+  if (width) { element.dataset.width = String(width); element.style.setProperty('--aa-picture-width', String(width)) }
+  pictureGrip(element, alt, src, width)
+}
+
 /** A picture drawn as itself, as wide as its Markdown says in squares, or its own size up to sixteen. */
 export const imageAtom: Atom = {
   ...IMAGE,
   draw(element, source) {
-    const { alt, src, width } = readPicture(source)
-    if (width) { element.dataset.width = String(width); element.style.setProperty('--aa-picture-width', String(width)) }
+    const { alt, src } = readPicture(source)
     const extension = src.split(/[?#]/)[0].split('.').pop()?.toLowerCase()
     if (/^data:(audio|video)\//.test(src) || (extension && /^(mp4|webm|mov|mp3|wav|ogg|m4a)$/.test(extension))) {
       const media = document.createElement(/^data:video\//.test(src) || /^(mp4|webm|mov)$/.test(extension ?? '') ? 'video' : 'audio')
@@ -101,7 +110,7 @@ export const imageAtom: Atom = {
       const image = document.createElement('img')
       image.src = src; image.alt = alt; image.loading = 'lazy'; image.draggable = false
       element.append(image)
-      pictureGrip(element, alt, src, width)
+      sizePicture(element, source)
     }
     const caption = document.createElement('span'); caption.className = 'aa-caption'; caption.textContent = alt; caption.contentEditable = 'true'; caption.dataset.placeholder = 'Add a caption'; element.append(caption)
   },
