@@ -27,7 +27,7 @@ Nothing is drawn beside a block. Enter starts a new one, `/` opens the styles, a
 
 `reordering` and `placing` default to `true` in `EditorOptions` and can be changed on the editor at runtime. `editor.reordering = false` disables same-flow block shuffling by pointer, keyboard and block commands. `editor.placing = false` disables side/column destinations and external file-drop placement; typing, paste, slash commands and explicit file insertion stay available. Disabling either cancels an active drag and reaches nested column and tab editors. Menus and toolbar are configured separately.
 
-An atom's `insert.preview(element)` optionally draws a specimen beside its highlighted slash command. Return a cleanup function for listeners or animation; Aa calls it when the highlighted command changes, the menu closes or the editor is destroyed. Preview rendering and library styling belong to the consumer.
+An atom's `insert.preview(element, { input })` optionally draws a specimen beside its highlighted slash command. Return a cleanup function for listeners or animation; Aa calls it when the highlighted command changes, the menu closes or the editor is destroyed. The input is `pointer` when hovering a command (including the already active one), or `keyboard` when opening or stepping through commands. Preview rendering and library styling belong to the consumer.
 
 `selection()`, `selectRange()`, `replace()` and `transaction()` work in Markdown offsets. `decorate([{ from, to, className, label }], layer)` adds comments, matches or peer carets without changing Markdown. `stats()` returns word and character counts. Call `destroy()` to release listeners, menus and atom resources.
 

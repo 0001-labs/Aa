@@ -357,9 +357,10 @@ describe('the bar over selected words', () => {
 
 it('renders the active product command preview and cleans it on keyboard, hover and close', () => {
   const stops = [vi.fn(), vi.fn()]
+  const inputs: string[] = []
   const previews = ['Alpha', 'Beta'].map((label, index) => ({
     name: label.toLowerCase(), match: () => 0,
-    insert: { label: `Spec ${label}`, icon: 'text', source: label, preview: (element: HTMLElement) => { element.textContent = label; return stops[index] } },
+    insert: { label: `Spec ${label}`, icon: 'text', source: label, preview: (element: HTMLElement, context: { input: 'pointer' | 'keyboard' }) => { inputs.push(context.input); element.textContent = label; return stops[index] } },
   }))
   const e = setup('/spe', { atoms: previews })
   e.selectRange(4); e.replace(4, 4, 'c')
@@ -373,4 +374,16 @@ it('renders the active product command preview and cleans it on keyboard, hover 
   key('Escape')
   expect(document.querySelector('.aa-command-preview')).toBeNull()
   expect(stops[0]).toHaveBeenCalledTimes(2)
+  expect(inputs).toEqual(['keyboard', 'keyboard', 'pointer'])
+})
+
+it('restarts an already active command preview when its row is hovered', () => {
+  const preview = vi.fn((_element: HTMLElement, _context: { input: 'pointer' | 'keyboard' }) => vi.fn())
+  const e = setup('/spec', { atoms: [{ name: 'spec', match: () => 0, insert: { label: 'Spec', icon: 'text', source: 'Example', preview } }] })
+  e.selectRange(5); e.replace(5, 5, ' ')
+  const row = document.querySelector('[data-command="insert-spec"]')!
+  expect(preview).toHaveBeenLastCalledWith(expect.any(HTMLElement), { input: 'keyboard' })
+  row.dispatchEvent(new PointerEvent('pointerenter'))
+  expect(preview).toHaveBeenLastCalledWith(expect.any(HTMLElement), { input: 'pointer' })
+  expect(preview).toHaveBeenCalledTimes(2)
 })

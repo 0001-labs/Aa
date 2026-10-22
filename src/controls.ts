@@ -11,7 +11,7 @@ import { initTooltips } from './ds1/0-face/tooltips'
 export type ToolbarAction = { id: string; label: string; icon: string; shortcut?: string; run(editor: Editor): void }
 /** `ink`: one of the text colours its row's mark is drawn in. */
 /** `swatch`: a callout fill its row's mark is drawn as, a filled square. */
-export type Command = ToolbarAction & { keywords?: string; ink?: string; swatch?: CalloutColor; enabled?(editor: Editor): boolean; preview?(element: HTMLElement): void | (() => void) }
+export type Command = ToolbarAction & { keywords?: string; ink?: string; swatch?: CalloutColor; enabled?(editor: Editor): boolean; preview?(element: HTMLElement, context: { input: 'pointer' | 'keyboard' }): void | (() => void) }
 const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'paragraph', label: 'Text', icon: 'text' }, { kind: 'h1', label: 'Heading 1', icon: 'h1' },
   { kind: 'h2', label: 'Heading 2', icon: 'h2' }, { kind: 'h3', label: 'Heading 3', icon: 'h3' },
@@ -215,15 +215,15 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     preview.hidden = false
     preview.style.left = `${right + width <= view.left + view.width ? right : left}px`
     const height = preview.getBoundingClientRect().height
-    preview.style.top = `${Math.max(view.top, Math.min(box.top, view.top + view.height - height))}px`
+    preview.style.top = `${Math.max(view.top, Math.min(Math.round(box.top / unit) * unit, view.top + view.height - height))}px`
   }
-  const showPreview = () => {
+  const showPreview = (input: 'pointer' | 'keyboard' = 'keyboard', restart = false) => {
     const command = choices[active]
-    if (command === previewed) { positionPreview(); return }
+    if (command === previewed && !restart) { positionPreview(); return }
     clearPreview()
     if (!command?.preview) return
     previewed = command; preview.hidden = false; overlayRoot.append(preview)
-    stopPreview = command.preview(preview)
+    stopPreview = command.preview(preview, { input })
     positionPreview()
   }
   overlayRoot.append(menu, findBar)
@@ -339,7 +339,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       node.addEventListener('pointerenter', () => {
         active = index
         Array.from(list.children).forEach((row, at) => row.toggleAttribute('data-current', at === active))
-        showPreview()
+        showPreview('pointer', true)
       })
       return node
     }))
