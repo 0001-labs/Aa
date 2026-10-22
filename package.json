@@ -59,6 +59,8 @@
   "sideEffects": [
     "./src/element.ts",
     "./src/aa.css",
+    "./src/ds1/0-face/grid.ts",
+    "./src/ds1/0-face/constraint-panel.ts",
     "./dist/aa.js"
   ],
   "scripts": {
