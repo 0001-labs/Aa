@@ -504,8 +504,16 @@ body {
   width: var(--item-width);
   padding-left: calc(5px * var(--sf));
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
+}
+
+/* Cut words fade over the last square, never an ellipsis (0-face/cut-fade.ts marks them). */
+.item-text[data-cut="end"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+.item-text[data-cut="end"]:dir(rtl) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
 }
 
 .grouped-item {

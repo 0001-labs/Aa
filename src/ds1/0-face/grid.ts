@@ -1,5 +1,6 @@
 import { createLayoutInspector } from './layout-inspector';
 import { initGridFit } from './grid-fit';
+import { initConstraintShortcut } from './constraint-panel';
 
 /** The presses of one key, each within 800ms of the last, that toggle an overlay. */
 export const GRID_PRESSES = 5;
@@ -18,6 +19,8 @@ export function initGridShortcut(): void {
   root.setAttribute("data-ds-grid-ready", "");
   root.setAttribute("data-design-system", "1");
   initGridFit();
+  // Five presses of C, for the page's owner alone (constraint-panel.ts).
+  initConstraintShortcut();
 
   const overlay = document.createElement("div");
   overlay.setAttribute("data-ds-grid-overlay", "");
