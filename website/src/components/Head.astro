@@ -10,6 +10,8 @@ import Default from '@astrojs/starlight/components/Head.astro';
 <script>
   import '../../../src/aa.css';
   import { startScaling } from '../../../src/ds1/0-face/scaling';
+  // Design system 1's page inspection: five g show the grid, five l the layout, for everyone.
+  import '../../../src/ds1/0-face/grid';
   // Design system 1's scale, on before anything is drawn: a phone's first paint is already to scale.
   startScaling({ snap: 'layout' });
 </script>

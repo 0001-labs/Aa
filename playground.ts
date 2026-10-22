@@ -1,5 +1,7 @@
 import './src/aa.css'
 import { startScaling } from './src/ds1/0-face/scaling'
+// Design system 1's page inspection: five g show the grid, five l the layout, for everyone.
+import './src/ds1/0-face/grid'
 import { createEditor, defineAaEditor, imageAtom, memoryCommentStore, type AaEditorElement } from './src/index'
 import { diagramAtom } from './src/diagram'
 import { correct, prompt } from './playground-ai'

@@ -4,6 +4,9 @@
     "version": "0.3.0-alpha.28",
     "dirty": true,
     "files": {
+      "src/ds1/0-face/grid.ts": "e21f355524dd45ed9eb8b9e128da5c48dd0fbb5d1c6476c664ffcee2e9c72c2f",
+      "src/ds1/0-face/layout-inspector.ts": "ca9ce2b78b2e209331a7b27807d4d17b1d038654cf35bcdd348a7c32cab6136c",
+      "src/ds1/0-face/grid-fit.ts": "4c52a6b2f3c0cfaf5a47dba80cf4589c2370481bb4ea1f5fd1318c1f2d85cdaf",
       "public/ds1/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
       "public/ds1/component-metrics.css": "1c5c0a1b5e309598e78bd76d95af941688de2d1dcd3e4e14222bd48560ff04c4",
       "public/ds1/component-tokens.css": "384c5e5ae8ce14172f6268b33fe0bde0bc7f3463f2f31ed97365516e270907c9",

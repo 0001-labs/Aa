@@ -24,7 +24,8 @@
         "modules": [
           "scaling",
           "overlay-swipe",
-          "tooltips"
+          "tooltips",
+          "grid"
         ],
         "scriptsTo": "../../src/ds1",
         "prose": true
