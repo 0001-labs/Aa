@@ -173,7 +173,7 @@ The backdrop, three by two metres, hung before the doors open.
 
   'table-of-contents': {
     title: 'Table of contents',
-    hint: 'Open the contents, then press a heading to go to it. Edit a heading and the contents follows.',
+    hint: 'Press a heading in the contents to go to it. Edit a heading and the contents follows.',
     markdown: `<table_of_contents/>
 
 # The visit
@@ -194,7 +194,7 @@ Sign the book by the door.`,
   },
   'table-of-contents-empty': {
     title: 'Before the first heading',
-    hint: 'Open the contents, then turn the paragraph below into a heading.',
+    hint: 'Turn the paragraph below into a heading to add it to the contents.',
     markdown: '<table_of_contents/>\n\nA new section',
   },
 

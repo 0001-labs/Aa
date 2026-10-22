@@ -820,24 +820,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-column .aa-atom[data-atom="image"][data-width] { display: block; }
 .aa-column .aa-atom > img { width: 100%; }
 
-/* A contents block keeps the reference's quiet, outlined disclosure. Its
-   generated outline is prose on the editor's squares, never editable text. */
+/* Contents are always visible, drawn by the shared component. */
 :where(.aa-toc) { display: block; white-space: normal; }
-:where(.aa-toc summary) {
-  box-sizing: border-box;
-  display: block;
-  width: fit-content;
-  max-width: 100%;
-  padding: 0 calc(4px * var(--aa-sf));
-  border: 1px solid var(--aa-rule-color);
-  border-radius: var(--ds-radius, calc(4px * var(--aa-sf)));
-  color: var(--ds-text-color-muted, GrayText);
-  line-height: var(--aa-unit);
-  list-style: none;
-  cursor: pointer;
-  user-select: none;
-}
-:where(.aa-toc summary)::-webkit-details-marker { display: none; }
-:where(.aa-toc ds-table-of-contents) { --ds-toc-width: 100%; margin-block-start: calc(var(--aa-unit) / 2); }
-:where(.aa-toc summary:focus-visible) { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: 2px; }
+:where(.aa-toc ds-table-of-contents) { --ds-toc-width: 100%; }
 :where(.aa-toc-empty) { color: var(--ds-text-color-muted, GrayText); }

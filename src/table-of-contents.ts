@@ -9,17 +9,14 @@ configureI18n({ autoLoad: false, persist: false, langTarget: false })
 export function createTableOfContents(element: HTMLElement, blocks: () => readonly Block[], target: HTMLElement, navigate: (index: number) => void): () => void {
   element.classList.add('aa-toc')
   element.setAttribute('data-aa-interactive', '')
-  const disclosure = document.createElement('details')
-  const label = document.createElement('summary')
-  label.textContent = 'Table of contents'
   const navigation = document.createElement('ds-table-of-contents')
+  navigation.label = 'Table of contents'
   navigation.literal = true
   navigation.target = target
   const empty = document.createElement('span')
   empty.className = 'aa-toc-empty'
   empty.textContent = 'Add headings to show them here.'
-  disclosure.append(label, navigation, empty)
-  element.append(disclosure)
+  element.append(navigation, empty)
   const prefix = `aa-heading-${crypto.randomUUID()}`
   let nextId = 0
   let previous = ''
@@ -50,11 +47,9 @@ export function createTableOfContents(element: HTMLElement, blocks: () => readon
         })
         return link
       }))
-      navigation.hidden = !headings.length
       empty.hidden = !!headings.length
     }
     navigation.refresh?.()
   }
-  disclosure.addEventListener('toggle', () => navigation.refresh?.())
   return update
 }

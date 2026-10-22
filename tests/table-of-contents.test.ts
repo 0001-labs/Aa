@@ -12,7 +12,6 @@ const setup = (value = source, readOnly = false) => {
   return editor
 }
 const entries = () => [...host!.querySelectorAll<HTMLAnchorElement>('.aa-toc a')]
-const disclosure = () => host!.querySelector<HTMLDetailsElement>('.aa-toc details')!
 afterEach(() => { editor?.destroy(); host?.remove(); vi.restoreAllMocks() })
 
 describe('table of contents', () => {
@@ -26,29 +25,26 @@ describe('table of contents', () => {
     expect(parseBlocks('Words ' + marker)[0].kind).toBe('paragraph')
   })
 
-  it('starts collapsed, uses visible words and heading levels, and never saves the generated list', () => {
+  it('shows the contents directly, uses visible words and heading levels, and never saves the generated list', () => {
     const e = setup()
-    expect(disclosure().open).toBe(false)
+    expect(host!.querySelector('.aa-toc details, .aa-toc summary')).toBeNull()
+    expect(host!.querySelector('ds-table-of-contents')?.label).toBe('Table of contents')
     expect(entries().map(entry => entry.textContent)).toEqual(['Start', 'Details and links', 'Finish'])
     expect(entries().map(entry => entry.dataset.depth)).toEqual(['0', '1', '2'])
-    disclosure().open = true
     expect(e.value).toBe(source)
     expect(readBlock(host!.firstElementChild as HTMLElement)).toBe(marker)
   })
 
-  it('updates on edits, undo, redo, heading conversion and external changes while keeping the disclosure open', () => {
+  it('updates on edits, undo, redo, heading conversion and external changes', () => {
     const e = setup()
-    disclosure().open = true
     const start = e.value.indexOf('Start')
     e.replace(start, start + 5, 'Welcome')
     expect(entries()[0].textContent).toBe('Welcome')
-    expect(disclosure().open).toBe(true)
     e.undo(); expect(entries()[0].textContent).toBe('Start')
     e.redo(); expect(entries()[0].textContent).toBe('Welcome')
     e.value = `${marker}\n\nPlain text\n\n## New section`
     expect(entries().map(entry => entry.textContent)).toEqual(['New section'])
     expect(entries()[0].dataset.depth).toBe('0')
-    expect(disclosure().open).toBe(true)
   })
 
   it('follows browser input after composition, without touching the outline during composition', () => {
@@ -74,7 +70,6 @@ describe('table of contents', () => {
 
   it.each([false, true])('navigates duplicate headings by their own block, readOnly=%s', readOnly => {
     const e = setup(`${marker}\n\n# Same\n\n## Same`, readOnly)
-    disclosure().open = true
     const target = host!.children[2] as HTMLElement
     const scroll = vi.spyOn(target, 'scrollIntoView')
     entries()[1].click()
@@ -107,9 +102,7 @@ describe('table of contents', () => {
 
   it('keeps multiple contents blocks independent and headings as text, never HTML', () => {
     setup(`${marker}\n\n# <img src=x onerror=alert(1)>\n\n${marker}`)
-    const disclosures = host!.querySelectorAll('details')
-    disclosures[0].open = true
-    expect(disclosures[1].open).toBe(false)
+    expect(host!.querySelectorAll('ds-table-of-contents')).toHaveLength(2)
     expect(host!.querySelector('.aa-toc img')).toBeNull()
     expect(entries()).toHaveLength(2)
   })
