@@ -171,6 +171,33 @@ The backdrop, three by two metres, hung before the doors open.
 > Who writes the release notes?`,
   },
 
+  'table-of-contents': {
+    title: 'Table of contents',
+    hint: 'Open the contents, then press a heading to go to it. Edit a heading and the contents follows.',
+    markdown: `<table_of_contents/>
+
+# The visit
+
+Start at the front door.
+
+## Arrival
+
+Leave your coat in the hall.
+
+### Getting here
+
+The station is a short walk away.
+
+## Before you leave
+
+Sign the book by the door.`,
+  },
+  'table-of-contents-empty': {
+    title: 'Before the first heading',
+    hint: 'Open the contents, then turn the paragraph below into a heading.',
+    markdown: '<table_of_contents/>\n\nA new section',
+  },
+
   // Tables
   'tables-basic': {
     title: 'A table',

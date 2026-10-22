@@ -17,6 +17,7 @@ import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
 import { icons } from './icons'
+import { createTableOfContents } from './table-of-contents'
 import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from './marks'
 import { openPrompt, glisten, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 import { createCommentsView, type CommentsView } from './comments-view'
@@ -243,7 +244,27 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let stopControls = () => {}
   let transactionDepth = 0
   let historyProvider: { undo(): boolean; redo(): boolean } | null = null
-  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }, { name: 'tabs', match: () => 0, draw: (element, source) => drawTabs(element, source), insert: { label: 'Tabs', icon: 'tabs', keywords: 'tab pages sections panels', source: writeTabs([{ name: 'Tab 1', content: '' }, { name: 'Tab 2', content: '' }]) } }]
+  const contents = new Map<HTMLElement, () => void>()
+  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }, { name: 'toc', match: () => 0, draw: element => drawContents(element), insert: { label: 'Table of contents', icon: 'bullet', keywords: 'toc outline headings navigation', source: '<table_of_contents/>' } }, { name: 'tabs', match: () => 0, draw: (element, source) => drawTabs(element, source), insert: { label: 'Tabs', icon: 'tabs', keywords: 'tab pages sections panels', source: writeTabs([{ name: 'Tab 1', content: '' }, { name: 'Tab 2', content: '' }]) } }]
+  function drawContents(element: HTMLElement) {
+    const update = createTableOfContents(element, () => blocks, host, index => {
+      const target = elements()[index]
+      if (!target) return
+      target.scrollIntoView({ block: 'start', behavior: 'instant' })
+      // Read-only headings can receive focus without becoming editable.
+      if (readOnly) target.tabIndex = -1
+      target.focus({ preventScroll: true })
+      if (!readOnly) {
+        const pos = { block: index, offset: blocks[index].prefix }
+        setSelection(pos)
+        applyReveal({ anchor: pos, focus: pos })
+      }
+    })
+    contents.set(element, update)
+    return () => { contents.delete(element) }
+  }
+  const updateContents = () => { for (const update of contents.values()) update() }
+
   /**
    * Columns (`<columns>` around a `<column>` each) side by side, each column
    * an editor of its own on the same atoms, so it is written where it stands
@@ -551,6 +572,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const renderAll = () => {
     host.replaceChildren(...blocks.map(block => makeElement(block)))
+    updateContents()
     showPlaceholder()
     sweep()
   }
@@ -581,6 +603,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         try { selection!.setBaseAndExtent(saved.anchorNode, saved.anchorOffset!, saved.focusNode, saved.focusOffset!) } catch { /* the nodes moved on */ }
       }
     }
+    updateContents()
     showPlaceholder()
     sweep()
     marks?.draw()
@@ -778,6 +801,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const anchor = selection ? keep(selection.anchor) : end, focus = selection ? keep(selection.focus) : end
     blocks = next
     draw(elements()[index], blocks[index], revealFor(index, selection && { anchor, focus }))
+    updateContents()
     sweep()
     // Put back only where it was drawn away, and only while the editor has the focus, which setting a selection could otherwise take.
     const touched = !!selection && Math.min(selection.anchor.block, selection.focus.block) <= index && Math.max(selection.anchor.block, selection.focus.block) >= index
@@ -913,6 +937,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       const next = [...blocks]
       next[index] = { ...blocks[index], source: readBlock(blockElement) }
       blocks = next
+      updateContents()
       const pos = { block: index, offset: offsetIn(blockElement, atom, 1) }
       history.record(snapshot(pos, pos), 'type')
       options.onChange?.(toMarkdown(blocks)); host.dispatchEvent(new Event('aa-change'))

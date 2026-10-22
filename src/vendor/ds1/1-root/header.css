@@ -1,0 +1,171 @@
+@import "./component-metrics.css";
+@import "./overlay.css";
+
+/*
+ * A site header, as plain classes on native elements.
+ *
+ * One row of one square, a square of room around it: the brand at the start
+ * (at least twelve squares), the navigation in the middle of the row, centred
+ * on the page whatever the brand and the actions hold, the actions at the end:
+ * three columns, the two outer ones sharing what the middle leaves. Every link is
+ * one square high, a square apart, in the text's ink; the page you are on
+ * (`aria-current="page"`) stands on a hairline of the full ink, the others
+ * show a faint one under the pointer. Below thirty squares of width the
+ * navigation and the actions fold into a drawer: the menu button takes their
+ * place at the end of the row, and `0-face/header.ts` opens them over the page.
+ * The `ds-header` element draws the same parts.
+ *
+ *   ds-header              the row, a <header>
+ *   ds-header__brand       the mark or name, a link home; a picture in it is one square high
+ *   ds-header__nav         the links, a <nav>
+ *   ds-header__actions     buttons or links at the end
+ *   ds-header__toggle      the menu button: `.ds-button.ds-button--icon.ds-overlay__toggle`
+ *                          with a menu icon and a close icon, shown only on a narrow screen
+ *   ds-header--sticky      stays at the top of the page as it scrolls, on the paper
+ *
+ * Tokens: `--ds-header-brand` (the brand's width, at least twelve squares),
+ * `--ds-header-paper` (the sticky header's paper) and `--ds-header-line` (the
+ * hairline under a sticky header, none by default).
+ */
+
+.ds-header {
+  box-sizing: border-box;
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  align-items: center;
+  gap: calc(2 * var(--ds-unit));
+  min-width: 0;
+  margin: 0;
+  padding: var(--ds-unit);
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  text-transform: none;
+}
+
+.ds-header--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--ds-header-paper, var(--background, Canvas));
+  box-shadow: inset 0 -1px var(--ds-header-line, transparent);
+}
+
+.ds-header__brand {
+  box-sizing: border-box;
+  grid-column: 1;
+  justify-self: start;
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: var(--ds-header-brand, calc(12 * var(--ds-unit)));
+  align-items: center;
+  gap: calc(var(--ds-unit) / 2);
+  height: var(--ds-unit);
+  color: inherit;
+  font-family: var(--ds-typeface-medium);
+  font-weight: var(--ds-type-weight-bold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ds-header__brand :is(img, svg) {
+  display: block;
+  width: auto;
+  height: var(--ds-unit);
+}
+
+.ds-header__nav,
+.ds-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-unit);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.ds-header > .ds-header__nav {
+  grid-column: 2;
+  justify-content: center;
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.ds-header > .ds-header__actions {
+  grid-column: 3;
+  justify-self: end;
+  justify-content: flex-end;
+  gap: calc(var(--ds-unit) / 2);
+}
+
+/* A link in the navigation: the text's ink on a one-square line. */
+.ds-header__nav a {
+  display: block;
+  height: var(--ds-unit);
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: transparent;
+  text-underline-offset: calc(2px * var(--ds-sf));
+  white-space: nowrap;
+}
+
+.ds-header__nav a:hover {
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+.ds-header__nav a[aria-current]:not([aria-current="false"]) {
+  text-decoration-color: currentColor;
+}
+
+.ds-header__nav a:focus-visible,
+.ds-header__brand:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 1px;
+}
+
+/* The menu button stands at the end of the row, and only on a narrow screen.
+   Two classes, so the button's own display and margin do not undo it. */
+.ds-header > .ds-header__toggle {
+  display: none;
+  grid-column: 3;
+  justify-self: end;
+  /* Centred in the last square of the row, where the close button stands too. */
+  margin-inline-end: calc((var(--ds-unit) - var(--ds-control-height)) / 2);
+}
+
+@container (max-width: 599px) {
+  .ds-header > :is(.ds-header__nav, .ds-header__actions) {
+    display: none;
+  }
+
+  .ds-header > .ds-header__toggle {
+    display: inline-flex;
+  }
+
+  .ds-header > .ds-header__brand {
+    min-width: 0;
+  }
+}
+
+/* In the drawer the navigation is a column of one-square links, and the
+   actions a row one square below it. */
+.ds-overlay--screen :is(.ds-header__nav, .ds-header__actions) {
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 0;
+  margin: 0;
+}
+
+.ds-overlay--screen .ds-header__actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: calc(var(--ds-unit) / 2);
+}

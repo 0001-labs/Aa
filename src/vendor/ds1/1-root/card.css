@@ -1,0 +1,209 @@
+@import "./component-metrics.css";
+
+/*
+ * A card, as plain classes on native elements.
+ *
+ * A card holds one thing on a fill of its own: its name in the muted ink on
+ * one square, a title in the display size on lines of a square and a half, writing,
+ * and a picture of it (`ds-card__media`) a square below, which can run off
+ * the card's foot and end edge and be cut there, never framed. Its size is
+ * given in whole squares, its padding one square, its corners a card's
+ * (`--ds-radius-card`). A card that opens something is one press target, an
+ * `<a class="ds-card" href>`: the pointer tints it, keyboard focus rings it
+ * 2px inside and its picture rises a little. Ordinary writing still sits
+ * straight on the paper; a card is for a thing shown among others, as in a
+ * slide. The `ds-card` element draws the same parts.
+ *
+ *   ds-card                      the card; `data-tone` names a palette colour
+ *                                for its fill (the colour's pastel, dim in dark
+ *                                mode, from palette.css, which one.css imports),
+ *                                `ink` for the ink with the paper's words
+ *   ds-card--outlined            a 1px line and no fill
+ *   ds-card__label               its name, muted, on one square
+ *   ds-card__title               the title, display size, a square and a half a line
+ *   ds-card__body                writing, one square a line
+ *   ds-card__media               the picture, on the card's foot and a square below the words at
+ *                                least, so pictures side by side line up; square where it meets the card
+ *   ds-card__media--center       standing in the card's middle
+ *   ds-card__media--bleed        running on past the padding to the end edge
+ *
+ * Tokens: `--ds-card-width` and `--ds-card-height` (whole squares; the
+ * content's size by default), `--ds-card-padding` (one square), and
+ * `--ds-card-fill`, `--ds-card-ink` and `--ds-card-muted`.
+ */
+
+.ds-card {
+  --ds-card-fill: var(--ds-fill);
+  --ds-card-ink: var(--ds-text-color);
+  --ds-card-muted: var(--ds-text-color-muted);
+  --ds-card-padding: var(--ds-unit);
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: var(--ds-card-width, auto);
+  height: var(--ds-card-height, auto);
+  min-width: 0;
+  margin: 0;
+  /* In a squares bento the surface reaches a quarter square towards its neighbours (`--ds-bento-inset-*`, 0 elsewhere), and the padding grows by as much so what it holds stays on the squares. */
+  padding:
+    calc(var(--ds-card-padding) + var(--ds-bento-inset-top, 0px))
+    calc(var(--ds-card-padding) + var(--ds-bento-inset-end, 0px))
+    var(--ds-bento-inset-bottom, 0px)
+    calc(var(--ds-card-padding) + var(--ds-bento-inset-start, 0px));
+  overflow: hidden;
+  border-radius: var(--ds-radius-card);
+  background: var(--ds-card-fill);
+  color: var(--ds-card-ink);
+  font-family: var(--ds-typeface-regular);
+  font-size: var(--ds-type-size-default);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-card[hidden] {
+  display: none;
+}
+
+.ds-card--outlined {
+  --ds-card-fill: transparent;
+  box-shadow: inset 0 0 0 1px var(--ds-border-color);
+}
+
+.ds-card[data-tone="apple-green"] { --ds-card-fill: var(--one-apple-green-pastel); }
+.ds-card[data-tone="chartreuse"] { --ds-card-fill: var(--one-chartreuse-pastel); }
+.ds-card[data-tone="every-green"] { --ds-card-fill: var(--one-every-green-pastel); }
+.ds-card[data-tone="yellow"] { --ds-card-fill: var(--one-yellow-pastel); }
+.ds-card[data-tone="orange"] { --ds-card-fill: var(--one-orange-pastel); }
+.ds-card[data-tone="tuned-red"] { --ds-card-fill: var(--one-tuned-red-pastel); }
+.ds-card[data-tone="pink"] { --ds-card-fill: var(--one-pink-pastel); }
+.ds-card[data-tone="sharp-blue"] { --ds-card-fill: var(--one-sharp-blue-pastel); }
+.ds-card[data-tone="winning-blue"] { --ds-card-fill: var(--one-winning-blue-pastel); }
+.ds-card[data-tone="hysteric-blue"] { --ds-card-fill: var(--one-hysteric-blue-pastel); }
+.ds-card[data-tone="purple"] { --ds-card-fill: var(--one-purple-pastel); }
+.ds-card[data-tone="metal-green"] { --ds-card-fill: var(--one-metal-green-pastel); }
+.ds-card[data-tone="drip-yellow"] { --ds-card-fill: var(--one-drip-yellow-pastel); }
+.ds-card[data-tone="sand"] { --ds-card-fill: var(--one-sand-pastel); }
+.ds-card[data-tone="old-gold"] { --ds-card-fill: var(--one-old-gold-pastel); }
+.ds-card[data-tone="red-for-blood"] { --ds-card-fill: var(--one-red-for-blood-pastel); }
+.ds-card[data-tone="dark-red-variant"] { --ds-card-fill: var(--one-dark-red-variant-pastel); }
+.ds-card[data-tone="signal-red"] { --ds-card-fill: var(--one-signal-red-pastel); }
+.ds-card[data-tone="ink"] {
+  --ds-card-fill: var(--ds-black);
+  --ds-card-ink: var(--ds-white);
+  --ds-card-muted: color-mix(in srgb, var(--ds-white) 60%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-white) 8%, transparent);
+}
+
+/* Words: each line on the lower sixteen of its square. They keep their room
+   in a card of a set height; only the picture is cut at the foot. */
+.ds-card__label,
+.ds-card__title,
+.ds-card__body {
+  flex: none;
+}
+
+.ds-card__label {
+  margin: 0;
+  padding-top: calc(4px * var(--ds-sf, 1));
+  color: var(--ds-card-muted);
+  font: inherit;
+  line-height: var(--ds-type-lineheight-default, calc(16px * var(--ds-sf, 1)));
+}
+
+.ds-card__title {
+  margin: 0;
+  color: var(--ds-card-ink);
+  font-family: var(--ds-typeface-medium);
+  font-size: var(--ds-type-size-display);
+  font-weight: var(--ds-type-weight-bold);
+  /* A title that wraps keeps its lines together: a square and a half each. */
+  line-height: calc(1.5 * var(--ds-unit));
+  letter-spacing: calc(var(--ds-display-text-tracking, -0.4px) * var(--ds-sf, 1));
+  text-wrap: balance;
+}
+
+.ds-card__body {
+  margin: 0;
+  line-height: var(--ds-unit);
+}
+
+/* The picture stands on the card's foot, a square below the words at least: in a card taller than
+   its words the room goes above the picture, so the pictures of cards side by side (stretched to one
+   height by their row) stand on one level. */
+.ds-card__media {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-width: 0;
+  margin-top: auto;
+  padding-top: var(--ds-unit);
+}
+
+/* A picture has no corners of its own where it meets the card: on the foot the card's edge cuts it
+   square. Only a corner standing free inside the card, towards the words, keeps a picture's corner. */
+.ds-card .ds-card__media > :is(img, picture, video, canvas, svg) {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.ds-card__media--center {
+  justify-content: center;
+  margin-inline: calc(-1 * var(--ds-card-padding));
+}
+
+/* A picture that bleeds runs on to the end edge and stands on the foot, the space a taller card
+   leaves going above it (or, taller than its room, it starts below the words and the foot cuts it).
+   It has no corners of its own: the card's edges cut it square, and its corner towards the words
+   is square too, a picture or square never rounded where it meets the card. */
+.ds-card__media--bleed {
+  flex: 1 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: safe flex-end;
+  margin-inline-end: calc(-1 * (var(--ds-card-padding) + var(--ds-bento-inset-end, 0px)));
+  margin-block-end: calc(-1 * var(--ds-bento-inset-bottom, 0px));
+  --ds-radius: 0px;
+  --ds-image-end-radius: 0px;
+  --ds-image-foot-radius: 0px;
+}
+
+.ds-card__media > * {
+  flex: none;
+}
+
+/* A card that opens something. */
+a.ds-card,
+.ds-card[data-interactive] {
+  cursor: pointer;
+}
+
+a.ds-card::after,
+.ds-card[data-interactive]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: transparent;
+  pointer-events: none;
+}
+
+a.ds-card:focus-visible,
+.ds-card[data-interactive]:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  a.ds-card:hover::after,
+  .ds-card[data-interactive]:hover::after {
+    background: color-mix(in srgb, var(--ds-card-ink) 4%, transparent);
+  }
+}
+
+a.ds-card:active::after,
+.ds-card[data-interactive]:active::after {
+  background: color-mix(in srgb, var(--ds-card-ink) 8%, transparent);
+}

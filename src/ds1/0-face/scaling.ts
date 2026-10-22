@@ -5,7 +5,8 @@
  * mobile browser, or a touch screen whose shorter side is at most 820px) is
  * drawn as if the screen were 280 units wide: the scale is the page's width
  * over 280, never under 0.75 or over 2, so a 375px phone draws everything a
- * third larger.
+ * third larger. The page's width is never taken as more than the screen's, so
+ * a page that a phone has widened and zoomed out never scales itself larger.
  *
  * `startScaling()` puts the scale on the page and keeps it there through
  * resizes and turns; `applyScaling()` does it once. Both set `--sf` and, on a
@@ -145,10 +146,27 @@ export function applyScaling(options: ScalingOptions = {}): number {
   return applyPage(root ?? document.documentElement, config);
 }
 
+/**
+ * The screen's own width as it is held, in CSS pixels: the widest a page on it
+ * is laid out at, or 0 when the browser does not say. iOS gives the screen's
+ * upright width whichever way it is turned, so the side is taken by the turn.
+ */
+export function screenWidth(): number {
+  const { width = 0, height = 0 } = window.screen ?? {};
+  if (!width || !height) return 0;
+  const turn = window.screen.orientation?.type;
+  const landscape = turn ? turn.startsWith("landscape") : window.matchMedia?.("(orientation: landscape)").matches ?? width > height;
+  return landscape ? Math.max(width, height) : Math.min(width, height);
+}
+
 function applyPage(root: HTMLElement, config: Partial<ScalingConfig>): number {
   const mobile = detectMobileDevice();
-  // The page's width without its scroll bar.
-  const width = document.documentElement.clientWidth || window.innerWidth || 0;
+  // The page's width without its scroll bar, never more than the screen's: when something reaches
+  // past the edge, a phone's browser widens the page and zooms out, and a scale read from that
+  // width would draw everything larger, which keeps the page too wide and zoomed out.
+  const page = document.documentElement.clientWidth || window.innerWidth || 0;
+  const held = mobile ? screenWidth() : 0;
+  const width = held ? Math.min(page, held) : page;
   const factor = mobile ? calculateScalingFactor(width, { ...defaultScalingConfig, ...config }, window.devicePixelRatio || 1) : 1;
   root.style.setProperty("--sf", String(factor));
   root.toggleAttribute("data-mobile", mobile);

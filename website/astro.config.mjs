@@ -68,6 +68,7 @@ export default defineConfig({
             { label: "Callouts", slug: "writing/callouts" },
             { label: "Tables", slug: "writing/tables" },
             { label: "Columns", slug: "writing/columns" },
+            { label: "Table of contents", slug: "writing/table-of-contents" },
             { label: "Equations", slug: "writing/equations" },
             { label: "Media", slug: "writing/media" },
           ],

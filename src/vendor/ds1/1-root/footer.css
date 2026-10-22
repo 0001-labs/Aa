@@ -1,0 +1,317 @@
+@import "./component-metrics.css";
+
+/*
+ * A site footer, as plain classes on native elements.
+ *
+ * The brand and its line at the start, twelve squares wide; the columns of
+ * links beside it, eight squares each (or the whole squares a column names in
+ * `--ds-footer-column-width`), two squares apart; then, two squares below, the
+ * legal line at the start, the policies under it as secondary buttons, and the
+ * preferences (language and theme, as `ds-cycle` or native buttons) at the
+ * end. Every line is one square, the column headings in the title grey, the
+ * links in the text's ink with a faint hairline under the pointer. A column of
+ * contact lines mixes words alone (`<span>`) with links: its links, and a
+ * heading that is a link, are underlined as `.ds-link` is. A stacked column
+ * (`--stack`) draws its icon links as round marks one control high, one a
+ * line, one square wide at the end of the row. A hairline runs along its top.
+ * Columns that do not fit beside the brand go below it, and on a narrow screen
+ * everything stands in one column. The `ds-footer` element draws the same
+ * parts from data.
+ *
+ *   ds-footer                    the block, a <footer>
+ *   ds-footer__brand             the mark and its line
+ *   ds-footer__mark              the mark or name, a link home; a picture in it is one square high
+ *   ds-footer__tagline           a line about the site, muted
+ *   ds-footer__columns           the columns, a <nav> or <div>
+ *   ds-footer__column            one column: a heading and its links
+ *   ds-footer__column--stack     a column of round marks, one square wide at the row's end
+ *   ds-footer__heading           the column's heading, one line in the title grey, or an <a> in it
+ *   ds-footer__icons             a column's icon links, a row of marks (a stack in --stack)
+ *   ds-footer__links             the lines, a <ul> with one <a> or <span> per <li>
+ *   ds-footer__base              the last row, two squares below
+ *   ds-footer__legal             in it, the copyright and legal line, muted
+ *   ds-footer__policies          under it, links as secondary buttons (a.ds-button.ds-button--secondary)
+ *   ds-footer__preferences       in it, the language and theme controls, at its end
+ *
+ * Tokens: `--ds-footer-line` (the hairline along the top),
+ * `--ds-footer-column-width` (a column's width in squares, 8),
+ * `--ds-footer-mark-background` and `--ds-footer-mark-color` (a round mark's
+ * disc and glyph: the ink and the paper).
+ */
+
+.ds-footer {
+  box-sizing: border-box;
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: calc(2 * var(--ds-unit));
+  min-width: 0;
+  margin: 0;
+  padding: calc(2 * var(--ds-unit)) var(--ds-unit) var(--ds-unit);
+  box-shadow: inset 0 1px var(--ds-footer-line, var(--ds-border-color));
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  text-transform: none;
+}
+
+.ds-footer :is(p, h2, h3, h4, ul) {
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.ds-footer__brand {
+  display: flex;
+  flex: 0 0 calc(12 * var(--ds-unit));
+  flex-direction: column;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ds-footer__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--ds-unit) / 2);
+  align-self: flex-start;
+  height: var(--ds-unit);
+  color: inherit;
+  font-family: var(--ds-typeface-medium);
+  font-weight: var(--ds-type-weight-bold);
+  text-decoration: none;
+}
+
+.ds-footer__mark :is(img, svg) {
+  display: block;
+  width: auto;
+  height: var(--ds-unit);
+}
+
+.ds-footer__tagline,
+.ds-footer__legal {
+  color: var(--ds-text-color-muted);
+}
+
+.ds-footer__columns {
+  display: flex;
+  /* Never narrower than one column: below that the columns go under the brand. */
+  flex: 1 1 calc(8 * var(--ds-unit));
+  flex-wrap: wrap;
+  gap: var(--ds-unit) calc(2 * var(--ds-unit));
+  min-width: min(100%, calc(8 * var(--ds-unit)));
+}
+
+.ds-footer__column {
+  display: flex;
+  flex: 0 0 calc(var(--ds-footer-column-width, 8) * var(--ds-unit));
+  flex-direction: column;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ds-footer .ds-footer__heading {
+  color: var(--ds-title-color);
+}
+
+.ds-footer .ds-footer__links {
+  padding: 0;
+  list-style: none;
+}
+
+.ds-footer__links li {
+  margin: 0;
+  padding: 0;
+}
+
+.ds-footer__links > li > *,
+.ds-footer__heading > a {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: transparent;
+  text-overflow: clip;
+  text-underline-offset: calc(2px * var(--ds-sf));
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+/* A cut line fades over its last square, never an ellipsis (0-face/cut-fade.ts marks it). */
+:is(.ds-footer__links > li > *, .ds-footer__heading > a)[data-cut="end"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+:is(.ds-footer__links > li > *, .ds-footer__heading > a)[data-cut="end"]:dir(rtl) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+
+.ds-footer__links a:hover {
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+/* Among words alone (a contact column) a link, and a heading that is a link, is
+   underlined as .ds-link is: the text's ink, a hairline 40% of it, full under the pointer. */
+.ds-footer .ds-footer__heading > a,
+.ds-footer__links:has(> li > :not(a)) a {
+  color: var(--ds-text-color);
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+:is(.ds-footer__heading > a, .ds-footer__links:has(> li > :not(a)) a):hover {
+  text-decoration-color: currentColor;
+}
+
+/* A column's icon links (a brand's marks: Instagram, Facebook, LinkedIn) stand first, in a row of
+   their own one square high, each mark a whole square, half a square apart, named by its label. */
+.ds-footer .ds-footer__icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 calc(var(--ds-unit) / 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-footer__icons li {
+  margin: 0;
+  padding: 0;
+}
+
+.ds-footer__icons a {
+  display: flex;
+  align-items: flex-end;
+  height: var(--ds-unit);
+  color: inherit;
+}
+
+.ds-footer__icons .ds-icon {
+  --ds-icon-size: 20px;
+}
+
+.ds-footer__icons a:hover {
+  color: var(--ds-text-color-muted);
+}
+
+/* A stacked column: its marks one a line at the end of the row, each a round
+   disc one control high in the ink on the sixteen of its square, the glyph in
+   the paper's colour, flush with the square's start. */
+.ds-footer .ds-footer__column--stack {
+  flex: 0 0 var(--ds-unit);
+  margin-inline-start: auto;
+}
+
+.ds-footer__column--stack .ds-footer__icons {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.ds-footer__column--stack .ds-footer__icons li {
+  display: flex;
+  align-items: flex-end;
+  height: var(--ds-unit);
+}
+
+.ds-footer__column--stack .ds-footer__icons a {
+  display: grid;
+  place-items: center;
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--ds-footer-mark-background, var(--ds-text-color));
+  color: var(--ds-footer-mark-color, light-dark(var(--ds-white), var(--ds-black)));
+}
+
+.ds-footer__column--stack .ds-footer__icons .ds-icon {
+  --ds-icon-size: 14px;
+}
+
+.ds-footer__column--stack .ds-footer__icons a:hover {
+  background: var(--ds-text-color-muted);
+  color: var(--ds-footer-mark-color, light-dark(var(--ds-white), var(--ds-black)));
+}
+
+.ds-footer__links a[aria-current]:not([aria-current="false"]) {
+  text-decoration-color: currentColor;
+}
+
+:is(.ds-footer__links a, .ds-footer__heading a, .ds-footer__icons a, .ds-footer__mark):focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 1px;
+}
+
+/* The last row, two squares below: the legal line at the start, the
+   policies on the square under it, the preferences at the end; on a narrow
+   screen the preferences go first, a square above the legal line. */
+.ds-footer__base {
+  display: flex;
+  flex: 0 0 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 calc(2 * var(--ds-unit));
+  min-width: 0;
+}
+
+.ds-footer .ds-footer__policies {
+  display: flex;
+  flex: 0 0 100%;
+  flex-wrap: wrap;
+  order: 1;
+  gap: 0 calc(var(--ds-unit) / 2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-footer__policies li {
+  display: flex;
+  align-items: flex-end;
+  height: var(--ds-unit);
+  margin: 0;
+  padding: 0;
+}
+
+.ds-footer__legal {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ds-footer__preferences {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 calc(var(--ds-unit) / 2);
+  min-height: var(--ds-unit);
+  margin-inline-start: auto;
+}
+
+@container (max-width: 599px) {
+  .ds-footer__brand,
+  .ds-footer__columns {
+    flex-basis: 100%;
+  }
+
+  .ds-footer__base {
+    flex-direction: column;
+  }
+
+  .ds-footer__preferences {
+    order: -1;
+    margin-inline-start: 0;
+  }
+
+  .ds-footer__preferences:not([hidden]) {
+    margin-block-end: var(--ds-unit);
+  }
+
+  .ds-footer .ds-footer__policies {
+    flex-basis: auto;
+  }
+}

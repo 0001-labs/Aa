@@ -1,0 +1,398 @@
+@import "./component-metrics.css";
+
+/*
+ * Rows, as plain classes on native elements: the `ds-row` and `ds-sidebar`
+ * elements' look without the elements.
+ *
+ * A row is one square high, and what it holds stands on the lower sixteen of
+ * the square with the spare four above, as Ezo sets every row: a line of
+ * words on a 16px line box, a 16px icon and a 16px control all end on the
+ * row's bottom line, so the capitals (7px below the top line, baseline 3px
+ * above the next) are centred on an icon beside them. On an `<a href>` or a
+ * `<button>` the whole row is one press target, a row, a tile or a card: the pointer over it, the
+ * press and the focus ring cover the row, and its content keeps the row's
+ * layout. A row that also holds controls of its own (a quick action, a link
+ * in another cell) is any element, a `<li>`, a `<div>` or a `<tr>`, with one
+ * `ds-row__target` inside: that link or button takes the press anywhere on
+ * the row, and every other control inside stays separately pressable.
+ *
+ *   ds-row                 a row one square high; a press target on <a> or <button>
+ *   ds-row__target         the row's press target, when the row holds other controls
+ *   ds-row--auto           as high as its content, at least one square
+ *   ds-row--stacked        the content stacked, each line one square (a tile, a card)
+ *   ds-row--nav            a navigation row: the sidebar's two-pixel corners
+ *   ds-row__name           a record's words: they hug and give way first; cut, they fade over
+ *                          the last square, never an ellipsis (`data-cut="end"`, set by the
+ *                          element, or 0-face/cut-fade.ts on a page without Lit)
+ *   ds-row__value          the figure or date at the row's end, in tabular figures
+ *   aria-current="page"    the destination being shown, filled and in the medium weight
+ *   aria-disabled="true"   or `disabled` on a button: dimmed, not pressable
+ *
+ * A sidebar of nested things (the `ds-sidebar tree` element without Lit) is a
+ * `role="tree"` list of `role="treeitem"` rows, flat, each with its
+ * `aria-level`, one square further in per level. `0-face/sidebar.ts`
+ * (`connectSidebar`) gives it the keyboard of the tree pattern.
+ *
+ *   ds-sidebar             the tree (`role="tree"`)
+ *   ds-sidebar__item       a row (`role="treeitem"`, `aria-level`, `aria-expanded` on a parent, `aria-selected`)
+ *   ds-sidebar__disclosure the arrow on its own square, turned down when the row is open; empty on a leaf
+ *   ds-sidebar__label      the words; cut, they fade over the last square (`data-cut="end"`)
+ *   ds-sidebar__meta       small muted words at the row's end
+ *
+ * An icon (`.ds-icon`) in a tree row takes a square of its own. Tokens:
+ * `--ds-row-padding` (the words' distance from the row's edges, 4px),
+ * `--ds-row-fill-hover`, `--ds-row-fill-press`, `--ds-row-fill-current` and
+ * `--ds-row-current-weight` (component-tokens.css, shared with the
+ * element), `--ds-sidebar-disclosure` (the arrow's drawing, the library's
+ * `right` icon) and `--ds-sidebar-indent` (a row's depth in squares, read
+ * from `aria-level` up to twelve levels).
+ */
+
+:where(.ds-row):not(tr) {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: calc(4px * var(--ds-sf));
+  min-width: 0;
+  height: var(--ds-row-height);
+  margin: 0;
+  line-height: var(--ds-type-lineheight-default);
+}
+
+:where(.ds-row--auto):not(tr) {
+  height: auto;
+  min-height: var(--ds-row-height);
+}
+
+:where(.ds-row--stacked):not(tr) {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0;
+  height: auto;
+}
+
+/* The press target: the row itself, or the one target inside it. */
+a.ds-row,
+button.ds-row,
+.ds-row__target {
+  appearance: none;
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: start;
+  text-decoration: none;
+  text-transform: none;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The font inherited above would bring the page's line into the row: the words go back on the
+   sixteen, as every row's (a stacked tile keeps its square lines below). */
+a.ds-row,
+button.ds-row {
+  position: relative;
+  width: 100%;
+  line-height: var(--ds-type-lineheight-default);
+  padding: 0 var(--ds-row-padding, calc(4px * var(--ds-sf)));
+  border-radius: var(--ds-row-radius, 0);
+}
+
+.ds-row__target {
+  padding: 0;
+}
+
+/* Each line of a tile one square, over the inherited font of a native link or button:
+   a tile's lines wrap, so they stay on whole squares rather than the sixteen. */
+.ds-row.ds-row--stacked {
+  line-height: var(--ds-row-height);
+}
+
+/* A row with a target inside: the target's layers cover the row. */
+.ds-row:has(.ds-row__target) {
+  position: relative;
+  isolation: isolate;
+}
+:where(.ds-row:has(.ds-row__target)):not(tr) {
+  padding-inline: var(--ds-row-padding, calc(4px * var(--ds-sf)));
+}
+.ds-row__target::before,
+.ds-row__target::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--ds-row-radius, 0);
+}
+.ds-row__target::before { z-index: 1; }
+.ds-row__target::after { z-index: -1; }
+.ds-row:has(.ds-row__target) :where(a[href], button, input, select, textarea, label, summary, [tabindex]):not(.ds-row__target) {
+  position: relative;
+  z-index: 2;
+}
+
+/*
+ * The pointer, the press, the current destination and the focus ring are one layer under the
+ * row's content (Joachim, 19 October 2026). On a one-square row it is a square high and sits two
+ * pixels around what the row holds: from two above the lower sixteen to two below the row's foot,
+ * and two past the content at each side, its corners the icon tiles' 4px and those two more, so a
+ * 16px icon stands in it with two all round. It is drawn over the row, never moving its words or
+ * icons off the grid. An open row (`data-open`) wears the same layer. A taller row (a stacked
+ * tile, `auto`) is filled whole.
+ * Tokens: `--ds-row-fill-radius` (6px), `--ds-row-fill-overhang` (2px).
+ */
+a.ds-row,
+button.ds-row {
+  isolation: isolate;
+}
+a.ds-row::after,
+button.ds-row::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+a.ds-row::after,
+button.ds-row::after,
+.ds-row__target::after {
+  --ds-row-overhang: var(--ds-row-fill-overhang, calc(2px * var(--ds-sf)));
+  inset:
+    calc(var(--ds-row-height) - var(--ds-control-height) - var(--ds-row-overhang))
+    calc(var(--ds-row-padding, calc(4px * var(--ds-sf))) - var(--ds-row-overhang))
+    calc(0px - var(--ds-row-overhang));
+  border-radius: var(--ds-row-radius, var(--ds-row-fill-radius, calc(6px * var(--ds-sf))));
+}
+:is(a, button).ds-row:is(.ds-row--stacked, .ds-row--auto)::after,
+:is(.ds-row--stacked, .ds-row--auto) .ds-row__target::after {
+  inset: 0;
+}
+a.ds-row[href]:hover::after,
+button.ds-row:hover:not(:disabled)::after,
+.ds-row__target:is(a[href], button:not(:disabled)):hover::after {
+  background: var(--ds-row-fill-hover, var(--ds-fill));
+}
+a.ds-row[href]:active::after,
+button.ds-row:active:not(:disabled)::after,
+.ds-row__target:is(a[href], button:not(:disabled)):active::after {
+  background: var(--ds-row-fill-press, var(--ds-fill-hover));
+}
+.ds-row:is(a, button)[aria-current]:not([aria-current="false"])::after,
+.ds-row__target[aria-current]:not([aria-current="false"])::after {
+  background: var(--ds-row-fill-current, var(--ds-fill-hover));
+}
+.ds-row:is(a, button)[aria-current]:not([aria-current="false"]),
+.ds-row:has(.ds-row__target[aria-current]:not([aria-current="false"])) {
+  --ds-type-weight-default: var(--ds-row-current-weight, 500);
+  font-weight: var(--ds-row-current-weight, 500);
+}
+a.ds-row:focus-visible::after,
+button.ds-row:focus-visible::after,
+.ds-row__target:focus-visible::after {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: -2px;
+}
+a.ds-row:not([href]),
+a.ds-row[aria-disabled="true"],
+button.ds-row:disabled,
+button.ds-row[aria-disabled="true"],
+.ds-row:has(.ds-row__target:is(:disabled, [aria-disabled="true"], a:not([href]))) {
+  cursor: default;
+  opacity: 0.5;
+}
+.ds-row__target:is(:disabled, [aria-disabled="true"], a:not([href])) {
+  cursor: default;
+}
+a.ds-row[aria-disabled="true"]:hover::after,
+button.ds-row[aria-disabled="true"]:hover::after {
+  background: none;
+}
+
+.ds-row--nav {
+  --ds-row-radius: calc(2px * var(--ds-sf));
+}
+
+/* The parts of a record's row, as the element draws them: a 16px picture before the name takes
+   the first sixteen of its square and the row's 4px gap puts the words on the next; the name
+   hugs and gives way first; the value stands at the row's end. */
+.ds-row .ds-row__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+.ds-row .ds-row__name[data-cut="end"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+.ds-row:dir(rtl) .ds-row__name[data-cut="end"] {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+.ds-row .ds-row__value {
+  flex: none;
+  margin-inline-start: auto;
+  white-space: nowrap;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A sidebar of nested things: the tree. */
+
+.ds-sidebar {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+
+.ds-sidebar__item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  height: var(--ds-row-height);
+  min-width: 0;
+  margin: 0;
+  padding-block: 0;
+  padding-inline: calc(var(--ds-sidebar-indent, 0) * var(--ds-unit)) var(--ds-row-padding, calc(4px * var(--ds-sf)));
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-sidebar__item[hidden] { display: none; }
+.ds-sidebar__item[aria-level="2"] { --ds-sidebar-indent: 1; }
+.ds-sidebar__item[aria-level="3"] { --ds-sidebar-indent: 2; }
+.ds-sidebar__item[aria-level="4"] { --ds-sidebar-indent: 3; }
+.ds-sidebar__item[aria-level="5"] { --ds-sidebar-indent: 4; }
+.ds-sidebar__item[aria-level="6"] { --ds-sidebar-indent: 5; }
+.ds-sidebar__item[aria-level="7"] { --ds-sidebar-indent: 6; }
+.ds-sidebar__item[aria-level="8"] { --ds-sidebar-indent: 7; }
+.ds-sidebar__item[aria-level="9"] { --ds-sidebar-indent: 8; }
+.ds-sidebar__item[aria-level="10"] { --ds-sidebar-indent: 9; }
+.ds-sidebar__item[aria-level="11"] { --ds-sidebar-indent: 10; }
+.ds-sidebar__item[aria-level="12"] { --ds-sidebar-indent: 11; }
+.ds-sidebar__item:hover:not([aria-disabled="true"]) { background: var(--ds-row-fill-hover, var(--ds-fill)); }
+.ds-sidebar__item:active:not([aria-disabled="true"]) { background: var(--ds-row-fill-press, var(--ds-fill-hover)); }
+.ds-sidebar__item[aria-selected="true"] {
+  --ds-type-weight-default: var(--ds-row-current-weight, 500);
+  background: var(--ds-row-fill-current, var(--ds-fill-hover));
+  font-weight: var(--ds-row-current-weight, 500);
+}
+.ds-sidebar__item:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: -2px;
+}
+.ds-sidebar__item[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* The arrow and an icon each stand on a whole square, drawn on the row's sixteen (two
+   pixels below the square's middle); a leaf keeps the arrow's square empty. */
+.ds-sidebar__disclosure,
+.ds-sidebar__item > .ds-icon {
+  flex: 0 0 var(--ds-unit);
+  width: var(--ds-unit);
+  height: var(--ds-unit);
+  -webkit-mask-size: var(--ds-icon-box, calc(14px * var(--ds-sf)));
+  mask-size: var(--ds-icon-box, calc(14px * var(--ds-sf)));
+  -webkit-mask-position: center calc(50% + 2px * var(--ds-sf));
+  mask-position: center calc(50% + 2px * var(--ds-sf));
+}
+.ds-sidebar__disclosure {
+  --ds-icon-box: calc(14px * var(--ds-sf));
+  display: inline-block;
+  color: var(--ds-text-color-muted);
+  background-color: currentColor;
+  -webkit-mask: var(--ds-sidebar-disclosure, url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 16 16'%3E%3Cpath d='M13.1566 8.60594H0V9.61651L13.1562 9.61791L10.249 12.5251L10.9558 13.219L15.0636 9.11123L10.9524 5L10.245 5.70734L13.1566 8.60594Z'/%3E%3C/svg%3E")) center calc(50% + 2px * var(--ds-sf)) / var(--ds-icon-box) no-repeat;
+  mask: var(--ds-sidebar-disclosure, url("data:image/svg+xml,%3Csvg xmlns='http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg' viewBox='0 0 16 16'%3E%3Cpath d='M13.1566 8.60594H0V9.61651L13.1562 9.61791L10.249 12.5251L10.9558 13.219L15.0636 9.11123L10.9524 5L10.245 5.70734L13.1566 8.60594Z'/%3E%3C/svg%3E")) center calc(50% + 2px * var(--ds-sf)) / var(--ds-icon-box) no-repeat;
+  transform: rotate(0deg);
+  transition: transform 120ms ease-out;
+}
+.ds-sidebar__item:not([aria-expanded]) > .ds-sidebar__disclosure {
+  visibility: hidden;
+}
+.ds-sidebar__item[aria-expanded="true"] > .ds-sidebar__disclosure {
+  transform: rotate(90deg);
+}
+.ds-sidebar__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-inline-start: calc(4px * var(--ds-sf));
+  overflow: hidden;
+  text-overflow: clip;
+}
+.ds-sidebar__label[data-cut="end"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+.ds-sidebar__label[data-cut="end"]:dir(rtl) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+.ds-sidebar__meta {
+  flex: none;
+  padding-inline-start: calc(4px * var(--ds-sf));
+  color: var(--ds-text-color-muted);
+  font-size: var(--ds-type-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-sidebar__disclosure { transition: none; }
+}
+
+@media (forced-colors: active) {
+  .ds-row:is(a, button)[aria-current]:not([aria-current="false"]),
+  .ds-row__target[aria-current]:not([aria-current="false"])::after,
+  .ds-sidebar__item[aria-selected="true"] {
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+  .ds-sidebar__disclosure {
+    background-color: CanvasText;
+  }
+}
+
+/* A controlled detail view: the caller marks its open row, and clears it on close.
+   Navigation's current state and the text weight remain independent. */
+.ds-row[data-open]:not([data-open="false"]) {
+  position: relative;
+  isolation: isolate;
+}
+.ds-row[data-open]:not([data-open="false"])::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  --ds-row-overhang: var(--ds-row-fill-overhang, calc(2px * var(--ds-sf)));
+  inset: calc(var(--ds-row-height) - var(--ds-control-height) - var(--ds-row-overhang))
+    calc(var(--ds-row-padding, calc(4px * var(--ds-sf))) - var(--ds-row-overhang))
+    calc(0px - var(--ds-row-overhang));
+  border-radius: var(--ds-row-radius, var(--ds-row-fill-radius, calc(6px * var(--ds-sf))));
+  background: var(--ds-row-fill-current, var(--ds-fill-hover));
+}
+/* A plain row (no press target inside) has no padding of its own: its words and icons stand on
+   the row's edges, so the layer reaches two past them, as a flush row's does. */
+.ds-row[data-open]:not([data-open="false"]):not(a, button, .ds-row--stacked, .ds-row--auto, :has(.ds-row__target))::after {
+  inset: calc(var(--ds-row-height) - var(--ds-control-height) - var(--ds-row-overhang))
+    calc(0px - var(--ds-row-overhang))
+    calc(0px - var(--ds-row-overhang));
+}
+.ds-row[data-open]:is(.ds-row--stacked, .ds-row--auto)::after { inset: 0; }
+@media (forced-colors: active) {
+  .ds-row[data-open]:not([data-open="false"])::after { outline: 1px solid Highlight; outline-offset: -1px; }
+}

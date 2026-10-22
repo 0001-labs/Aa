@@ -36,6 +36,13 @@
           "context.css",
           "overlay.css"
         ]
+      },
+      "components": {
+        "to": "src/vendor/ds1",
+        "components": [
+          "table-of-contents"
+        ],
+        "react": false
       }
     },
     "Drag": {

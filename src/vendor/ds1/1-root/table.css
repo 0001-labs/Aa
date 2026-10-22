@@ -1,0 +1,340 @@
+/*
+ * A table: words straight on the paper, one square a row. No box and no
+ * column lines: each row stands on a hairline at its foot, its words set on
+ * that line like a caption: the sixteen of words against the 1px line, three
+ * spare above, a 20px pitch, as Ezo sets every row.
+ * Column headers keep the text's weight in the title grey; the first column
+ * of a body row is a row header in the text colour. Nothing is filled with
+ * the accent except a cell someone has selected.
+ *
+ * `.ds-table` dresses a native <table>; `<ds-table>` draws the same table
+ * from data. Put a wide table in `.ds-table-scroll` to scroll it sideways,
+ * and give the table `data-sticky` to keep its first column in place.
+ *
+ *   <th data-numeric>, <td data-numeric>   numbers, set to the column's end
+ *   <tfoot>                                totals, under a line of their own
+ *   <th colspan="2">                       a column group, in a header row
+ *   <th scope="rowgroup">                  a row group, a heading row in grey
+ *   <td aria-selected="true">              a selected cell
+ *
+ * `data-plain` takes every line away: the same rows with no rule at their
+ * foot, standing on the paper as a list's rows do (Money's tables), the
+ * words still on the lower sixteen of each square.
+ *
+ * `data-frame` draws the same rows in a rounded 1px frame with a 1px line
+ * between columns. Every line is drawn inside the cells' squares, the frame
+ * over the first and last pixels as the sheet's lines are at a cell's end and
+ * foot, so each row keeps its 20px pitch and the last row's rule is the
+ * frame's foot; words stand 4px in from the lines. Fills in the cells keep
+ * inside the rounded corners.
+ *
+ * `data-sheet` makes it a spreadsheet: every cell four squares by one (80 by
+ * 20), its 1px lines at its end and foot so the words have 79 by 19, set 4px
+ * in on the sixteen. Words that do not fit fade out over the last square
+ * where they are cut, never an ellipsis: put them in `.ds-table__words`,
+ * which carries the fade (a mask, so it fades to whatever is behind: the
+ * paper, a selected or hovered cell's fill). A table marked `data-fit`
+ * (`<ds-table sheet>` is) measures its cells and marks the cut ones
+ * `data-cut="end"`, or `"start"` for a number it has scrolled to its end, so
+ * words that fit never fade; without it every cell's end fades. Column letters and the row numbers
+ * (`.ds-table__letters`, `.ds-table__number`, two squares wide) stay in place
+ * while the sheet scrolls both ways inside `.ds-table-scroll`; give the table
+ * `--ds-table-columns` (the number of data columns) and the scroll a height
+ * with `--ds-table-height`.
+ *
+ * `data-reorderable` (set by `<ds-table sheet reorderable>`) gives each row
+ * number a grip, `.ds-table__handle` with the `handle` icon, in place of the
+ * number while the row is hovered or the grip focused. A lifted row
+ * (`tr[data-lifted]`) keeps the paper behind it and follows the pointer; while
+ * `data-moving` is on the table the other rows step aside in transform alone,
+ * a sortable list's 200ms on cubic-bezier(0.2, 0, 0, 1), and never under
+ * reduced motion.
+ */
+
+.ds-table {
+  --ds-table-row: var(--ds-row-height, calc(20px * var(--ds-sf, 1)));
+  --ds-table-gap: calc(var(--ds-table-row) / 2);
+  --ds-table-rule: var(--ds-border-color, light-dark(#d8d8d8, #3d3d3d));
+  --ds-table-paper: var(--ds-background, Canvas);
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: var(--ds-text-color, inherit);
+  font-family: var(--ds-typeface-regular, inherit);
+  font-feature-settings: var(--ds-font-features, normal);
+  font-size: var(--ds-type-size-default, 14px);
+  letter-spacing: var(--ds-type-letterspacing-default, normal);
+}
+
+.ds-table :is(th, td) {
+  box-sizing: border-box;
+  height: var(--ds-table-row);
+  padding: 0 var(--ds-table-gap) 0 0;
+  border: 0;
+  border-bottom: 1px solid var(--ds-table-rule);
+  background: transparent;
+  line-height: var(--ds-type-lineheight-default);
+  text-align: start;
+  vertical-align: bottom;
+  font-weight: inherit;
+  white-space: nowrap;
+}
+
+.ds-table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+/* A plain table: no lines at all, each row one square with its words on the lower sixteen. */
+.ds-table[data-plain] :is(th, td) {
+  border-bottom: 0;
+}
+.ds-table[data-frame] {
+  --ds-table-radius: var(--ds-radius-card, calc(8px * var(--ds-sf, 1)));
+  position: relative;
+  border-collapse: separate;
+  border-radius: var(--ds-table-radius);
+  clip-path: inset(0 round var(--ds-table-radius));
+}
+/* The frame is drawn over the cells, so a filled cell never covers it. */
+.ds-table[data-frame]::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 1px solid var(--ds-table-rule);
+  border-radius: var(--ds-table-radius);
+  content: "";
+  pointer-events: none;
+}
+.ds-table[data-frame] :is(th, td) {
+  padding-inline: calc(4px * var(--ds-sf, 1));
+}
+.ds-table[data-frame] :is(th, td) + :is(th, td) {
+  box-shadow: inset 1px 0 0 var(--ds-table-rule);
+}
+.ds-table[data-frame]:dir(rtl) :is(th, td) + :is(th, td) {
+  box-shadow: inset -1px 0 0 var(--ds-table-rule);
+}
+
+.ds-table thead th,
+.ds-table th[scope="rowgroup"] {
+  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+}
+
+.ds-table tbody th:not([scope="rowgroup"]) {
+  color: inherit;
+}
+
+.ds-table [data-numeric] {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Totals: the rule above them is the last body row's; theirs closes the table. */
+.ds-table tfoot :is(th, td) {
+  color: inherit;
+}
+
+.ds-table [aria-selected="true"] {
+  background: var(--ds-accent-color, Highlight);
+  color: var(--ds-button-text-color-on-accent, inherit);
+}
+
+.ds-table :is(th, td):has(> :is(a, button):only-child) {
+  cursor: pointer;
+}
+
+.ds-table caption {
+  box-sizing: border-box;
+  height: var(--ds-table-row);
+  padding-top: calc(var(--ds-table-row) - var(--ds-type-lineheight-default));
+  line-height: var(--ds-type-lineheight-default);
+  text-align: start;
+  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+}
+
+.ds-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.ds-table-scroll > .ds-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.ds-table[data-sticky] :is(th, td):first-child {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--ds-table-paper);
+}
+
+.ds-table[data-sticky] [aria-selected="true"]:first-child {
+  background: var(--ds-accent-color, Highlight);
+}
+
+/* Keep the row whose details are open visible, including its sticky first cell.
+   Cell selection remains independent and keeps its accent. */
+.ds-table tbody > tr[data-open]:not([data-open="false"]) > :is(th, td):not([aria-selected="true"]) {
+  background: var(--ds-row-fill-current, var(--ds-fill-hover));
+}
+@media (forced-colors: active) {
+  .ds-table tbody > tr[data-open]:not([data-open="false"]) > :is(th, td):not([aria-selected="true"]) {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
+/* A spreadsheet: cells four squares by one, on lines, lettered and numbered. */
+.ds-table[data-sheet] {
+  --ds-table-cell: calc(4 * var(--ds-table-row));
+  --ds-table-index: calc(2 * var(--ds-table-row));
+  --ds-table-text: calc(4px * var(--ds-sf, 1));
+  table-layout: fixed;
+  width: calc(var(--ds-table-index) + var(--ds-table-columns, 8) * var(--ds-table-cell));
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ds-table-scroll > .ds-table[data-sheet] {
+  width: calc(var(--ds-table-index) + var(--ds-table-columns, 8) * var(--ds-table-cell));
+  min-width: 0;
+}
+.ds-table[data-sheet] :is(th, td) {
+  width: var(--ds-table-cell);
+  max-width: var(--ds-table-cell);
+  height: var(--ds-table-row);
+  padding: 0 var(--ds-table-text);
+  border-bottom: 1px solid var(--ds-table-rule);
+  border-inline-end: 1px solid var(--ds-table-rule);
+  overflow: hidden;
+}
+.ds-table[data-sheet] :is(th, td):last-child {
+  padding-inline-end: var(--ds-table-text);
+}
+.ds-table[data-sheet] .ds-table__words {
+  --ds-table-fade-to: right;
+  --ds-table-fade-from: left;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ds-table[data-sheet]:dir(rtl) .ds-table__words {
+  --ds-table-fade-to: left;
+  --ds-table-fade-from: right;
+}
+/* Cut words fade over their last square to nothing, at the edge where they are cut. */
+.ds-table[data-sheet]:not([data-fit]) .ds-table__words,
+.ds-table[data-sheet] .ds-table__words[data-cut="end"] {
+  mask-image: linear-gradient(to var(--ds-table-fade-to), #000 calc(100% - var(--ds-table-row)), transparent);
+}
+.ds-table[data-sheet] .ds-table__words[data-cut="start"] {
+  mask-image: linear-gradient(to var(--ds-table-fade-from), #000 calc(100% - var(--ds-table-row)), transparent);
+}
+.ds-table[data-sheet] .ds-table__number {
+  width: var(--ds-table-index);
+  max-width: var(--ds-table-index);
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--ds-table-paper);
+  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ds-table[data-sheet] thead :is(th, td) {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--ds-table-paper);
+}
+.ds-table[data-sheet] thead tr + tr :is(th, td) {
+  top: var(--ds-table-row);
+}
+.ds-table[data-sheet] thead .ds-table__number {
+  z-index: 4;
+}
+.ds-table[data-sheet] .ds-table__letters td {
+  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+  text-align: center;
+}
+.ds-table[data-sheet] tbody td:not([data-numeric]) {
+  color: inherit;
+}
+.ds-table[data-sheet] [aria-selected="true"] {
+  background: transparent;
+  color: inherit;
+  box-shadow: inset 0 0 0 2px var(--ds-focus-ring, Highlight);
+}
+.ds-table-scroll:has(> .ds-table[data-sheet]) {
+  max-height: var(--ds-table-height, none);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Rows that move: a grip on the number, the lifted row on paper, the others stepping aside. */
+.ds-table[data-sheet][data-reorderable] tbody .ds-table__number {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.ds-table__index {
+  transition: opacity 100ms ease;
+}
+.ds-table__handle {
+  all: unset;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  color: var(--ds-reorder-color, light-dark(#777777, #cccccc));
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+.ds-table__handle:hover {
+  color: var(--ds-reorder-active-color, light-dark(#333333, #ffffff));
+}
+.ds-table__handle:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ds-focus-ring, Highlight);
+}
+@media (hover: hover) {
+  .ds-table[data-reorderable]:not([data-moving]) tbody tr:hover .ds-table__handle { opacity: 1; }
+  .ds-table[data-reorderable]:not([data-moving]) tbody tr:hover .ds-table__index { opacity: 0; }
+}
+.ds-table[data-reorderable] tbody tr:is([data-lifted], :has(.ds-table__handle:focus-visible)) .ds-table__handle { opacity: 1; }
+.ds-table[data-reorderable] tbody tr:is([data-lifted], :has(.ds-table__handle:focus-visible)) .ds-table__index { opacity: 0; }
+.ds-table[data-moving] tbody tr {
+  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+.ds-table[data-moving],
+.ds-table[data-moving] * {
+  cursor: grabbing;
+}
+.ds-table[data-sheet] tbody tr[data-lifted] {
+  position: relative;
+  z-index: 2;
+  transition: none;
+}
+.ds-table[data-sheet] tbody tr[data-lifted] > :is(th, td) {
+  background: var(--ds-table-paper);
+  box-shadow: inset 0 1px var(--ds-table-rule);
+}
+.ds-table__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-table[data-moving] tbody tr,
+  .ds-table__index,
+  .ds-table__handle {
+    transition: none;
+  }
+}

@@ -1,0 +1,190 @@
+@import "./component-metrics.css";
+
+/*
+ * `.ds-context` is the `ds-context` element's look on a native menu, for a page
+ * without Lit or a menu a library draws: Ezo's gap face. The rows carry the
+ * colour and the menu only cuts the outer silhouette, so the page shows
+ * through a pixel between rows and two between groups. The rows are black
+ * with white words in both themes, as Ezo's menus always were (the slate in
+ * dark, darker than the page). Every row is 19px with the pixel under it, a square's pitch, its words
+ * on the sixteen and an icon at its end. A Select's menu is the light face,
+ * `.ds-menu`; a Context's is this dark one.
+ *
+ *   ds-context                 the menu (`role="menu"`); its rows are its buttons,
+ *                              links and menu items, or `ds-context__item`
+ *   ds-context__item           a row; `--danger` (or `data-danger`) in red
+ *   ds-context__label          a heading row, muted
+ *   ds-context__shortcut       a shortcut at the row's end, muted
+ *   ds-context__separator      a group gap (or an `hr`, or `role="separator"`):
+ *                              never a line; first, last or doubled it is quiet
+ *   [data-ds-refused]          a refused change: the row turns red
+ *   ds-context--bar            the context bar over what is selected: the rows
+ *                              side by side, one row high; `ds-context__item--icon`
+ *                              a cell holding only an icon, one square
+ *
+ * The page places and opens it (a popover at the pointer, say) and owns its
+ * keys; the faces of hover, focus, disabled and the wait of a pending menu
+ * (`aria-busy="true"`) are here. Tokens as the element's: --ds-context-fill,
+ * --ds-context-ink, --ds-context-hover, --ds-context-danger,
+ * --ds-context-refused, --ds-context-radius.
+ *
+ * It draws the same on a page without the root stylesheet: the measures come
+ * from component-metrics.css, imported above, and every colour and the scale
+ * fall back to their values; the type is the page's.
+ */
+
+.ds-context {
+  --ds-context-row: calc(var(--ds-row-height) - 1px);
+  /* Black in both themes, as Ezo's menus always were: in dark the slate, darker than the page. */
+  --ds-context-fill: light-dark(var(--ds-black, #2a2a2a), var(--ds-slate, #1e1e1e));
+  --ds-context-ink: var(--ds-white, #ffffff);
+  --ds-context-hover: color-mix(in srgb, var(--ds-context-fill) 78%, var(--ds-context-ink));
+  --ds-context-danger: var(--ds-tuned-red, #ff5f5f);
+  --ds-context-refused: var(--ds-tuned-red, #ff5f5f);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: var(--ds-menu-width, max-content);
+  min-width: calc(4 * var(--ds-unit));
+  max-height: var(--ds-menu-max-height, calc(16 * var(--ds-unit)));
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  clip-path: inset(0 round var(--ds-context-radius, var(--ds-radius, 4px)));
+  color: var(--ds-context-ink);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  list-style: none;
+}
+
+.ds-context > [role="group"] {
+  display: contents;
+}
+
+/* A row: whatever the page or library styles its buttons with, one row on the sixteen. */
+.ds-context :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"]):not(.ds-context__label, .ds-context__separator, [role="separator"])) {
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex: 0 0 auto !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  gap: calc(4px * var(--ds-sf, 1));
+  width: 100%;
+  height: var(--ds-context-row) !important;
+  min-height: var(--ds-context-row) !important;
+  max-height: var(--ds-context-row) !important;
+  margin: 0 !important;
+  padding: 0 calc(4px * var(--ds-sf, 1)) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--ds-context-fill) !important;
+  color: var(--ds-context-ink) !important;
+  font: inherit;
+  line-height: var(--ds-type-lineheight-default) !important;
+  letter-spacing: inherit;
+  text-align: start;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-context :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"])):is(:hover, :focus-visible, [data-highlighted]):not(:disabled, [aria-disabled="true"], [data-disabled]) {
+  background: var(--ds-context-hover) !important;
+}
+
+.ds-context :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"])):focus-visible {
+  box-shadow: inset 0 0 0 2px var(--ds-focus-ring, #594dff);
+}
+
+.ds-context :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"])):is(:disabled, [aria-disabled="true"], [data-disabled]) {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.ds-context[aria-busy="true"] > * {
+  cursor: wait !important;
+}
+
+/* Danger is red, on either fill. */
+.ds-context :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"])):is(.ds-context__item--danger, [data-danger], [data-variant="destructive"]) {
+  color: var(--ds-context-danger) !important;
+}
+
+/* A refused change: its row turns red a moment. */
+.ds-context :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"]))[data-ds-refused] {
+  background: var(--ds-context-refused) !important;
+}
+
+/* Groups are a gap, never a line: the separator takes nothing but the gap after it. */
+.ds-context > :is(hr, .ds-context__separator, [role="separator"]) {
+  flex: 0 0 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+}
+
+/* A group left empty leaves no gap. */
+.ds-context > :is(hr, .ds-context__separator, [role="separator"]):is(:first-child, :last-child),
+.ds-context > :is(hr, .ds-context__separator, [role="separator"]) + :is(hr, .ds-context__separator, [role="separator"]) {
+  display: none !important;
+}
+
+.ds-context :is(.ds-context__label, [data-ds-menu-label]) {
+  box-sizing: border-box;
+  height: var(--ds-context-row);
+  /* The spare three above the sixteen. */
+  padding: calc(var(--ds-context-row) - var(--ds-type-lineheight-default)) calc(4px * var(--ds-sf, 1)) 0;
+  background: var(--ds-context-fill);
+  color: color-mix(in srgb, var(--ds-context-ink) 60%, var(--ds-context-fill));
+  line-height: var(--ds-type-lineheight-default);
+  white-space: nowrap;
+}
+
+.ds-context__shortcut {
+  margin-left: auto;
+  color: color-mix(in srgb, var(--ds-context-ink) 60%, var(--ds-context-fill));
+}
+
+/* The bar: the same rows side by side, the context bar over what is selected.
+   One row high, the cells a pixel apart and groups two, the page showing
+   through; a cell with words is 4px in on the sixteen, a cell holding only an
+   icon (`ds-context__item--icon`) one square, the icon in its middle. As long
+   as its cells. The page stands it half a square above the selection. */
+.ds-context.ds-context--bar {
+  flex-direction: row;
+  width: var(--ds-menu-width, max-content);
+  min-width: 0;
+  height: var(--ds-context-row);
+  max-height: none;
+  overflow: auto hidden;
+  scrollbar-width: none;
+}
+
+.ds-context.ds-context--bar :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"])) {
+  width: auto;
+  min-width: var(--ds-context-row);
+}
+
+.ds-context.ds-context--bar :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"])):is(.ds-context__item--icon, [data-ds-context-icon]) {
+  justify-content: center !important;
+  width: var(--ds-context-row);
+  padding: 0 !important;
+}
+
+.ds-context.ds-context--bar > :is(hr, .ds-context__separator, [role="separator"]) {
+  width: 0 !important;
+  height: auto !important;
+}

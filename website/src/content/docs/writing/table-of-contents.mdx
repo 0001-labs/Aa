@@ -1,0 +1,26 @@
+---
+title: Table of contents
+description: A compact outline that follows the headings in your document.
+---
+
+import Example from "../../../components/Example.astro";
+
+Insert **Table of contents** from the slash menu, or from Insert block on a phone. Press its outlined label to open the headings, then press a heading to go to it.
+
+<Example name="table-of-contents" />
+
+Heading levels are indented. Renaming, adding, moving or deleting a heading updates the contents, including when you undo a change. It also works in a read-only document.
+
+<Example name="table-of-contents-empty" />
+
+The outline lists nonempty headings in the current editor. Columns and tabs are separate writing surfaces: insert a contents block inside one to list that surface's headings. Callout titles and code blocks are not included.
+
+## The Markdown
+
+The block stores only its marker. The list is drawn from the document, so generated labels never become stale saved text.
+
+```md
+<table_of_contents/>
+```
+
+Opening or closing the contents does not change the document. A reader without Aa needs to support this marker to draw the outline.

@@ -4,7 +4,7 @@
  * so what is drawn on the screen reads straight back into the text.
  */
 
-export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation' | 'columns' | 'tabs'
+export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation' | 'columns' | 'tabs' | 'toc'
 
 export type Block = {
   kind: BlockKind
@@ -104,6 +104,8 @@ export function writeColumns(columns: readonly string[]): string {
   return ['<columns>', ...columns.flatMap(column => ['<column>', ...(column ? [column] : []), '</column>']), '</columns>'].join('\n')
 }
 
+export const TOC = /^\s*<table_of_contents\s*\/>\s*$/
+
 export const TABS_OPEN = /^\s*<tabs>\s*$/
 const TABS_CLOSE = /^\s*<\/tabs>\s*$/
 const TAB_OPEN = /^\s*<tab\b([^>]*)>\s*$/
@@ -172,7 +174,7 @@ function closesFence(line: string, fence: string): boolean {
 
 /** A line that goes on with the paragraph before it rather than starting something of its own. */
 function continues(line: string): boolean {
-  return !!line.trim() && !FENCE.test(line) && !DIVIDER.test(line) && !HEADING.test(line) && !BULLET.test(line) && !QUOTE.test(line) && !COLUMNS_OPEN.test(line) && !TABS_OPEN.test(line)
+  return !!line.trim() && !FENCE.test(line) && !DIVIDER.test(line) && !HEADING.test(line) && !BULLET.test(line) && !QUOTE.test(line) && !COLUMNS_OPEN.test(line) && !TABS_OPEN.test(line) && !TOC.test(line)
 }
 
 /** Read a text into its blocks. A text with nothing in it is one empty paragraph. */
@@ -209,6 +211,7 @@ export function parseBlocks(text: string): Placed[] {
       i = j + 1
       continue
     }
+    if (TOC.test(line)) { push('toc', i, i); i++; continue }
     if (TABS_OPEN.test(line)) {
       let j = i + 1
       while (j < lines.length && !TABS_CLOSE.test(lines[j])) j++
@@ -532,6 +535,7 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   // Columns are drawn whole, each column written where it stands; their tags are never shown.
   if (block.kind === 'columns') return [{ kind: 'atom', atom: 'columns', from: 0, to: block.source.length }]
   // Tabs too: the open tab written where it stands, the others kept; their tags are never shown.
+  if (block.kind === 'toc') return [{ kind: 'atom', atom: 'toc', from: 0, to: block.source.length }]
   if (block.kind === 'tabs') return [{ kind: 'atom', atom: 'tabs', from: 0, to: block.source.length }]
   const fenced = fencedAtom(block, atoms)
   if (fenced) return [{ kind: 'atom', atom: fenced.name, from: 0, to: block.source.length, group: [0, block.source.length] }]

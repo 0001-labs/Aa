@@ -1,0 +1,364 @@
+@import "./component-metrics.css";
+
+/*
+ * Progress, as plain classes on native elements: a value against its range,
+ * a sequence of steps, or a dot for each page. The `ds-progress` element
+ * draws the same parts; controls.css imports this file.
+ *
+ * Everything sits on the paper with no box, every line is one square and
+ * widths come in whole squares. Colour is kept for a state: the danger colour
+ * for a value that is over or a step that failed, the ink for the current
+ * step and the current dot.
+ *
+ * A value against its range, one square high (HTML's <progress>):
+ *
+ *   ds-progress              the row; role="meter" with aria-valuenow, -min, -max and -valuetext
+ *   ds-progress__fill        the bar, half a square high, drawn to --ds-progress-value (0 to 1)
+ *   ds-progress--squares     the range in squares instead, each one square
+ *   ds-progress__square      one square of the range; --on when it is filled
+ *   ds-progress--over        past the end: filled whole in the danger colour
+ *
+ * Tokens: `--ds-progress-value`, `--ds-progress-color` (the ink by default)
+ * and `--ds-progress-track` (the grey fill).
+ *
+ * A sequence of steps, one square high, each step on whole squares:
+ *
+ *   ds-progress--steps       with ds-progress, on an <ol>; the steps on one row, joined by a line
+ *   ds-progress--vertical    one step to a row, each with room for its body under it
+ *   ds-progress__step        an <li>; aria-current="step" on the current one
+ *   ds-progress__step--done, --current, --failed    states; upcoming without one
+ *   ds-progress__link        a step that goes somewhere: an <a href> around its mark and label
+ *   ds-progress__mark        the number (or the done or failed icon), one control high
+ *   ds-progress__label       the step's name on one line
+ *   ds-progress__state       the state in words for assistive technology, hidden ("Done")
+ *   ds-progress__body        what belongs under a step in a vertical sequence
+ *
+ * A dot for each page, one square each:
+ *
+ *   ds-progress--dots        with ds-progress, a group of dots (role="group")
+ *   ds-progress__dot         a button; `data-state` is `past`, `current` (with
+ *                            `aria-current="true"`), `next`, `future`, or `end` for a
+ *                            last dot marked as an end
+ *
+ * Tokens: the dot colours `--ds-progress-dot-past` and `-future` (the muted
+ * text colour by default), `-current`, `-next` and `-end` (the text colour),
+ * set on the dots or any element around them. Past, current and next dots are
+ * filled; future dots and the end marker are rings.
+ */
+
+/* ---- A value against its range: the bar, or the range in squares ---- */
+
+.ds-progress {
+  box-sizing: border-box;
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--ds-unit);
+  margin: 0;
+}
+
+/* The range and its bar are a band half a square high across the middle of
+   the row, as a chart's ratio is drawn. */
+.ds-progress:not(.ds-progress--squares, .ds-progress--steps, .ds-progress--dots)::before,
+.ds-progress__fill {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(var(--ds-unit) / 4);
+  height: calc(var(--ds-unit) / 2);
+}
+
+.ds-progress:not(.ds-progress--squares, .ds-progress--steps, .ds-progress--dots)::before {
+  content: "";
+  background: var(--ds-progress-track, var(--ds-fill));
+}
+
+.ds-progress__fill {
+  display: block;
+  background: var(--ds-progress-color, var(--ds-text-color));
+  transform: scaleX(var(--ds-progress-value, 0));
+  transform-origin: left center;
+  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ds-progress__fill:dir(rtl) {
+  transform-origin: right center;
+}
+
+.ds-progress--over .ds-progress__fill {
+  background: var(--ds-danger-color);
+  transform: none;
+}
+
+.ds-progress--squares {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.ds-progress__square {
+  flex: none;
+  width: calc(var(--ds-unit) - 1px);
+  height: calc(var(--ds-unit) - 1px);
+  margin-inline-end: 1px;
+  background: var(--ds-progress-track, var(--ds-fill));
+}
+
+.ds-progress__square--on {
+  background: var(--ds-progress-color, var(--ds-text-color));
+}
+
+.ds-progress--over .ds-progress__square {
+  background: var(--ds-danger-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-progress__fill {
+    transition: none;
+  }
+}
+
+/* ---- A sequence of steps --------------------------------------------- */
+
+.ds-progress--steps {
+  box-sizing: border-box;
+  position: static;
+  display: flex;
+  width: auto;
+  height: auto;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  text-transform: none;
+}
+
+/* Each step rounds its width up to whole squares where the browser can size
+   to content in calc; elsewhere it hugs its words. */
+.ds-progress__step {
+  --ds-progress-mark: transparent;
+  --ds-progress-mark-ink: var(--ds-text-color-muted);
+  --ds-progress-mark-line: var(--ds-border-color);
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  width: max-content;
+  width: calc-size(max-content, round(up, size, var(--ds-unit)));
+  min-height: var(--ds-unit);
+  margin: 0;
+  color: var(--ds-text-color-muted);
+}
+
+/* A line joins a step to the next: at least one square, across whatever the
+   step's rounding leaves, a quarter of a square short of each end. */
+.ds-progress__step:not(:last-child)::after {
+  content: "";
+  flex: 1 0 var(--ds-unit);
+  height: var(--ds-unit);
+  background: linear-gradient(var(--ds-border-color), var(--ds-border-color)) center / calc(100% - var(--ds-unit) / 2) 1px no-repeat;
+}
+
+.ds-progress__step--done {
+  --ds-progress-mark: var(--ds-fill);
+  --ds-progress-mark-ink: var(--ds-text-color);
+  --ds-progress-mark-line: transparent;
+  color: var(--ds-text-color);
+}
+
+.ds-progress__step--current {
+  --ds-progress-mark: var(--ds-text-color);
+  --ds-progress-mark-ink: var(--ds-paper);
+  --ds-progress-mark-line: transparent;
+  color: var(--ds-text-color);
+}
+
+.ds-progress__step--failed {
+  --ds-progress-mark: var(--ds-danger-color);
+  --ds-progress-mark-ink: light-dark(var(--ds-white), var(--ds-black));
+  --ds-progress-mark-line: transparent;
+  color: var(--ds-danger-color);
+}
+
+.ds-progress__link {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--ds-radius);
+}
+
+.ds-progress__link:hover .ds-progress__label {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: calc(3px * var(--ds-sf, 1));
+}
+
+.ds-progress__link:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: -2px;
+}
+
+.ds-progress__mark {
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+  margin: calc((var(--ds-unit) - var(--ds-control-height)) / 2);
+  overflow: hidden;
+  background: var(--ds-progress-mark);
+  box-shadow: inset 0 0 0 1px var(--ds-progress-mark-line);
+  color: var(--ds-progress-mark-ink);
+  --ds-icon-color: var(--ds-progress-mark-ink);
+  font-family: var(--ds-typeface-medium);
+  font-size: var(--ds-type-size-small);
+  font-weight: var(--ds-type-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--ds-control-height);
+  letter-spacing: 0;
+}
+
+.ds-progress__label {
+  min-width: 0;
+  padding-inline-end: calc(4px * var(--ds-sf, 1));
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+/* A cut step name fades over its last square, never an ellipsis (0-face/cut-fade.ts marks it). */
+.ds-progress__label[data-cut="end"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+.ds-progress__label[data-cut="end"]:dir(rtl) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+
+.ds-progress__step--current .ds-progress__label {
+  font-family: var(--ds-typeface-medium);
+  font-weight: var(--ds-type-weight-bold);
+}
+
+.ds-progress__state {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.ds-progress--vertical {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.ds-progress--vertical .ds-progress__step {
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ds-progress--vertical .ds-progress__step::after {
+  content: none;
+}
+
+/* Its content stands in a column, so an inline element in it (text drawn by
+   an element, say) takes its own lines rather than a line box's descent. */
+.ds-progress__body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 100%;
+  min-width: 0;
+  padding-inline-start: var(--ds-unit);
+  color: var(--ds-text-color);
+}
+
+/* ---- A dot for each page ------------------------------------------- */
+
+.ds-progress--dots {
+  position: static;
+  display: inline-flex;
+  width: auto;
+  flex: none;
+  align-items: center;
+  height: var(--ds-row-height);
+  margin: 0;
+  padding: 0;
+}
+
+.ds-progress__dot {
+  --ds-progress-dot-color: var(--ds-progress-dot-future, var(--ds-text-color-muted));
+  appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-unit);
+  height: var(--ds-unit);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-radius);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The dot itself: 4px, scaled with the surface, a fifth of the square. */
+.ds-progress__dot::before {
+  content: "";
+  box-sizing: border-box;
+  width: calc(4px * var(--ds-sf, 1));
+  height: calc(4px * var(--ds-sf, 1));
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ds-progress-dot-color);
+  transition: transform 160ms ease-out;
+}
+
+.ds-progress__dot[data-state="past"] { --ds-progress-dot-color: var(--ds-progress-dot-past, var(--ds-text-color-muted)); }
+.ds-progress__dot[data-state="next"] { --ds-progress-dot-color: var(--ds-progress-dot-next, var(--ds-text-color)); }
+.ds-progress__dot[data-state="end"] { --ds-progress-dot-color: var(--ds-progress-dot-end, var(--ds-text-color)); }
+.ds-progress__dot[aria-current="true"] { --ds-progress-dot-color: var(--ds-progress-dot-current, var(--ds-text-color)); }
+
+.ds-progress__dot:is([data-state="past"], [data-state="next"], [aria-current="true"])::before {
+  background: var(--ds-progress-dot-color);
+}
+
+/* The current dot is half again as large. */
+.ds-progress__dot[aria-current="true"]::before {
+  transform: scale(1.5);
+}
+
+.ds-progress__dot:hover:not([aria-current="true"])::before {
+  transform: scale(1.25);
+}
+
+.ds-progress__dot:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-progress__dot::before {
+    transition: none;
+  }
+}

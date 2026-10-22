@@ -1,0 +1,143 @@
+@import "./component-metrics.css";
+
+/*
+ * A carousel, as plain classes on native elements.
+ *
+ * A carousel is a row of slides that snaps sideways, one slide to a stop,
+ * with a row of controls one square high under it: optional previous and
+ * next buttons and a dot for each slide. Slides are the track's width, or
+ * whole squares wide, a whole number of squares apart (one by default). The
+ * controls stand one square below the track, on the grid from its start.
+ * The `ds-carousel` element draws the same parts, and
+ * `0-face/carousel.ts` gives the native markup its behaviour.
+ *
+ *   ds-carousel                    the region: track, controls, status;
+ *                                  `data-slides="auto"` for slides of their
+ *                                  own width, `data-bleed` `end` or `both`,
+ *                                  `data-snap="none"` to slide freely
+ *   ds-carousel__track             the scroller; every child is a slide
+ *   ds-carousel__controls          the row of buttons and dots
+ *   ds-carousel__previous, __next, icon buttons, on `.ds-button.ds-button--icon`
+ *   __pause
+ *   ds-carousel__status            the polite announcement, kept out of sight
+ *
+ *   The dots are `ds-progress--dots` from progress.css.
+ *
+ * A strip of slides of their own width can run on past its box to the
+ * window's end edge, or to both edges, while its first slide keeps to the
+ * box's start, so it lines up with the page's column; `--ds-carousel-before`
+ * and `--ds-carousel-after` are the room to the edges, which the script
+ * measures.
+ *
+ * Tokens: `--ds-carousel-slide` (a slide's width, the track's by default)
+ * and `--ds-carousel-gap` (between slides, one square by default).
+ */
+
+.ds-carousel {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--ds-unit);
+  position: relative;
+  min-width: 0;
+  margin: 0;
+}
+
+.ds-carousel__track {
+  box-sizing: border-box;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--ds-carousel-slide, 100%);
+  column-gap: var(--ds-carousel-gap, var(--ds-unit));
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.ds-carousel__track::-webkit-scrollbar {
+  display: none;
+}
+
+/* A mouse dragging the strip (0-face/carousel.ts dragTrack): no snapping until it lets go, and no words selected on the way. */
+.ds-carousel__track[data-dragging] {
+  scroll-snap-type: none;
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Slides of their own width, several in view. */
+.ds-carousel[data-slides="auto"] > .ds-carousel__track {
+  grid-auto-columns: max-content;
+}
+
+.ds-carousel[data-snap="none"] > .ds-carousel__track {
+  scroll-snap-type: none;
+}
+
+/* To the window's end edge: the track reaches out over the room after the
+   box and keeps a gap at its end, so the last slide stops short of the edge. */
+.ds-carousel[data-bleed="end"] > .ds-carousel__track {
+  margin-inline-end: calc(-1 * var(--ds-carousel-after, 0px));
+  padding-inline-end: var(--ds-carousel-gap, var(--ds-unit));
+}
+
+/* To both edges: the track reaches out both ways, and the first slide, and
+   each one it stops at, still stands on the box's start. */
+.ds-carousel[data-bleed="both"] > .ds-carousel__track {
+  margin-inline: calc(-1 * var(--ds-carousel-before, 0px)) calc(-1 * var(--ds-carousel-after, 0px));
+  padding-inline: var(--ds-carousel-before, 0px) var(--ds-carousel-gap, var(--ds-unit));
+  scroll-padding-inline-start: var(--ds-carousel-before, 0px);
+}
+
+.ds-carousel__track:focus-visible {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 1px;
+}
+
+.ds-carousel__track > * {
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 0;
+  scroll-snap-align: start;
+}
+
+/* One slide to a stop; a strip of several in view may pass a few. */
+.ds-carousel:not([data-slides="auto"]) > .ds-carousel__track > * {
+  scroll-snap-stop: always;
+}
+
+.ds-carousel__controls {
+  display: flex;
+  align-items: center;
+  height: var(--ds-row-height);
+  min-width: 0;
+}
+
+/* The buttons take a one-square cell each, as the dots do. Two classes, so
+   the button's own reset of its margin does not undo it. */
+.ds-carousel .ds-carousel__previous,
+.ds-carousel .ds-carousel__next,
+.ds-carousel .ds-carousel__pause {
+  flex: none;
+  margin: calc((var(--ds-unit) - var(--ds-control-height)) / 2);
+}
+
+/* Previous points back along the reading direction. */
+.ds-carousel:dir(rtl) :is(.ds-carousel__previous, .ds-carousel__next) > * {
+  transform: scaleX(-1);
+}
+
+.ds-carousel__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

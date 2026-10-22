@@ -1,0 +1,124 @@
+@import "../../1-root/component-metrics.css";
+
+/* ds-text.css */
+/* Text component styles for displaying translations. Without attributes the
+   element is one control high, for a row; text.css draws the same words as
+   classes on native text. */
+
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: var(--ds-control-height);
+  font-family: var(--ds-typeface-regular);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: var(--ds-text-tone, inherit);
+}
+:host([hidden]) { display: none !important; }
+
+:host([data-language="ja"]) {
+  font-family: var(--ds-typeface-regular-jp, var(--typeface-regular-jp));
+}
+
+:host([data-language="zh"]),
+:host([data-language="zh-hant"]) {
+  font-family: var(--ds-typeface-regular-zh-hant, var(--typeface-regular-zh-hant));
+  font-weight: var(--ds-type-weight-default, 400);
+}
+
+:host([data-language="zh-hans"]) {
+  font-family: var(--ds-typeface-regular-zh-hans, var(--typeface-regular-zh-hans));
+  font-weight: var(--ds-type-weight-default, 400);
+}
+
+:host span {
+  color: inherit;
+}
+
+/* Text someone wrote: shown as it stands. Cut at its width, it fades over its
+   last square, never an ellipsis: the element marks itself `data-cut="end"`
+   while its words do not fit (0-face/cut-fade.ts). */
+:host([literal]) {
+  height: auto;
+  min-height: var(--ds-control-height);
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: var(--ds-text-overflow, hidden);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  text-overflow: clip;
+  white-space: nowrap;
+}
+:host([literal]:not([wrap])[data-cut="end"]) {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+:host([literal]:not([wrap])[data-cut="end"]:dir(rtl)) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+
+/*
+ * Tone, size, strength and wrapping work alike for a translation key and for
+ * literal text. They follow the rules above, at the same specificity.
+ */
+
+:host([strong]) {
+  font-weight: var(--ds-type-weight-bold);
+}
+
+/* Several lines, each one square. */
+:host([wrap]) {
+  display: inline-block;
+  height: auto;
+  min-height: var(--ds-control-height);
+  max-width: 100%;
+  overflow: visible;
+  line-height: var(--ds-unit);
+  white-space: normal;
+}
+
+:host([tone="muted"]) {
+  --ds-text-tone: var(--ds-text-color-muted);
+}
+
+:host([tone="title"]) {
+  --ds-text-tone: var(--ds-title-color);
+}
+
+:host([tone="danger"]) {
+  --ds-text-tone: var(--ds-danger-color);
+}
+
+:host([tone="warning"]) {
+  --ds-text-tone: var(--ds-warning-color);
+}
+
+:host([size="small"]) {
+  font-size: var(--ds-type-size-small);
+}
+
+:host([size="heading"]) {
+  height: auto;
+  font-size: var(--ds-type-size-heading);
+  line-height: var(--ds-type-lineheight-default);
+}
+
+/* A title on two squares. */
+:host([size="display"]) {
+  display: inline-block;
+  height: auto;
+  min-height: calc(2 * var(--ds-unit));
+  font-size: var(--ds-type-size-display);
+  line-height: calc(2 * var(--ds-unit));
+  letter-spacing: calc(var(--ds-display-text-tracking, -0.4px) * var(--ds-sf, 1));
+}

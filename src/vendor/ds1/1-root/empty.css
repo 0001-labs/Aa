@@ -1,0 +1,146 @@
+@import "./component-metrics.css";
+
+/*
+ * An empty state, as plain classes on native elements.
+ *
+ * It says that a place has nothing in it yet and what to do about it: a title,
+ * a line of text and, when there is one, the action that fills it. The words
+ * sit on the paper with no box, no illustration and no colour; every line is
+ * one square, so the whole stands on whole squares. The `ds-empty` element
+ * draws the same parts from a translation key, with the shared words' "Nothing
+ * here yet" as its title when none is given.
+ *
+ *   ds-empty                 the block, at most sixteen squares wide
+ *   ds-empty__icon           an icon from the library, before the title, muted
+ *   ds-empty__title          one line in the medium face
+ *   ds-empty__text           lines of one square, muted
+ *   ds-empty__actions        buttons or links on one row, one square below
+ *   ds-empty--centered       centred in the space it stands in
+ *   ds-empty--done           all done: the check on a mark in the success
+ *                            green, the title in that green
+ *
+ * Tokens: `--ds-empty-measure` (the widest it grows, sixteen squares) and
+ * `--ds-empty-padding` (the room above and below, none by default).
+ */
+
+.ds-empty {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: var(--ds-empty-measure, calc(16 * var(--ds-unit)));
+  margin: 0 auto;
+  text-align: center;
+  padding-block: var(--ds-empty-padding, 0);
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  text-transform: none;
+}
+
+.ds-empty__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: calc(var(--ds-unit) - var(--ds-control-height));
+  max-width: 100%;
+}
+
+.ds-empty__icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+  margin-top: calc(var(--ds-unit) - var(--ds-control-height));
+  color: var(--ds-text-color-muted);
+}
+
+.ds-empty__title,
+.ds-empty__text {
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.ds-empty__title {
+  min-width: 0;
+  padding-top: calc(var(--ds-unit) - var(--ds-control-height));
+  line-height: var(--ds-control-height);
+  font-family: var(--ds-typeface-medium);
+  font-weight: var(--ds-type-weight-bold);
+}
+
+.ds-empty__text {
+  color: var(--ds-text-color-muted);
+}
+
+.ds-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0 calc(var(--ds-unit) / 2);
+  min-height: var(--ds-row-height);
+  margin-top: var(--ds-unit);
+}
+
+.ds-empty--start {
+  align-items: flex-start;
+  margin-inline: 0;
+  text-align: start;
+}
+
+.ds-empty--start .ds-empty__heading,
+.ds-empty--start .ds-empty__actions {
+  justify-content: flex-start;
+}
+
+.ds-empty--centered {
+  align-items: center;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.ds-empty--centered .ds-empty__actions {
+  justify-content: center;
+}
+
+/* Done: a place empty because everything in it is finished (every receipt
+   found, nothing left to review). The icon, the check by default, stands on a
+   round mark one control high in the success green, on the sixteen, and the
+   title takes the same green; the line under it stays muted. */
+.ds-empty--done .ds-empty__icon {
+  box-sizing: border-box;
+  justify-content: center;
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+  margin-top: calc(var(--ds-unit) - var(--ds-control-height));
+  border-radius: 50%;
+  background: var(--ds-success-color);
+  color: light-dark(var(--ds-white), var(--ds-black));
+  --ds-icon-color: currentColor;
+}
+
+.ds-empty--done .ds-empty__title {
+  color: var(--ds-success-color);
+}
+
+/* Compatibility for saved markup with the icon and title as siblings. */
+.ds-empty:has(> .ds-empty__icon:not([hidden])) {
+  display: grid;
+  grid-template-columns: var(--ds-control-height) minmax(0, auto);
+  column-gap: calc(var(--ds-unit) - var(--ds-control-height));
+  justify-content: center;
+  align-items: start;
+}
+.ds-empty > .ds-empty__icon { grid-column: 1; grid-row: 1; }
+.ds-empty:has(> .ds-empty__icon:not([hidden])) > .ds-empty__title { grid-column: 2; grid-row: 1; }
+.ds-empty > .ds-empty__text,
+.ds-empty > .ds-empty__actions { grid-column: 1 / -1; }

@@ -1,0 +1,110 @@
+@import "./component-metrics.css";
+
+/*
+ * A bento, as plain classes on native elements: tiles of different sizes
+ * standing half a square (10px) apart, each a card (`.ds-card`, or any box)
+ * that holds one thing. The `ds-bento` element draws the same.
+ *
+ * Flow (the default): columns that share the width (`--ds-bento-columns`,
+ * three), a tile one column wide or more (`data-span`, or
+ * `--ds-bento-span`) and one row high or more (`data-rows`, or
+ * `--ds-bento-rows`); a row is as high as its tallest tile, at least
+ * `--ds-bento-row` (ten squares by default). Below thirty squares of width
+ * the bento is one column.
+ *
+ * Squares (`data-squares`): the bento is exactly `--ds-bento-columns` squares wide
+ * and every tile is placed on whole squares (`data-place="x y w h"`,
+ * counted from 0). Tiles are placed a square apart, and a tile's surface
+ * reaches a quarter square towards each tile beside it, so they stand half a
+ * square apart while what they hold stays on the squares, and the bento's
+ * own edges stay on the page's. `placeBento()` (0-face/bento.ts) reads the
+ * places and sets the reach; the element does it itself.
+ *
+ *   data-span="2"          a tile two columns wide (to 6)
+ *   data-rows="2"          a tile two rows high (to 6)
+ *   data-place="0 0 15 7"  a tile's square, width and height in squares
+ *
+ * `data-fit` lets a squares bento's columns share a measure other than its
+ * squares (each tile still reaches a quarter square, so the gap is a column
+ * less half a square); `data-layout` (say `phone`) makes `placeBento()` take each tile's
+ * `data-place-phone` where it has one, a place per layout.
+ *
+ * Tokens: `--ds-bento-unit` (the square, `--ds-unit` by default),
+ * `--ds-bento-gap` (half of it), `--ds-bento-columns`, `--ds-bento-row`,
+ * `--ds-bento-padding` (a squares tile that is not a card, one square), and
+ * on a tile `--ds-bento-span`, `--ds-bento-rows`.
+ */
+
+.ds-bento {
+  --ds-bento-unit: var(--ds-unit);
+  --ds-bento-gap: calc(var(--ds-bento-unit) / 2);
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(var(--ds-bento-columns, 3), minmax(0, 1fr));
+  grid-auto-rows: minmax(var(--ds-bento-row, calc(10 * var(--ds-bento-unit))), auto);
+  grid-auto-flow: row dense;
+  gap: var(--ds-bento-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ds-bento[hidden] { display: none; }
+
+.ds-bento > * {
+  --ds-card-width: auto;
+  --ds-card-height: auto;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  grid-column: span var(--ds-bento-span, 1);
+  grid-row: span var(--ds-bento-rows, 1);
+}
+.ds-bento > [data-span="2"] { --ds-bento-span: 2; }
+.ds-bento > [data-span="3"] { --ds-bento-span: 3; }
+.ds-bento > [data-span="4"] { --ds-bento-span: 4; }
+.ds-bento > [data-span="5"] { --ds-bento-span: 5; }
+.ds-bento > [data-span="6"] { --ds-bento-span: 6; }
+.ds-bento > [data-rows="2"] { --ds-bento-rows: 2; }
+.ds-bento > [data-rows="3"] { --ds-bento-rows: 3; }
+.ds-bento > [data-rows="4"] { --ds-bento-rows: 4; }
+.ds-bento > [data-rows="5"] { --ds-bento-rows: 5; }
+.ds-bento > [data-rows="6"] { --ds-bento-rows: 6; }
+
+@media (max-width: 600px) {
+  .ds-bento:not([data-squares]) { grid-template-columns: minmax(0, 1fr); }
+  .ds-bento:not([data-squares]) > * { grid-column: auto; }
+}
+
+/* Squares: every tile on whole squares, a square apart, its surface a quarter square nearer each neighbour. */
+.ds-bento[data-squares] {
+  --ds-bento-reach: calc(var(--ds-bento-unit) / 4);
+  /* Exactly its squares wide: each column one square. */
+  width: calc(var(--ds-bento-columns, 48) * var(--ds-bento-unit));
+  max-width: none;
+  grid-template-columns: repeat(var(--ds-bento-columns, 48), var(--ds-bento-unit));
+  grid-auto-rows: var(--ds-bento-unit);
+  grid-auto-flow: row;
+  gap: 0;
+}
+/* Fit: the columns share a measure narrower (or wider) than the squares, the rows still one square. */
+.ds-bento[data-squares][data-fit] {
+  width: auto;
+  grid-template-columns: repeat(var(--ds-bento-columns, 48), minmax(0, 1fr));
+}
+.ds-bento[data-squares] > * {
+  --ds-bento-inset-top: calc(var(--ds-bento-reach) * var(--ds-bento-top, 0));
+  --ds-bento-inset-end: calc(var(--ds-bento-reach) * var(--ds-bento-end, 0));
+  --ds-bento-inset-bottom: calc(var(--ds-bento-reach) * var(--ds-bento-bottom, 0));
+  --ds-bento-inset-start: calc(var(--ds-bento-reach) * var(--ds-bento-start, 0));
+  grid-column: calc(var(--ds-bento-x, 0) + 1) / span var(--ds-bento-w, 4);
+  grid-row: calc(var(--ds-bento-y, 0) + 1) / span var(--ds-bento-h, 4);
+  margin: calc(-1 * var(--ds-bento-inset-top)) calc(-1 * var(--ds-bento-inset-end)) calc(-1 * var(--ds-bento-inset-bottom)) calc(-1 * var(--ds-bento-inset-start));
+}
+/* A card grows its own padding by the reach (card.css); any other tile is padded here, a square inside. */
+.ds-bento[data-squares] > :not(.ds-card, ds-card) {
+  padding:
+    calc(var(--ds-bento-padding, var(--ds-bento-unit)) + var(--ds-bento-inset-top))
+    calc(var(--ds-bento-padding, var(--ds-bento-unit)) + var(--ds-bento-inset-end))
+    calc(var(--ds-bento-padding, var(--ds-bento-unit)) + var(--ds-bento-inset-bottom))
+    calc(var(--ds-bento-padding, var(--ds-bento-unit)) + var(--ds-bento-inset-start));
+}

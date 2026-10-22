@@ -61,7 +61,8 @@
     "./src/aa.css",
     "./src/ds1/0-face/grid.ts",
     "./src/ds1/0-face/constraint-panel.ts",
-    "./dist/aa.js"
+    "./dist/aa.js",
+    "./src/vendor/ds1/**/*.ts"
   ],
   "scripts": {
     "dev": "vp dev",
@@ -106,6 +107,7 @@
     "access": "public"
   },
   "dependencies": {
+    "lit": "^3.3.3",
     "yjs": "^13.6.33"
   }
 }

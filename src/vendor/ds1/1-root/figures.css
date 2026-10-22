@@ -1,0 +1,183 @@
+@import "./component-metrics.css";
+
+/*
+ * Figures, as plain classes on native elements: a stat and a group of stats.
+ * The `ds-stat` element draws the same parts; controls.css imports this
+ * file. A value against its range, steps and page dots are `progress.css`.
+ *
+ * Everything sits on the paper with no box, every line is one square and
+ * widths come in whole squares. Colour is kept for a state: the danger colour
+ * for a figure that is over.
+ *
+ * A stat: a label, a figure and a line for its change or caption.
+ *
+ *   ds-stat                  the block, as wide as its column
+ *   ds-stat__label           one line, muted; an icon may lead it on its own square
+ *   ds-stat__icon            the square an icon from the library stands on
+ *   ds-stat__figure          the figure in tabular numerals, 20 on two squares
+ *   ds-stat__digit           one digit in a cell of one width, for a face without tabular numerals
+ *   ds-stat__caption         one line, muted, under the figure
+ *   ds-stat__change          the change at the start of the caption, in the text colour;
+ *                            --danger or --warning where the page knows which way is bad
+ *   ds-stat--danger, --warning    the figure in that colour
+ *   ds-stats                 a group of stats on whole squares: columns eight
+ *                            squares wide, one square between them and between rows
+ *   ds-stats[data-frame]     the group in a rounded 1px frame with a 1px line
+ *                            between stats, as a framed table: the columns share
+ *                            the width, each stat's words 4px in from its lines
+ *                            as a framed table's, and a square at its foot, so
+ *                            the frame stays whole squares high
+ *
+ * Tokens: `--ds-stat-size` (the figure's type size before the scale, 20px)
+ * and `--ds-stat-lines` (the squares its line takes, 2), `--ds-stat-typeface`
+ * (the medium face), `--ds-stat-digit` (a digit cell's width, 1ch),
+ * `--ds-stat-change-color`, and `--ds-stats-width` (a column's width in
+ * squares, 8).
+ *
+ */
+
+/* ---- Stat ------------------------------------------------------------ */
+
+.ds-stat {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0;
+  color: var(--ds-text-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  text-transform: none;
+}
+
+.ds-stat__label,
+.ds-stat__figure,
+.ds-stat__caption {
+  box-sizing: border-box;
+  max-width: 100%;
+  margin: 0;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.ds-stat__label,
+.ds-stat__caption {
+  display: flex;
+  align-items: flex-start;
+  min-height: var(--ds-unit);
+  color: var(--ds-text-color-muted);
+  overflow-wrap: anywhere;
+}
+
+.ds-stat__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-unit);
+  height: var(--ds-unit);
+}
+
+.ds-stat__figure {
+  display: block;
+  overflow: hidden;
+  font-family: var(--ds-stat-typeface, var(--ds-typeface-medium));
+  font-size: calc(var(--ds-stat-size, var(--ds-display-text-size, 20px)) * var(--ds-sf, 1));
+  font-weight: var(--ds-type-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: calc(var(--ds-stat-lines, 2) * var(--ds-unit));
+  min-height: calc(var(--ds-stat-lines, 2) * var(--ds-unit));
+  letter-spacing: calc(var(--ds-display-text-tracking, -0.4px) * var(--ds-sf, 1));
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+/* A figure too wide for its column fades over its last square, never an ellipsis (0-face/cut-fade.ts marks it). */
+.ds-stat__figure[data-cut="end"] {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+.ds-stat__figure[data-cut="end"]:dir(rtl) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+
+.ds-stat__digit {
+  display: inline-block;
+  width: var(--ds-stat-digit, 1ch);
+  text-align: center;
+}
+
+.ds-stat--danger .ds-stat__figure {
+  color: var(--ds-danger-color);
+}
+
+.ds-stat--warning .ds-stat__figure {
+  color: var(--ds-warning-color);
+}
+
+.ds-stat__change {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: var(--ds-unit);
+  margin-inline-end: calc(4px * var(--ds-sf, 1));
+  color: var(--ds-stat-change-color, var(--ds-text-color));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ds-stat__change--danger {
+  --ds-stat-change-color: var(--ds-danger-color);
+}
+
+.ds-stat__change--warning {
+  --ds-stat-change-color: var(--ds-warning-color);
+}
+
+.ds-stats {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, min(100%, calc(var(--ds-stats-width, 8) * var(--ds-unit))));
+  gap: var(--ds-unit);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ds-stats[data-frame] {
+  --ds-stats-radius: var(--ds-radius-card, calc(4px * var(--ds-sf, 1)));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--ds-stats-width, 8) * var(--ds-unit))), 1fr));
+  position: relative;
+  gap: 0;
+  border-radius: var(--ds-stats-radius);
+}
+/* The frame is drawn over the stats, as a framed table's is over its cells. */
+.ds-stats[data-frame]::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  border: 1px solid var(--ds-border-color, light-dark(#d8d8d8, #3d3d3d));
+  border-radius: var(--ds-stats-radius);
+  content: "";
+  pointer-events: none;
+}
+.ds-stats[data-frame] > * {
+  min-width: 0;
+  padding: 0 calc(4px * var(--ds-sf, 1)) var(--ds-unit);
+}
+.ds-stats[data-frame] > * + * {
+  box-shadow: inset 1px 0 0 var(--ds-border-color, light-dark(#d8d8d8, #3d3d3d));
+}
+.ds-stats[data-frame]:dir(rtl) > * + * {
+  box-shadow: inset -1px 0 0 var(--ds-border-color, light-dark(#d8d8d8, #3d3d3d));
+}
+
+.ds-stats > li {
+  min-width: 0;
+  margin: 0;
+}
