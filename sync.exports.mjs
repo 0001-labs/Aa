@@ -19,7 +19,7 @@ export default {
       build: ({ run }) => run('vp', ['run', 'build']),
       files({ read, tree, exists, options }) {
         const entries = [...(options.entries ?? [])]
-        if (entries.includes('diagram')) for (const part of ['diagram-language', 'marker', 'partial-reader']) if (!entries.includes(part)) entries.push(part)
+        if (entries.includes('diagram')) for (const part of ['diagram-language', 'marker']) if (!entries.includes(part)) entries.push(part)
         for (const entry of entries) if (!optional.includes(entry)) throw new Error(`Aa has no entry "${entry}"; it has ${optional.join(', ')}`)
         if (!exists('dist/aa.js')) throw new Error('Aa is not built: run vp run build in Aa')
         const files = new Map([
