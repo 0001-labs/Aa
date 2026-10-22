@@ -1,0 +1,88 @@
+/* Light DOM preserves native forms, labels and React event targets. */
+ds-overlay > dialog {
+  box-sizing: border-box;
+  position: var(--ds-overlay-position, fixed);
+  inset: var(--ds-overlay-inset, 0);
+  width: var(--ds-overlay-width, calc(20 * var(--ds-unit)));
+  max-width: var(--ds-overlay-max-width, calc(100vw - 2 * var(--ds-unit)));
+  max-height: var(--ds-overlay-max-height, calc(100dvh - 2 * var(--ds-unit)));
+  height: var(--ds-overlay-height, fit-content);
+  margin: var(--ds-overlay-margin, auto);
+  padding: var(--ds-overlay-padding, var(--ds-unit));
+  border: var(--ds-overlay-border, 1px solid var(--ds-border-color));
+  border-radius: 0;
+  background: var(--ds-overlay-paper, var(--ds-paper));
+  color: var(--ds-text-color);
+  z-index: var(--ds-overlay-layer, auto);
+  box-shadow: none;
+  overflow: var(--ds-overlay-overflow, auto);
+  overscroll-behavior: contain;
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+ds-overlay > dialog[open] { display: flex; flex-direction: column; gap: var(--ds-unit); }
+ds-overlay > dialog:not([open]) { display: none; }
+ds-overlay > dialog[data-ds-type="popover"] {
+  inset: auto;
+  left: var(--ds-overlay-anchor-left, 0px);
+  top: var(--ds-overlay-anchor-top, 0px);
+  margin: calc(var(--ds-unit) / 2);
+  width: var(--ds-overlay-width, max-content);
+  max-width: var(--ds-overlay-available-width, calc(100vw - var(--ds-unit)));
+  max-height: var(--ds-overlay-available-height, calc(100dvh - var(--ds-unit)));
+}
+ds-overlay > dialog[data-ds-overlay-flush] { padding: 0; gap: 0; }
+ds-overlay > dialog[data-ds-overlay-rotated] {
+  inset: auto;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  width: calc(100dvh - 2 * var(--ds-unit));
+  height: calc(100vw - 2 * var(--ds-unit));
+  max-width: none;
+  max-height: none;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+ds-overlay > dialog[data-ds-type="screen"][data-ds-overlay-rotated] { width: 100dvh; height: 100vw; }
+ds-overlay > dialog::backdrop { background: color-mix(in srgb, var(--ds-black) 40%, transparent); }
+/* The header keeps the last square of its row for the close button, only when it has one. */
+ds-overlay [data-ds-overlay="header"] { display: flex; flex-direction: column; }
+ds-overlay > dialog:has(> [data-ds-overlay="close"]) [data-ds-overlay="header"] { padding-inline-end: var(--ds-unit); }
+/* The title on its square's lower sixteen, as every row's words. */
+ds-overlay [data-ds-overlay="title"] {
+  display: flex;
+  align-items: flex-end;
+  min-height: var(--ds-row-height);
+  margin: 0;
+  color: var(--ds-text-color);
+  font: inherit;
+  font-weight: var(--ds-type-weight-bold);
+  line-height: var(--ds-type-lineheight-default);
+}
+ds-overlay [data-ds-overlay="description"] { margin: 0; color: var(--ds-text-color-muted); font: inherit; }
+ds-overlay [data-ds-overlay="footer"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(var(--ds-unit) / 2);
+  min-height: var(--ds-row-height);
+}
+ds-overlay [data-ds-overlay="close"] { position: absolute; top: var(--ds-unit); right: var(--ds-unit); }
+
+ds-overlay > dialog[data-ds-overlay-inline] {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  background: transparent;
+}

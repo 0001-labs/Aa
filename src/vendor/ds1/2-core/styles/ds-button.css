@@ -1,0 +1,231 @@
+/* ds-button.css */
+/* Core button component styles. The face is a <button>, or an <a> when the
+   element has an href: both draw alike in every variant and state. */
+
+:host {
+  display: inline-flex;
+  /* At the foot of a line, so a 16px face takes the lower sixteen of the square. */
+  vertical-align: bottom;
+  min-width: 0;
+  flex: 0 0 auto;
+  width: var(--ds-button-width, max-content);
+  max-width: 100%;
+  /* Clipped along the line only: a word that runs long is cut and fades over
+     its last square (never an ellipsis), but the descenders of g, y, p and j
+     hang below the 16-unit box as they would anywhere else, instead of being
+     cut off at its edge. */
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+/* Label width is standard. Fixed grid widths are explicit layout choices. */
+:host([fixed]) { width: var(--ds-button-width, calc(4 * var(--ds-unit))); }
+:host([wide]) { width: var(--ds-button-width, calc(8 * var(--ds-unit))); }
+/* Keep fit as an explicit intrinsic-width alias for existing consumers. */
+:host([fit]) {
+  flex: 0 0 auto;
+  width: max-content;
+}
+:host([fit]) :is(button, a) {
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: var(--ds-button-min-width, 0px);
+  justify-content: var(--ds-button-align, flex-start);
+}
+:host([fit]) :is(button, a) ds-text,
+:host([fit]) :is(button, a) ::slotted(*) {
+  flex: 0 0 auto;
+  width: max-content;
+}
+
+:is(button, a) {
+  box-sizing: border-box;
+  max-height: var(--ds-control-height);
+  height: var(--ds-control-height);
+  min-height: var(--ds-control-height);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  border: none;
+  border-radius: var(--ds-radius);
+  corner-shape: var(--ds-corner-shape, round);
+  cursor: pointer;
+  padding: 0;
+  color: var(--button-color, var(--button-text-color));
+  font-family: var(--ds-typeface-regular);
+  font-size: var(--ds-type-size-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  overflow-x: clip;
+  overflow-y: visible;
+  text-overflow: clip;
+  /* Default to no-background when no variant is specified */
+  background-color: transparent;
+  text-decoration: none;
+}
+
+:is(button, a) ds-text,
+:is(button, a) ::slotted(*) {
+  overflow-x: clip;
+  overflow-y: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  max-width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  color: inherit;
+}
+
+/* Cut words fade over their last square, never an ellipsis: the element marks
+   them `data-cut="end"` while they do not fit (0-face/cut-fade.ts). Words in an
+   element of their own fade with a mask, on any face. */
+:is(button, a) ds-text[data-cut="end"],
+:is(button, a) ::slotted([data-cut="end"]) {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+:host(:dir(rtl)) :is(button, a) ds-text[data-cut="end"],
+:host(:dir(rtl)) :is(button, a) ::slotted([data-cut="end"]) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+
+/* Words written straight into the face cannot be masked apart from it, and a
+   mask on the face would fade its fill and its focus ring too. So, filled or
+   not, the face paints its words through the same gradient instead: a first
+   background layer in the words' own colour, fading over the last square of
+   the face's content box and clipped to the glyphs, over the face's own fill,
+   which stays whole to its edge. Icons, drawn as pictures, stay crisp. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  :is(button, a)[data-cut="end"] {
+    background-image: linear-gradient(to right, currentColor calc(100% - var(--ds-unit)), transparent), none;
+    background-origin: content-box, padding-box;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text, border-box;
+    background-clip: text, border-box;
+    -webkit-text-fill-color: transparent;
+  }
+  :host(:dir(rtl)) :is(button, a)[data-cut="end"] {
+    background-image: linear-gradient(to left, currentColor calc(100% - var(--ds-unit)), transparent), none;
+  }
+}
+
+:is(button, a)[primary] {
+  background-color: var(--accent-color);
+  color: var(--button-text-color-on-light, var(--black));
+  text-decoration-line: none;
+  font-family: var(--ds-typeface-regular);
+  padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
+}
+
+/* The secondary face's words are the text's ink, as on `.ds-button--secondary`
+   and the host and slotted faces; the grey is the face, not the words. */
+:is(button, a)[secondary] {
+  background-color: var(--button-background-color-secondary);
+  color: var(--ds-button-color, var(--ds-button-text-color));
+  font-family: var(--ds-typeface-regular);
+  padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
+}
+
+/* An entry in a menu or a list of options is one row high on this face too,
+   as on the host and slotted faces: the menu's --ds-button-height (one
+   square, or a compact row), its words at the start, padded 4px. */
+:host(:is([menu-item], [role="option"], [role^="menuitem"])) :is(button, a) {
+  /* Its words and icon on the lower sixteen of the row, the spare four above. */
+  align-items: flex-end;
+  height: var(--ds-button-height, var(--ds-row-height));
+  min-height: var(--ds-button-height, var(--ds-row-height));
+  max-height: var(--ds-button-height, var(--ds-row-height));
+  justify-content: var(--ds-button-align, flex-start);
+  padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
+}
+
+/* `danger`: a destructive action's words in the danger colour, on this face
+   as on the host and slotted faces and `.ds-button--danger`. */
+:host([danger]) :is(button, a) {
+  color: var(--ds-danger-color, var(--ds-tuned-red));
+}
+
+/* Disabled, as in the slotted and host modes. A disabled link has no href. */
+:is(button:disabled, a[aria-disabled="true"]) {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.loading {
+  opacity: 0.7;
+}
+
+/* A button that holds only an icon — every close button — is a 16-unit
+   square, scaled with the page, in the shape's corners: the icon fills it,
+   no word-padding around it, so the glyph's lines are the same size wherever
+   a page or a panel closes, on the web and in the app alike. The element
+   marks itself `icon` when its only child is an ds-icon. */
+:host([icon]) {
+  flex: 0 0 auto;
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+}
+:host([icon]) :is(button, a) {
+  width: var(--ds-control-height);
+  padding: 0 !important;
+  justify-content: center;
+}
+:host([icon]) ::slotted(ds-icon) {
+  flex: 0 0 auto;
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+}
+
+/* A button marked `square` is a 16-unit square whatever it holds, a count
+   or an initial, its words in its middle with no word-padding around them. */
+:host([square]) {
+  flex: 0 0 auto;
+  width: var(--ds-control-height);
+}
+:host([square]) :is(button, a) {
+  width: var(--ds-control-height);
+  padding: 0 !important;
+  justify-content: center;
+}
+
+/* Words and an icon hug them, as on every face (controls.css): this face has
+   no gap, and on a filled face the icon takes the padding on its side, its
+   own room around the glyph standing in for it. */
+:host(:is([primary], [secondary]):not([icon])) ::slotted(ds-icon:last-child:not(:first-child)) {
+  margin-inline-end: calc(-4px * var(--ds-sf));
+}
+:host(:is([primary], [secondary]):not([icon])) ::slotted(ds-icon:first-child:not(:last-child)) {
+  margin-inline-start: calc(-4px * var(--ds-sf));
+}
+
+/* A paper tab (`ds-tabs paper`) on this face: a row high with its words on
+   the sixteen, half a square of room at its sides, in the run's colours,
+   rounded at the top only and square at the foot, where it joins the page. */
+:host([paper]) :is(button, a) {
+  height: var(--ds-row-height);
+  min-height: var(--ds-row-height);
+  max-height: var(--ds-row-height);
+  align-items: flex-end;
+  padding: 0 calc(10px * var(--ds-sf));
+  border-radius: var(--ds-radius) var(--ds-radius) 0 0;
+  background-color: var(--ds-button-background, transparent);
+  color: var(--ds-button-color, var(--button-text-color));
+}
+
+/* A segment gets its outside corners from the enclosing split control, or
+   from its place in a joined run of tabs (`ds-tabs split`). */
+:host([segment]) :is(button, a) {
+  border-radius: 0 !important;
+}
+:host(:is([segment="first"], [segment="only"])) :is(button, a) {
+  border-start-start-radius: var(--ds-radius) !important;
+  border-end-start-radius: var(--ds-radius) !important;
+}
+:host(:is([segment="last"], [segment="only"])) :is(button, a) {
+  border-start-end-radius: var(--ds-radius) !important;
+  border-end-end-radius: var(--ds-radius) !important;
+}

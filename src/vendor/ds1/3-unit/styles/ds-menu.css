@@ -1,0 +1,122 @@
+@import "../../1-root/component-metrics.css";
+
+/* On whole squares: the line and the padding inside it make half a square on
+ * each side, and every entry is one square high, so a menu of n entries is
+ * n + 1 squares high. Placed half a square from its anchor, its entries
+ * stand on the anchor's grid lines. No shadow: words on paper. */
+:host {
+  --ds-menu-row: var(--ds-row-height);
+  box-sizing: border-box;
+  display: block;
+  min-width: calc(8 * var(--ds-unit));
+  max-height: var(--ds-menu-max-height, calc(16 * var(--ds-unit)));
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+:host([hidden]) { display: none !important; }
+
+/* Keep the shared face inside the boundary: product resets can reach a host. */
+.frame {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-height: min(var(--ds-menu-max-height, calc(16 * var(--ds-unit))), var(--ds-menu-available-height, 100vh));
+  overflow-y: auto;
+  padding: calc(var(--ds-unit) / 2 - 1px);
+  border: 1px solid var(--ds-border-color);
+  border-radius: var(--ds-radius-card);
+  background: var(--ds-paper);
+  color: var(--ds-text-color);
+  box-shadow: none;
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+slot { display: contents; }
+
+/* Every entry is one row, whatever button styles a product or library gives
+ * it: shared buttons through their height, a native button or link through
+ * its box, which the menu's !important holds against outside styles. */
+::slotted(:is(ds-button, ds-file-picker)) { flex: 0 0 auto; width: 100%; --ds-button-height: var(--ds-menu-row); }
+::slotted(:is(button, a, [role="option"], [role^="menuitem"]):not(ds-button, ds-file-picker)) {
+  box-sizing: border-box !important;
+  flex: 0 0 auto !important;
+  height: var(--ds-menu-row) !important;
+  min-height: var(--ds-menu-row) !important;
+  max-height: var(--ds-menu-row) !important;
+  margin-block: 0 !important;
+  padding-block: 0 !important;
+  line-height: var(--ds-type-lineheight-default) !important;
+}
+
+:host([floating]:not([open])) { display: none; }
+:host([floating]) { position: fixed; inset: auto; margin: 0; min-width: 0; width: var(--ds-menu-width, var(--ds-menu-anchor-width)); z-index: 1; scroll-padding: calc(var(--ds-unit) / 2); }
+:host([floating]) ::slotted(:is(ds-button, ds-file-picker)) { flex: 0 0 auto; --ds-button-height: var(--ds-menu-row); --ds-button-align: flex-start; --ds-button-padding: 0 calc(4px * var(--ds-sf)); width: 100%; }
+:host([data-grid]) { width: max-content; min-width: 0; }
+:host([data-grid]) .frame { display: grid; grid-template-columns: repeat(var(--ds-menu-columns), var(--ds-row-height)); width: max-content; max-width: 100%; }
+:host([data-grid]) ::slotted(:is(ds-button, ds-file-picker)) { --ds-button-height: var(--ds-menu-row); --ds-button-min-width: 0px; --ds-button-padding: 0; --ds-button-align: center; }
+
+/* Compact entries are filled rows edge to edge, 19px with the 1px between
+ * them, a square's pitch: n entries are n squares less the last line. */
+:host([compact]) {
+  --ds-menu-row: calc(var(--ds-row-height) - 1px);
+  width: var(--ds-menu-width, calc(8 * var(--ds-unit)));
+  min-width: calc(4 * var(--ds-unit));
+  max-width: 100%;
+  max-height: none;
+}
+:host([compact]) .frame {
+  gap: 1px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+}
+:host([compact]) ::slotted(:is(ds-button, ds-file-picker)) {
+  --ds-button-height: var(--ds-menu-row);
+  --ds-button-padding: 0 calc(4px * var(--ds-sf));
+  --ds-button-background: var(--ds-fill);
+  --ds-button-color: var(--ds-text-color);
+  --ds-radius: 0px;
+  width: 100%;
+}
+
+:host([floating]) ::slotted(:is(ds-button, ds-file-picker):is(:hover, :focus-within):not([disabled], [data-disabled])) { --ds-button-background: var(--ds-fill); }
+
+:host([trigger-mode="context"]), :host([trigger-mode="submenu"]), :host([trigger-mode="manual"]) {
+  width: var(--ds-menu-width, calc(8 * var(--ds-unit)));
+}
+:host([data-grid]) {
+  width: calc((var(--ds-menu-columns) + 1) * var(--ds-row-height));
+}
+:host([data-grid]) .frame {
+  width: 100%;
+  padding-inline: calc(var(--ds-unit) / 2 - 1px);
+}
+:host([data-grid]) ::slotted([data-ds-menu-start]) { grid-column-start: 1; }
+:host([data-grid]) ::slotted(:is([data-ds-menu-row], [data-ds-menu-separator], [data-ds-menu-label])) { grid-column: 1 / -1; }
+:host([data-grid]) ::slotted([data-ds-menu-row]) {
+  --ds-button-align: flex-start;
+  --ds-button-padding: 0 calc(4px * var(--ds-sf));
+}
+::slotted([data-ds-menu-label]) {
+  display: block;
+  box-sizing: border-box;
+  height: var(--ds-menu-row);
+  padding: 0 calc(4px * var(--ds-sf));
+  color: var(--ds-text-color-muted);
+}
+::slotted([data-ds-menu-separator]) {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-top: 1px solid var(--ds-border-color);
+  /* One square with its line: half a square above it, less the line, and half below. */
+  margin: calc(var(--ds-unit) / 2 - 1px) 0 calc(var(--ds-unit) / 2);
+}

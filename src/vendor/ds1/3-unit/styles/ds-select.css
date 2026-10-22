@@ -1,0 +1,165 @@
+@import "../../1-root/component-metrics.css";
+
+/*
+ * Select as a field, around a native <select> (`data-field`): the menu
+ * engine's own rules (an action menu's) do not reach it. One control high
+ * (16px), standing at the foot of its line on the lower sixteen as a button
+ * does, and hugging its options by default; a list one square a visible row.
+ */
+:host([data-field]) {
+  --ds-select-unit: calc(var(--ds-1) * var(--ds-sf));
+  display: inline-flex;
+  position: relative;
+  vertical-align: bottom;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  max-height: none;
+  height: var(--ds-control-height);
+}
+:host([hidden]) { display: none !important; }
+::slotted(select) {
+  appearance: none !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  field-sizing: content;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 var(--ds-select-unit) 0 calc(4px * var(--ds-sf)) !important;
+  border: 1px solid var(--ds-border-color) !important;
+  border-radius: var(--ds-radius) !important;
+  corner-shape: var(--ds-corner-shape, round) !important;
+  background: var(--ds-input-background) !important;
+  color: var(--ds-input-color) !important;
+  font-family: var(--ds-typeface-regular) !important;
+  font-size: var(--ds-type-size-default) !important;
+  font-weight: var(--ds-type-weight-default) !important;
+  letter-spacing: var(--ds-type-letterspacing-default) !important;
+  line-height: calc(var(--ds-control-height) - 2px) !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+}
+.arrow {
+  position: absolute;
+  pointer-events: none;
+  inset-inline-end: calc(2px * var(--ds-sf));
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+  background: var(--ds-input-color);
+  mask: var(--ds-select-arrow) center / contain no-repeat;
+}
+::slotted(select:focus-visible) { outline: 2px solid var(--ds-focus-ring) !important; outline-offset: 1px !important; }
+::slotted(select:disabled) { cursor: default !important; opacity: .5 !important; }
+.arrow.disabled { opacity: .5; }
+.arrow[hidden] { display: none; }
+::slotted(select[multiple]),
+::slotted(select[size]:not([size="0"]):not([size="1"])) {
+  padding: 0 calc(4px * var(--ds-sf)) !important;
+  line-height: calc(var(--ds-select-unit) - 2px) !important;
+}
+
+:host([data-listbox]) { width: calc(8 * var(--ds-select-unit)); height: calc(var(--ds-select-rows, 1) * var(--ds-select-unit)); }
+:host([data-listbox]) ::slotted(select) { width: 100% !important; }
+
+/* Intrinsic width uses the native option sizing, including translated labels. */
+:host([fit]:not([data-listbox])) { width: max-content; }
+:host([fit]:not([data-listbox])) ::slotted(select) { width: auto !important; max-width: 100% !important; }
+
+/* A settings chip keeps the same native picker and height, filled as a button. */
+:host([chip]:not([data-listbox])) ::slotted(select) {
+  border: 0 !important;
+  background: var(--ds-button-background-color-secondary) !important;
+  color: var(--ds-button-text-color) !important;
+  line-height: var(--ds-control-height) !important;
+}
+:host([chip][primary]:not([data-listbox])) ::slotted(select) {
+  background: var(--ds-button-background-color-primary) !important;
+  color: var(--ds-button-text-color-on-accent) !important;
+}
+:host([chip]) .arrow { background: var(--ds-button-text-color); }
+:host([chip][primary]) .arrow { background: var(--ds-button-text-color-on-accent); }
+
+/* A colour choice uses the shared swatch; the native select remains the hit target. */
+:host([swatch]:not([swatch=""]):not([data-listbox])) {
+  width: var(--ds-select-unit);
+  height: var(--ds-select-unit);
+  border-radius: var(--ds-radius);
+  background: var(--ds-input-background);
+}
+:host([swatch]:not([swatch=""]):not([data-listbox])) ::slotted(select) {
+  width: 100% !important;
+  opacity: 0 !important;
+  position: relative !important;
+  z-index: 1;
+}
+:host([swatch]:not([swatch=""]):not([data-listbox]):focus-within) {
+  outline: 2px solid var(--ds-focus-ring);
+  outline-offset: 1px;
+}
+ds-swatch { pointer-events: none; position: absolute; inset: 0; margin: auto; }
+ds-swatch.disabled { opacity: .5; }
+
+/*
+ * The field's list, in place of the platform's picker (`data-listed`). The
+ * select takes no pointer, so a press on the field opens the list and no
+ * platform picker; the keyboard still reaches the select, and its opening keys
+ * open the list. The list is the menu engine's, as wide as its choices in whole
+ * squares and at least the field (`--ds-select-list-width` sets one), each choice one
+ * square on the sixteen: an icon on the first square, the name, muted details,
+ * a shortcut at the end and the check on the last square for the chosen one.
+ */
+:host([data-listed]) { cursor: pointer; }
+:host([data-listed]) ::slotted(select) { pointer-events: none !important; }
+/* The list fits its choices on whole squares, at least as wide as the field. */
+.list { --ds-menu-width: var(--ds-select-list-width); }
+.choice,
+.group-label {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  gap: calc(4px * var(--ds-sf));
+  flex: 0 0 auto;
+  width: 100%;
+  height: var(--ds-row-height);
+  min-width: 0;
+  margin: 0;
+  padding: 0 calc(4px * var(--ds-sf));
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ds-text-color);
+  font: inherit;
+  line-height: var(--ds-type-lineheight-default);
+  text-align: start;
+  white-space: nowrap;
+}
+.choice { cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
+.choice:hover:not(:disabled), .choice:focus-visible { background: var(--ds-row-fill-hover, var(--ds-fill)); }
+.choice:active:not(:disabled) { background: var(--ds-row-fill-press, var(--ds-fill-hover)); }
+.choice:focus-visible { box-shadow: inset 0 0 0 2px var(--ds-focus-ring); }
+.choice:disabled { cursor: default; opacity: .5; }
+.group { display: flex; flex-direction: column; }
+.group-label { color: var(--ds-text-color-muted); }
+/* A name is one line, fading over its last square where it is cut short. */
+.name { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.details { flex: 0 1 auto; min-width: 0; overflow: hidden; color: var(--ds-text-color-muted); }
+.shortcut { flex: none; margin-inline-start: auto; color: var(--ds-text-color-muted); }
+.mark { flex: none; width: calc(16px * var(--ds-sf)); height: calc(16px * var(--ds-sf)); }
+.check {
+  flex: none;
+  width: calc(16px * var(--ds-sf));
+  height: calc(16px * var(--ds-sf));
+  margin-inline-start: auto;
+  background: currentColor;
+  mask: var(--ds-select-check) center / contain no-repeat;
+  visibility: hidden;
+}
+.shortcut + .check { margin-inline-start: 0; }
+.choice[aria-selected="true"] .check { visibility: visible; }
+.choice[aria-selected="true"] .name { font-weight: var(--ds-row-current-weight, var(--ds-type-weight-bold)); }

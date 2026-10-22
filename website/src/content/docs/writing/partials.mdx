@@ -1,0 +1,41 @@
+---
+title: Inline controls
+description: Put the real interface inside the sentence that explains it.
+---
+
+import Example from "../../../components/Example.astro";
+
+A guide can show the control where its name would usually be. These are real Design system 1 buttons, with the same type, colours and states as the app.
+
+<Example name="partials-inline" />
+
+## Insert a button
+
+Type **@button** in a sentence. Choose Default, Primary, Secondary, Active, Disabled or Danger with the arrow keys and Enter, or press a choice. Escape leaves the words as you typed them.
+
+<Example name="partials-insert" />
+
+## Change the label or state
+
+Select the button illustration to open its properties. Edit **Label**, choose **State**, and press **Apply**. The preview shows the result before you apply it. Cancel leaves the document unchanged. Applying both properties is one change to undo.
+
+Even a disabled example can be selected for editing. Tab reaches each illustration; Enter or Space opens its properties.
+
+## Publish an instruction
+
+In a read-only document, the same component sits in the sentence without opening its editor or triggering a product action. Its accessible description includes the label and state.
+
+<Example name="partials-readonly" />
+
+## Use in documentation
+
+Enable partials on a documentation editor or reader:
+
+```ts
+createEditor(host, { value: markdown, partials: true });
+createEditor(reader, { value: markdown, partials: true, readOnly: true, toolbar: false, menus: false });
+```
+
+Labels and states are stored as text, for example `@Button("Save", "primary")`. Quotes and backslashes in labels are escaped. Copying, pasting, reloading and undo preserve that source. A Markdown reader without partial support displays the notation as text. Code examples and links keep the notation literal.
+
+Button is the first partial. These illustrations do not carry URLs, scripts or app actions.

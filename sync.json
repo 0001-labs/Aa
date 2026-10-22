@@ -40,7 +40,12 @@
       "components": {
         "to": "src/vendor/ds1",
         "components": [
-          "table-of-contents"
+          "table-of-contents",
+          "button",
+          "input",
+          "select",
+          "menu",
+          "overlay"
         ],
         "react": false
       }

@@ -101,6 +101,7 @@ function mountPage(root: HTMLElement, name: string) {
   });
   let editor: Editor;
   const make = (value: string) => createEditor(host, {
+    partials: true,
     value, toolbar: true, atoms: [imageAtom, diagramAtom], comments, prompt, correct, drawEquation,
     onChange: next => { stored.textContent = next; },
     onFiles: async files => {

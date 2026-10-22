@@ -1,0 +1,70 @@
+
+
+:host([split]) {
+  display: inline-flex;
+  max-width: none;
+  overflow: visible;
+  flex: none;
+  align-items: stretch;
+  height: var(--ds-control-height);
+  gap: 1px;
+  vertical-align: bottom;
+}
+:host([split][hidden]) { display: none; }
+
+:host([split]) button {
+  appearance: none;
+  width: auto;
+  max-width: none;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--ds-control-height);
+  margin: 0;
+  padding: 0 calc(5px * var(--ds-sf));
+  border: 0;
+  border-radius: 0;
+  corner-shape: var(--ds-corner-shape, round);
+  background: var(--ds-button-background-color-secondary);
+  color: var(--ds-text-color-muted);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-control-height);
+  letter-spacing: var(--ds-type-letterspacing-default);
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+:host([split]) button:first-child {
+  border-start-start-radius: var(--ds-radius);
+  border-end-start-radius: var(--ds-radius);
+}
+:host([split]) button:last-child {
+  border-start-end-radius: var(--ds-radius);
+  border-end-end-radius: var(--ds-radius);
+}
+:host([split]) button[data-icon] { width: var(--ds-control-height); padding: 0; }
+/* An icon with its words hugs them: the icon's own 4px room around its glyph
+   replaces the padding on its side and the gap before the words. */
+:host([split]) button[data-icon-words] { gap: 0; padding-inline-start: 0; }
+:host([split]) ds-icon { --ds-icon-size: 16px; color: inherit; }
+:host([split]) ds-text { color: inherit; }
+/* Compact numeric views: a single digit is a square; longer values use the
+   shared compressed face and smaller inset. Products supply only the labels. */
+:host([split][compact]) button:not([data-icon], [data-short]) {
+  --ds-typeface-regular: var(--ds-typeface-compressed);
+  padding-inline: calc(3px * var(--ds-sf));
+}
+:host([split][compact]) button[data-short] { width: var(--ds-control-height); padding: 0; }
+:host([split]) button:hover:not(:disabled, [aria-pressed="true"]) { color: var(--ds-text-color); }
+:host([split]) button[aria-pressed="true"] {
+  background: var(--ds-accent-color);
+  color: var(--ds-button-text-color-on-accent);
+  cursor: default;
+}
+:host([split]) button:disabled { cursor: default; opacity: 0.5; }
+:host([split]) button:focus-visible { outline: 1px solid currentColor; outline-offset: -2px; }

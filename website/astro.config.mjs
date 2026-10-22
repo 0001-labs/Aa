@@ -62,6 +62,7 @@ export default defineConfig({
           items: [
             { label: "Formatting", slug: "writing/formatting" },
             { label: "Links", slug: "writing/links" },
+            { label: "Inline controls", slug: "writing/partials" },
             { label: "Headings", slug: "writing/headings" },
             { label: "Lists and boxes", slug: "writing/lists" },
             { label: "Quotes and code", slug: "writing/quotes-and-code" },

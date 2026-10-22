@@ -1,0 +1,284 @@
+@import "../../1-root/component-metrics.css";
+
+/* ds-button.css */
+
+:host([control="host"]),
+:host([control="slotted"]) ::slotted(:is(button, a)) {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: var(--ds-button-align, flex-start) !important;
+  gap: var(--ds-button-gap, calc(4px * var(--ds-sf))) !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  height: var(--ds-button-height, var(--ds-control-height)) !important;
+  /* Important, so a page's `* { padding: 0 }` reset cannot reach it: the
+     padding is set through --ds-button-padding. */
+  padding: var(--ds-button-padding, 0) !important;
+  border-radius: var(--ds-radius) !important;
+  corner-shape: var(--ds-corner-shape, round) !important;
+  background: var(--ds-button-background, transparent) !important;
+  color: var(--ds-button-color, var(--ds-button-text-color)) !important;
+  font-family: var(--ds-typeface-regular) !important;
+  font-feature-settings: var(--ds-font-features) !important;
+  font-size: var(--ds-type-size-default) !important;
+  font-weight: var(--ds-type-weight-default) !important;
+  line-height: var(--ds-type-lineheight-default) !important;
+  letter-spacing: var(--ds-type-letterspacing-default) !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none !important;
+  transition: opacity 120ms ease !important;
+}
+
+:host([control="host"]) ::slotted(*) {
+  flex: 0 0 auto !important;
+}
+
+:host([fit][control="slotted"]) ::slotted(:is(button, a)) {
+  width: max-content !important;
+  min-width: var(--ds-button-min-width, 0px) !important;
+  justify-content: var(--ds-button-align, flex-start) !important;
+}
+
+:host([control="host"][primary]),
+:host([control="slotted"][primary]) {
+  --ds-button-padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
+  --ds-button-background: var(--ds-button-background-color-primary);
+  --ds-button-color: var(--ds-button-text-color-on-accent);
+}
+
+:host([control="host"][secondary]),
+:host([control="slotted"][secondary]) {
+  --ds-button-padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
+  --ds-button-background: var(--ds-button-background-color-secondary);
+}
+
+:host([control="host"][secondary]:hover:not([disabled])),
+:host([control="slotted"][secondary]:hover:not([disabled])) {
+  --ds-button-background: var(--ds-fill-hover);
+}
+
+:host([control="host"][active]),
+:host([control="slotted"][active]) {
+  --ds-button-background: var(--ds-fill);
+}
+
+/* A tab: muted until it is hovered or current. */
+:host([control="host"][role="tab"]),
+:host([control="host"][choice]),
+:host([control="slotted"][choice]) {
+  --ds-button-padding: 0 calc(4px * var(--ds-sf));
+  --ds-button-color: var(--ds-text-color-muted);
+}
+
+:host([control="host"][role="tab"]:hover:not([disabled])),
+:host([control="host"][choice]:hover:not([disabled])),
+:host([control="slotted"][choice]:hover:not([disabled])) {
+  --ds-button-background: color-mix(in srgb, var(--ds-fill) 72%, transparent);
+  --ds-button-color: var(--ds-text-color);
+}
+
+:host([control="host"][role="tab"][active]),
+:host([control="host"][role="tab"][active]:hover:not([disabled])),
+:host([control="host"][choice][active]),
+:host([control="host"][choice][active]:hover:not([disabled])),
+:host([control="slotted"][choice][active]),
+:host([control="slotted"][choice][active]:hover:not([disabled])) {
+  --ds-button-background: var(--ds-fill);
+  --ds-button-color: var(--ds-text-color);
+}
+
+:host([control="host"]) ::slotted([slot="icon"]) {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: var(--ds-control-height) !important;
+  height: var(--ds-control-height) !important;
+}
+
+:host([control="host"]) ::slotted([slot="trailing"]) {
+  color: var(--ds-text-color-muted) !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+:host([control="host"][icon]),
+:host([control="slotted"][icon]) {
+  justify-content: center !important;
+  width: var(--ds-button-height, var(--ds-control-height)) !important;
+  height: var(--ds-button-height, var(--ds-control-height)) !important;
+  padding: 0 !important;
+  color: var(--ds-button-color, var(--ds-text-color-muted)) !important;
+}
+
+:host([control="host"][icon]:hover:not([disabled])) {
+  --ds-button-color: var(--ds-text-color);
+}
+
+/* A choice in a ds-menu: a full-width row, filled under the pointer or focus. */
+:host([control="host"][role="option"]),
+:host([control="host"][role="menuitem"]),
+:host([control="host"][role="menuitemradio"]),
+:host([control="host"][role="menuitemcheckbox"]) {
+  --ds-button-height: auto;
+  --ds-button-padding: calc(4px * var(--ds-sf)) calc(6px * var(--ds-sf));
+  width: var(--ds-button-width, 100%) !important;
+  min-height: var(--ds-row-height) !important;
+  border-radius: var(--ds-radius) !important;
+}
+
+:host([control="host"][role="option"]:hover),
+:host([control="host"][role="menuitem"]:hover),
+:host([control="host"][role="menuitemradio"]:hover),
+:host([control="host"][role="menuitemcheckbox"]:hover),
+:host([control="host"][role="option"]:focus-visible),
+:host([control="host"][role="menuitem"]:focus-visible) {
+  --ds-button-background: var(--ds-fill);
+  outline: none !important;
+}
+
+:host([control="host"][role="option"][active]) {
+  --ds-button-background: var(--ds-fill);
+}
+
+:host([control="host"]:focus-visible),
+:host([control="slotted"]) ::slotted(:is(button, a):focus-visible) {
+  outline: 2px solid var(--ds-focus-ring) !important;
+  outline-offset: 1px !important;
+}
+
+:host([control="host"][disabled]),
+:host([control="slotted"]) ::slotted(:is(button:disabled, a[aria-disabled="true"])) {
+  cursor: default !important;
+  opacity: 0.5 !important;
+  pointer-events: none !important;
+}
+
+/* The light-DOM button keeps native forms, submitters and fieldset semantics.
+   DS1 owns its face; product layout belongs on the host. */
+:host([control="slotted"]) ::slotted(:is(button, a)) {
+  appearance: none !important;
+  box-sizing: border-box !important;
+  border: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  min-height: var(--ds-button-height, var(--ds-control-height)) !important;
+  max-height: var(--ds-button-height, var(--ds-control-height)) !important;
+  box-shadow: none !important;
+  text-align: start !important;
+  text-transform: none !important;
+  text-decoration: none !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+/* Cut words fade over the face's last square, never an ellipsis, and the face
+   keeps its fill whole (0-face/cut-fade.ts marks the light-DOM face, or the
+   host face itself, `data-cut="end"`). The words are written straight into
+   the face, so they cannot be masked apart from its fill: the face paints
+   them through the gradient instead, a first background layer in their own
+   colour fading over the last square of its content box, clipped to the
+   glyphs, over the face's own background. A mask on the face would fade the
+   fill and the focus ring with the words. */
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  :host([control="host"][data-cut="end"]),
+  :host([control="slotted"]) ::slotted(:is(button, a)[data-cut="end"]) {
+    background: linear-gradient(to right, currentColor calc(100% - var(--ds-unit)), transparent) content-box no-repeat, var(--ds-button-background, transparent) !important;
+    -webkit-background-clip: text, border-box !important;
+    background-clip: text, border-box !important;
+    -webkit-text-fill-color: transparent !important;
+  }
+  :host([control="host"][data-cut="end"]:dir(rtl)),
+  :host([control="slotted"]:dir(rtl)) ::slotted(:is(button, a)[data-cut="end"]) {
+    background: linear-gradient(to left, currentColor calc(100% - var(--ds-unit)), transparent) content-box no-repeat, var(--ds-button-background, transparent) !important;
+    -webkit-background-clip: text, border-box !important;
+    background-clip: text, border-box !important;
+  }
+}
+:host([control="slotted"][icon]) ::slotted(:is(button, a)) {
+  justify-content: center !important;
+}
+
+:host([control="slotted"]) {
+  /* The native focus ring extends beyond the face; only its text is clipped. */
+  overflow: visible;
+  /* The face is one control high, as the host and native faces are. Its box
+     stays one square, as before, with the face at its foot, so the words take
+     the lower sixteen of the square in a row or at the foot of a line and no
+     row around it changes height. */
+  align-items: flex-end;
+  min-height: var(--ds-row-height);
+  vertical-align: bottom;
+  width: var(--ds-button-width, max-content);
+}
+/* An icon's square: the face takes its first sixteen, the spare four above. */
+:host([control="slotted"][icon]) {
+  justify-content: flex-start !important;
+  width: max(var(--ds-row-height), var(--ds-button-height, var(--ds-control-height))) !important;
+  height: max(var(--ds-row-height), var(--ds-button-height, var(--ds-control-height))) !important;
+}
+:host([control="slotted"][icon]) ::slotted(:is(button, a)) {
+  width: var(--ds-button-height, var(--ds-control-height)) !important;
+}
+:host([control="slotted"][fixed]) {
+  width: var(--ds-button-width, calc(4 * var(--ds-unit)));
+}
+:host([control="slotted"][wide]) {
+  width: var(--ds-button-width, calc(8 * var(--ds-unit)));
+}
+:host([control="slotted"][fit]) {
+  width: max-content;
+}
+
+:host([control="host"][danger]),
+:host([control="slotted"][danger]) {
+  --ds-button-color: var(--ds-danger-color, var(--ds-tuned-red));
+}
+
+:host([hidden]) { display: none !important; }
+
+/* Native actions in menus, including grouped and nested choices. */
+:host([menu-item]) {
+  flex: 0 0 auto;
+  width: 100%;
+  --ds-button-height: var(--ds-row-height);
+  --ds-button-align: flex-start;
+  --ds-button-padding: 0 calc(4px * var(--ds-sf));
+}
+/* A row-high entry's words and icon stand on the lower sixteen, the spare four above. */
+:host([menu-item][control="host"]),
+:host([menu-item][control="slotted"]) ::slotted(:is(button, a)) {
+  align-items: flex-end !important;
+}
+:host([menu-item]:is(:hover, :focus-within):not([disabled])) {
+  --ds-button-background: var(--ds-fill);
+}
+:host([menu-item][control="slotted"]) ::slotted([aria-checked="true"]) {
+  box-shadow: inset 0 0 0 1px var(--ds-focus-ring) !important;
+}
+
+/* A paper tab (`ds-tabs paper`): a row high with its words on the sixteen,
+   rounded at the top only and square at the foot, where it joins the page. */
+:host([control="host"][paper]),
+:host([control="slotted"][paper]) ::slotted(:is(button, a)) {
+  align-items: flex-end !important;
+  border-start-start-radius: var(--ds-radius) !important;
+  border-start-end-radius: var(--ds-radius) !important;
+  border-end-start-radius: 0 !important;
+  border-end-end-radius: 0 !important;
+}
+
+/* A tab in a joined run (`ds-tabs split`): square inside, rounded at the run's ends. */
+:host([control="host"][segment]) {
+  border-radius: 0 !important;
+}
+:host([control="host"]:is([segment="first"], [segment="only"])) {
+  border-start-start-radius: var(--ds-radius) !important;
+  border-end-start-radius: var(--ds-radius) !important;
+}
+:host([control="host"]:is([segment="last"], [segment="only"])) {
+  border-start-end-radius: var(--ds-radius) !important;
+  border-end-end-radius: var(--ds-radius) !important;
+}

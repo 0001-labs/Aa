@@ -1,0 +1,286 @@
+@import "../../1-root/component-metrics.css";
+
+/* ds-input.css */
+/* Input component styles */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+label {
+  font-family: var(--ds-typeface-regular);
+  font-size: var(--ds-type-size-default);
+  line-height: var(--ds-row-height);
+  color: var(--ds-text-color);
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+:is(input, textarea) {
+  background: var(--base-light-grey, #e8e8e8);
+  border: none;
+  padding: 0 calc(2px * var(--ds-sf, 1));
+  font-size: var(--ds-type-size-default);
+  font-family: var(--ds-typeface-regular);
+  color: var(--base-darker-grey, #797979);
+  line-height: calc(16px * var(--ds-sf, 1));
+  letter-spacing: calc(-0.4px * var(--ds-sf, 1));
+  opacity: 0.5;
+  height: var(--ds-input-height, calc(16px * var(--ds-sf, 1)));
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+:is(input, textarea):focus {
+  outline: none;
+  opacity: 1;
+  color: var(--base-slate, #1e1e1e);
+}
+
+input {
+  border-radius: var(--ds-input-radius, var(--ds-radius));
+  corner-shape: var(--ds-corner-shape, round);
+}
+
+:is(input, textarea)::placeholder {
+  color: var(--base-darker-grey, #797979);
+  opacity: 0.5;
+}
+
+:is(input, textarea):disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+:is(input, textarea):read-only {
+  background-color: var(--input-readonly-background, #fafafa);
+}
+
+:host([variant="filled"]) :is(input, textarea) {
+  background-color: var(--input-filled-background, var(--surface-color-secondary, #f5f5f5));
+  border: none;
+  border-bottom: 2px solid var(--border-color, #ccc);
+  border-radius: calc(var(--025) * var(--ds-sf, 1)) calc(var(--025) * var(--ds-sf, 1)) 0 0;
+}
+
+:host([variant="filled"]) :is(input, textarea):focus {
+  border-bottom-color: var(--accent-color, #007aff);
+  box-shadow: none;
+}
+
+:host([variant="outlined"]) :is(input, textarea) {
+  background-color: transparent;
+  border: 2px solid var(--border-color, #ccc);
+}
+
+:host([variant="outlined"]) :is(input, textarea):focus {
+  border-color: var(--accent-color, #007aff);
+}
+
+/*
+ * The error stands on one-square lines in the danger colour, as
+ * `.ds-field__error` does. While it shows, every row of the field is at least
+ * one square high and a lower control keeps its place at the top of its row,
+ * so the error starts on the square below the control in every variant.
+ */
+.input-wrapper.has-error {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(var(--ds-input-control-row, var(--ds-row-height)), auto);
+  align-items: start;
+}
+
+.error-message {
+  margin: 0;
+  min-width: 0;
+  color: var(--ds-danger-color);
+  font-family: var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-unit);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+
+/* A translated error wraps on the same lines as a literal one. */
+.error-message > ds-text {
+  display: block;
+}
+
+:host([required]) label::after {
+  content: " *";
+  color: var(--ds-danger-color);
+}
+
+/* Error state */
+:is(input, textarea).has-error {
+  border-color: var(--ds-danger-color);
+}
+
+:is(input, textarea).has-error:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-danger-color) 20%, transparent);
+}
+
+/* A field drawn 18px high inside a 20px form row. */
+:host([variant="row"]) {
+  box-sizing: border-box;
+  padding-top: calc(2px * var(--ds-sf, 1));
+  /* The host's 2px above the 18px field make up its row. */
+  --ds-input-control-row: calc(18px * var(--ds-sf, 1));
+}
+:host([variant="row"]) .input-container,
+:host([variant="row"]) :is(input, textarea) {
+  box-sizing: border-box;
+  height: calc(18px * var(--ds-sf, 1));
+  min-height: calc(18px * var(--ds-sf, 1));
+  max-height: calc(18px * var(--ds-sf, 1));
+}
+:host([variant="row"]) :is(input, textarea) {
+  margin: 0;
+  padding-block: 0;
+  line-height: calc(16px * var(--ds-sf, 1));
+  border-radius: 0;
+  background: var(--ds-input-background);
+  color: var(--ds-input-color);
+  opacity: 1;
+}
+:host([variant="row"]) :is(input, textarea)::placeholder {
+  color: var(--ds-input-placeholder-color);
+  opacity: 1;
+}
+:host([variant="row"]) :is(input, textarea):focus {
+  background: var(--ds-input-background);
+  color: var(--ds-input-color);
+  box-shadow: inset 0 0 0 1px var(--ds-accent-color);
+  opacity: 1;
+}
+:host([variant="row"]) :is(input, textarea):disabled {
+  opacity: 1;
+  background: var(--ds-input-background);
+  color: var(--ds-input-disabled-color);
+  -webkit-text-fill-color: var(--ds-input-disabled-color);
+}
+:host([quiet-focus]) :is(input, textarea):focus,
+:host([quiet-focus]) :is(input, textarea):focus-visible,
+:host([quiet-focus]) .input-container:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+:is(input, textarea).has-reveal {
+  padding-inline-end: calc(24px * var(--ds-sf, 1));
+}
+.password-visibility {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 0;
+  height: 100%;
+  width: calc(24px * var(--ds-sf, 1));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ds-input-reveal-color);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.password-visibility:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+}
+.password-visibility:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.password-visibility span {
+  display: block;
+  width: calc(16px * var(--ds-sf, 1));
+  height: calc(16px * var(--ds-sf, 1));
+  background: currentColor;
+  mask: var(--eye-icon) center / 100% 100% no-repeat;
+}
+@supports (corner-shape: squircle) {
+  :is(input, textarea) {
+    corner-shape: var(--ds-corner-shape, squircle);
+  }
+}
+
+/* Standard standalone form field and text-only inline editor. */
+:host([variant="field"]) :is(input, textarea),
+:host([variant="plain"]) :is(input, textarea) {
+  height: var(--ds-input-height, var(--ds-row-height));
+  padding: var(--ds-input-padding, 0 calc(4px * var(--ds-sf)));
+  border: var(--ds-input-border, 1px solid var(--ds-border-color));
+  border-radius: var(--ds-input-radius, var(--ds-radius));
+  background: var(--ds-input-field-background, var(--ds-fill));
+  color: var(--ds-text-color);
+  opacity: 1;
+  font-size: var(--ds-type-size-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+:host([variant="plain"]) :is(input, textarea) {
+  padding: var(--ds-input-padding, 0);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+:host([variant="field"]) :is(input, textarea)::placeholder,
+:host([variant="plain"]) :is(input, textarea)::placeholder {
+  color: var(--ds-text-color-muted);
+  opacity: 1;
+}
+:host([variant="field"]) :is(input, textarea):focus {
+  outline: 1px solid var(--ds-focus-ring);
+  outline-offset: -1px;
+}
+:host([variant="field"]) :is(input, textarea):disabled,
+:host([variant="plain"]) :is(input, textarea):disabled {
+  opacity: 0.5;
+}
+:host([variant="field"]) :is(input, textarea).has-reveal,
+:host([variant="plain"]) :is(input, textarea).has-reveal {
+  padding-inline-end: calc(24px * var(--ds-sf));
+}
+
+/* ---- Multiline ------------------------------------------------------- */
+/* A text area spans whole rows; shared input styles own its field treatment. */
+.row-metric {
+  position: absolute;
+  width: 0;
+  height: var(--ds-row-height);
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* Pill-shaped corners would cut into multiline writing. A text area's field
+ * corners stay small independently of the surrounding control preference. */
+:host([variant="field"]) textarea {
+  border-radius: var(--ds-textarea-radius, calc(4px * var(--ds-sf)));
+  corner-shape: var(--ds-textarea-corner-shape, squircle);
+}
+:host([variant]) textarea {
+  height: var(--ds-textarea-height, calc(var(--ds-textarea-rows, 3) * var(--ds-row-height)));
+  min-height: var(--ds-row-height);
+  padding: var(--ds-textarea-padding, calc(4px * var(--ds-sf)));
+  resize: vertical;
+}
+:host([variant="plain"]) textarea {
+  padding: 0;
+}
+:host([auto-grow]) textarea {
+  resize: none;
+}

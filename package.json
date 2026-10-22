@@ -54,6 +54,10 @@
     "./convex.config": {
       "types": "./convex/convex.config.ts",
       "import": "./convex/convex.config.ts"
+    },
+    "./partial-reader": {
+      "types": "./dist/partial-reader.d.ts",
+      "import": "./dist/partial-reader.js"
     }
   },
   "sideEffects": [
@@ -69,7 +73,7 @@
     "docs:dev": "cd website && vp exec astro dev",
     "site:build": "cd website && vp exec astro build && cd .. && rm -rf site && cp -R website/dist site",
     "deploy": "vp run site:build && CLOUDFLARE_ACCOUNT_ID=ce6189d5ac975158991e207a3c4e1cd5 vp exec wrangler deploy",
-    "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts && vp build --config vite.config.react.ts && vp build --config vite.config.collaboration.ts && vp build --config vite.config.convex.ts && vp build --config vite.config.diagram.ts && vp build --config vite.config.diagram-language.ts && vp build --config vite.config.marker.ts",
+    "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts && vp build --config vite.config.react.ts && vp build --config vite.config.collaboration.ts && vp build --config vite.config.convex.ts && vp build --config vite.config.diagram.ts && vp build --config vite.config.diagram-language.ts && vp build --config vite.config.marker.ts && vp build --config vite.config.partial-reader.ts",
     "check": "vp exec tsc --noEmit",
     "test": "vp test",
     "release": "node scripts/release.mjs"

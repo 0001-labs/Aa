@@ -18,6 +18,7 @@ import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
 import { icons } from './icons'
 import { createTableOfContents } from './table-of-contents'
+import { buttonPartialAtom, createPartialPicker } from './partials'
 import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from './marks'
 import { openPrompt, glisten, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 import { createCommentsView, type CommentsView } from './comments-view'
@@ -132,6 +133,8 @@ export type EditorOptions = {
   onChange?: (value: string) => void
   /** The atoms to read and draw; a picture unless told otherwise. */
   atoms?: readonly Atom[]
+  /** Inline DS1 illustrations, inserted with @button. Opt in for documentation. */
+  partials?: boolean
   /** Files pasted or dropped into the editor. Without it, they are ignored. */
   onFiles?: (files: File[]) => void
   toolbar?: boolean | readonly ToolbarAction[]
@@ -242,10 +245,11 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   let decorations: readonly Decoration[] = []
   const decorationLayers = new Map<string, readonly Decoration[]>()
   let stopControls = () => {}
+  let stopPartials = () => {}
   let transactionDepth = 0
   let historyProvider: { undo(): boolean; redo(): boolean } | null = null
   const contents = new Map<HTMLElement, () => void>()
-  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }, { name: 'toc', match: () => 0, draw: element => drawContents(element), insert: { label: 'Table of contents', icon: 'bullet', keywords: 'toc outline headings navigation', source: '<table_of_contents/>' } }, { name: 'tabs', match: () => 0, draw: (element, source) => drawTabs(element, source), insert: { label: 'Tabs', icon: 'tabs', keywords: 'tab pages sections panels', source: writeTabs([{ name: 'Tab 1', content: '' }, { name: 'Tab 2', content: '' }]) } }]
+  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), ...(options.partials ? [buttonPartialAtom(() => !readOnly)] : []), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }, { name: 'toc', match: () => 0, draw: element => drawContents(element), insert: { label: 'Table of contents', icon: 'bullet', keywords: 'toc outline headings navigation', source: '<table_of_contents/>' } }, { name: 'tabs', match: () => 0, draw: (element, source) => drawTabs(element, source), insert: { label: 'Tabs', icon: 'tabs', keywords: 'tab pages sections panels', source: writeTabs([{ name: 'Tab 1', content: '' }, { name: 'Tab 2', content: '' }]) } }]
   function drawContents(element: HTMLElement) {
     const update = createTableOfContents(element, () => blocks, host, index => {
       const target = elements()[index]
@@ -295,6 +299,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
           value,
           readOnly,
           atoms: options.atoms,
+          partials: options.partials,
           drawEquation: options.drawEquation,
           // Files are the page's: they land on its line beside the columns, from where they are carried in.
           blockPlaceholder: '',
@@ -447,6 +452,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         value: tabs[current]?.content ?? '',
         readOnly,
         atoms: options.atoms,
+          partials: options.partials,
         drawEquation: options.drawEquation,
         blockPlaceholder: '',
         onChange(next) { tabs = tabs.map((tab, at) => at === current ? { ...tab, content: next } : tab); changed() },
@@ -1832,6 +1838,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       stopSelection()
       stopSpanning()
       stopControls()
+      stopPartials()
       host.removeEventListener('beforeinput', onBeforeInput)
       host.removeEventListener('input', onInput)
       host.removeEventListener('keydown', onKeyDown)
@@ -1865,5 +1872,6 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   })
   // The controls offer every atom the editor draws that can be inserted, its own Columns among them.
   stopControls = createControls(editor, { ...options, atoms })
+  if (options.partials && options.menus !== false) stopPartials = createPartialPicker(editor)
   return editor
 }

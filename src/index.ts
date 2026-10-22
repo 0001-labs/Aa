@@ -16,3 +16,5 @@ export { glisten, PROMPT_HERE, type Prompter, type PromptAnswer, type PromptCont
 export { REACTION_EMOJIS, textChange, mapRange, applyEdit, relocate, anchorThreads, movedThreads, sortThreads, threadsAt, countThreads, commentsLabel, mentionsIn, mentionQuery, relativeTime, initialOf, personColour, type CommentStore, type CommentThread, type Comment, type CommentPerson, type CommentReaction, type CommentRange, type CommentMove, type AnchoredThread, type TextEdit } from './comments'
 export { memoryCommentStore, type MemoryCommentStore } from './comments-memory'
 export type { EditorComments } from './editor'
+
+export { BUTTON_STATES, BUTTON_PARTIAL, readButtonPartial, writeButtonPartial, type ButtonState, type ButtonPartial } from './partials'

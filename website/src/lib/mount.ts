@@ -60,6 +60,7 @@ async function mount(figure: HTMLElement) {
   }
   let editor: ReturnType<typeof createEditor> | undefined;
   editor = createEditor(host, {
+    partials: true,
     value: spec.markdown,
     toolbar: spec.toolbar ?? true,
     readOnly: spec.readOnly,
