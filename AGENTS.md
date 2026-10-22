@@ -86,3 +86,7 @@ It refuses with uncommitted changes or when npm is signed out (`vp pm login`), r
 ## Git commits
 
 - English. Do not add Co-Authored-By lines to commits. No tool names anywhere.
+
+## Product code
+
+Canonical short code: `AA`, an explicit two-character exception to the studio’s three-character rule. Keep all letters uppercase. Use it for product-owned libraries and compact ownership labels; the icon-library namespace is `AA/I`. Use this code followed by a colon for commit subjects; keep the full product name in prose.
