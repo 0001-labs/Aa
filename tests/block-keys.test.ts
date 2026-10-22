@@ -20,6 +20,19 @@ function key(key: string, modifiers: KeyboardEventInit = {}) {
 afterEach(() => { editor?.destroy(); host?.remove(); window.getSelection()?.removeAllRanges() })
 
 describe('block keyboard commands', () => {
+  it('gates only shuffling at runtime while formatting and duplication keep working', () => {
+    setup()
+    editor.reordering = false
+    key('ArrowUp', { ...mod, shiftKey: true })
+    editor.blockAction('up')
+    editor.moveBlock(1, 0)
+    expect(editor.value).toBe('one\n\ntwo\n\nthree')
+    editor.turnInto('h2')
+    expect(editor.value).toBe('one\n\n## two\n\nthree')
+    editor.reordering = true
+    key('ArrowUp', { ...mod, shiftKey: true })
+    expect(editor.value).toBe('## two\n\none\n\nthree')
+  })
   it('extends directly from the caret, and handles the digit code with Option pressed', () => {
     setup()
     key('ArrowUp', { shiftKey: true })

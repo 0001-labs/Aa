@@ -54,8 +54,9 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   /** In columns: where among the columns the carried block would stand as a column of its own, or the column it would trade places with. */
   let across: { slot: number } | { swap: number } | null = null
   const children = () => Array.from(host.children) as HTMLElement[]
-  const movable = () => !editor.readOnly && options.menus !== false
-  host.toggleAttribute('data-movable', options.menus !== false)
+  const movable = () => !editor.readOnly && options.menus !== false && (editor.reordering || editor.placing)
+  const placeable = () => movable() && editor.placing
+  host.toggleAttribute('data-movable', movable())
 
   /** The press as the editor saw it, before the engine decides: what it may lift, and what it leaves to the page. */
   let press: { block: HTMLElement; mouse: boolean; plain: boolean; own: boolean; inSelection: boolean; selected: HTMLElement[]; grabbed: boolean; x: number; y: number } | null = null
@@ -123,13 +124,13 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       host.removeAttribute('data-dragging')
       document.removeEventListener('selectionchange', keepClear)
       const all = children(), from = result.source.index, to = result.destination?.index
-      if (result.reason === 'DROP' && beside && group.length <= 1 && movable() && placeBeside(from, beside.index, beside.at)) return
+      if (result.reason === 'DROP' && beside && group.length <= 1 && placeable() && placeBeside(from, beside.index, beside.at)) return
       // Out of its column, beside another: the columns move it, as one step to undo of the page around them.
-      if (result.reason === 'DROP' && over && group.length <= 1 && movable()) {
+      if (result.reason === 'DROP' && over && group.length <= 1 && placeable()) {
         host.dispatchEvent(new CustomEvent('aa-column-carry', { bubbles: true, detail: { from, ...over } }))
         return
       }
-      if (result.reason === 'DROP' && to !== undefined && movable()) {
+      if (result.reason === 'DROP' && to !== undefined && movable() && editor.reordering) {
         if (group.length > 1) {
           // The others go where the one carried went: after as many unchosen blocks as stood before it.
           const first = all.indexOf(group[0]), count = group.length
@@ -149,7 +150,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
 
   /** Follows the carried block over the others: near one's side, the line down that side shows where it would stand. */
   function besides(event: PointerEvent) {
-    if (!carried || carried.group.length > 1) return
+    if (!carried || carried.group.length > 1 || !placeable()) return
     if (acrossColumns(event)) return
     const unit = parseFloat(getComputedStyle(host).getPropertyValue('--aa-unit')) || 20
     const dx = window.scrollX - liftedScroll.x, dy = window.scrollY - liftedScroll.y
@@ -350,7 +351,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     line.style.left = `${rect.left}px`; line.style.top = `${top}px`; line.style.width = `${rect.width}px`; line.hidden = false
   }
   let fileDestination = -1
-  const files = (event: DragEvent) => !editor.readOnly && !!options.onFiles && Array.from(event.dataTransfer?.types ?? []).includes('Files')
+  const files = (event: DragEvent) => !editor.readOnly && editor.placing && !!options.onFiles && Array.from(event.dataTransfer?.types ?? []).includes('Files')
   const dragOver = (event: DragEvent) => {
     if (!files(event)) return
     event.preventDefault()
@@ -367,6 +368,14 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     window.getSelection()?.collapse(block, all[at] ? 0 : block.childNodes.length)
     options.onFiles!(Array.from(event.dataTransfer.files))
   }
+  const movementChanged = () => {
+    sortable.cancel()
+    press = null
+    stopResting()
+    side = null; across = null; sideLine.hidden = true; line.hidden = true; fileDestination = -1
+    host.toggleAttribute('data-movable', movable())
+  }
+  host.addEventListener('aa-movement-change', movementChanged)
   host.addEventListener('dragover', dragOver)
   host.addEventListener('dragleave', dragLeave)
   host.addEventListener('drop', drop, true)
@@ -385,6 +394,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     window.removeEventListener('pointerup', up, true); window.removeEventListener('pointercancel', up, true)
     stopResting()
     host.removeEventListener('pointermove', hover); host.removeEventListener('pointerleave', stopResting); host.removeEventListener('keydown', stopResting)
+    host.removeEventListener('aa-movement-change', movementChanged)
     host.removeEventListener('dragover', dragOver); host.removeEventListener('dragleave', dragLeave); host.removeEventListener('drop', drop, true)
   }
 }

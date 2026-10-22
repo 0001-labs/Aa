@@ -33,6 +33,52 @@ const lifted = () => Array.from(host!.children).filter(element => (element as HT
 const settle = () => vi.runAllTimers()
 
 describe('moving blocks without a handle, on the Drag library', () => {
+  it('places beside blocks when shuffling is disabled, but does not shuffle in flow', () => {
+    const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)', { reordering: false })
+    pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
+    pointer('pointermove', document, 10, { clientX: 200 })
+    pointer('pointerup', document, 10, { clientX: 200 }); settle()
+    expect(e.value).toBe('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
+    pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
+    pointer('pointermove', document, 10, { clientX: 395 })
+    pointer('pointerup', document, 10, { clientX: 395 }); settle()
+    expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
+  })
+  it('disables side placement independently and cancels active drags on runtime changes', () => {
+    const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)', { placing: false })
+    pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
+    pointer('pointermove', document, 10, { clientX: 395 })
+    expect((document.querySelector('.aa-drop-side') as HTMLElement).hidden).toBe(true)
+    pointer('pointerup', document, 10, { clientX: 395 }); settle()
+    expect(e.value).toBe('![Cup](cup.jpg)\n\n![Lake](lake.jpg)')
+    place()
+    pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
+    pointer('pointermove', document, 10, { clientX: 200 })
+    expect(lifted()).toEqual([1])
+    e.reordering = false
+    pointer('pointerup', document, 10, { clientX: 200 }); settle()
+    expect(e.value).toBe('![Cup](cup.jpg)\n\n![Lake](lake.jpg)')
+    expect(host!.hasAttribute('data-dragging')).toBe(false)
+  })
+  it('blocks file drop placement while preserving explicit file insertion', () => {
+    const files = vi.fn()
+    const e = setup('One\n\nTwo', { placing: false, onFiles: files })
+    const file = new File(['x'], 'x.png', { type: 'image/png' })
+    const data = { types: ['Files'], files: [file] }
+    for (const type of ['dragover', 'drop']) {
+      const event = new DragEvent(type, { bubbles: true, cancelable: true })
+      Object.defineProperties(event, { dataTransfer: { value: data }, clientY: { value: 45 } })
+      block(1).dispatchEvent(event)
+    }
+    expect(files).not.toHaveBeenCalled()
+    e.insertFile(file)
+    expect(files).toHaveBeenCalledWith([file])
+    e.placing = true
+    const drop = new DragEvent('drop', { bubbles: true, cancelable: true })
+    Object.defineProperty(drop, 'dataTransfer', { value: data })
+    block(1).dispatchEvent(drop)
+    expect(files).toHaveBeenCalledTimes(2)
+  })
   it('carries an image horizontally with the pointer', () => {
     setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
     const image = block(0).querySelector('img')!

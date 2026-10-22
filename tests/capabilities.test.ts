@@ -354,3 +354,23 @@ describe('the bar over selected words', () => {
     expect(menu.hidden).toBe(true)
   })
 })
+
+it('renders the active product command preview and cleans it on keyboard, hover and close', () => {
+  const stops = [vi.fn(), vi.fn()]
+  const previews = ['Alpha', 'Beta'].map((label, index) => ({
+    name: label.toLowerCase(), match: () => 0,
+    insert: { label: `Spec ${label}`, icon: 'text', source: label, preview: (element: HTMLElement) => { element.textContent = label; return stops[index] } },
+  }))
+  const e = setup('/spe', { atoms: previews })
+  e.selectRange(4); e.replace(4, 4, 'c')
+  expect(document.querySelector('.aa-command-preview')?.textContent).toBe('Alpha')
+  key('ArrowDown')
+  expect(stops[0]).toHaveBeenCalledTimes(1)
+  expect(document.querySelector('.aa-command-preview')?.textContent).toBe('Beta')
+  document.querySelector('[data-command="insert-alpha"]')?.dispatchEvent(new PointerEvent('pointerenter'))
+  expect(stops[1]).toHaveBeenCalledTimes(1)
+  expect(document.querySelector('.aa-command-preview')?.textContent).toBe('Alpha')
+  key('Escape')
+  expect(document.querySelector('.aa-command-preview')).toBeNull()
+  expect(stops[0]).toHaveBeenCalledTimes(2)
+})

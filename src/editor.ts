@@ -32,7 +32,7 @@ import type { AnchoredThread, CommentStore } from './comments'
 export type Atom = AtomSyntax & {
   draw?(element: HTMLElement, source: string): void | (() => void)
   /** A block that starts one, offered in the toolbar and the slash menu: its name, icon and first source. */
-  insert?: { label: string; icon: string; source: string; keywords?: string }
+  insert?: { label: string; icon: string; source: string; keywords?: string; preview?(element: HTMLElement): void | (() => void) }
 }
 
 /** The narrowest a picture is sized to, in squares. */
@@ -141,6 +141,10 @@ export type EditorOptions = {
   commands?: readonly Command[]
   blockCommands?: readonly Command[]
   menus?: boolean
+  /** Same-flow block shuffling by pointer, keyboard and block commands. Defaults to true. */
+  reordering?: boolean
+  /** Side/column destinations and external file-drop placement. Defaults to true; paste stays available. */
+  placing?: boolean
   drawEquation?: (element: HTMLElement, source: string, display: boolean) => void | (() => void)
   /**
    * Corrects the person's words as they write, in place: Aa sends a block's
@@ -197,6 +201,9 @@ export type Editor = {
   blockAction(action: 'delete' | 'duplicate' | 'up' | 'down'): void
   /** Move `count` blocks from `from` so the first stands at `to` once they have left; they stay selected, the editor focused. */
   moveBlock(from: number, to: number, count?: number): void
+  /** Runtime movement switches; disabling either cancels an active gesture. */
+  reordering: boolean
+  placing: boolean
   indent(direction: -1 | 1): void
   toggle(open?: boolean): void
   /**
@@ -235,6 +242,7 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 export function createEditor(host: HTMLElement, options: EditorOptions = {}): Editor {
   let blocks: Block[] = fromMarkdown(options.value ?? '')
   let readOnly = !!options.readOnly
+  let reordering = options.reordering !== false, placing = options.placing !== false
   let placeholder = options.placeholder ?? ''
   // As Notion says it: Space asks AI where the product answers, / opens the commands.
   const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? (options.prompt ? 'Press space for AI or / for commands' : 'Type / for commands')
@@ -297,7 +305,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         element.append(column)
         const editor = createEditor(column, {
           value,
-          readOnly,
+          readOnly, reordering, placing,
           atoms: options.atoms,
           partials: options.partials,
           drawEquation: options.drawEquation,
@@ -316,7 +324,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       const { from, slot, swap } = (event as CustomEvent<{ from: number; slot?: number; swap?: number }>).detail
       const columns = Array.from(element.querySelectorAll(':scope > .aa-column'))
       const origin = columns.indexOf((event.target as HTMLElement).closest('.aa-column') as Element)
-      if (origin < 0) return
+      if (origin < 0 || !placing || readOnly) return
       event.stopPropagation()
       // Let go on another column, a block alone in its own trades places with it.
       if (swap !== undefined) {
@@ -445,18 +453,19 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     }
     const show = (index: number, focus = false) => {
       current = Math.max(0, Math.min(tabs.length - 1, index))
-      page?.destroy(); page = null
+      if (page) { columnEditors.delete(page); page.destroy(); page = null }
       panel.replaceChildren()
       buildRow()
       page = createEditor(panel, {
         value: tabs[current]?.content ?? '',
-        readOnly,
+        readOnly, reordering, placing,
         atoms: options.atoms,
           partials: options.partials,
         drawEquation: options.drawEquation,
         blockPlaceholder: '',
         onChange(next) { tabs = tabs.map((tab, at) => at === current ? { ...tab, content: next } : tab); changed() },
       })
+      columnEditors.add(page)
       if (focus) row.querySelector<HTMLButtonElement>(`[data-tab="${current}"]`)?.focus({ preventScroll: true })
     }
     const build = () => show(current)
@@ -478,7 +487,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       }
     })
     build()
-    return () => { page?.destroy(); page = null }
+    return () => { if (page) { columnEditors.delete(page); page.destroy(); page = null } }
   }
   const drawn = new Map<HTMLElement, (() => void) | void>()
   const drawAtom = (name: string, source: string) => {
@@ -1080,6 +1089,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     elements().forEach((element, index) => element.toggleAttribute('data-selected', index >= first && index <= last))
   }
   const changeBlocks = (action: 'delete' | 'duplicate' | 'up' | 'down', range: BlockSelection) => {
+    if (!reordering && (action === 'up' || action === 'down')) return
     const first = Math.min(range.anchor, range.focus), last = Math.max(range.anchor, range.focus)
     const change = action === 'delete' ? deleteBlocks(blocks, range) : action === 'duplicate' ? duplicateBlocks(blocks, range) : moveBlocks(blocks, range, action === 'up' ? -1 : 1)
     if (!change) return
@@ -1645,7 +1655,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const onDrop = (event: DragEvent) => {
     event.preventDefault()
     const files = filesOf(event.dataTransfer)
-    if (!files.length || !options.onFiles || readOnly || destroyed) return
+    if (!files.length || !options.onFiles || readOnly || destroyed || !placing) return
     // The caret goes where the files were let go, so they land there.
     const range = document.caretRangeFromPoint?.(event.clientX, event.clientY)
     const index = range ? blockIndexOf(range.startContainer) : -1
@@ -1720,6 +1730,20 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     },
     get readOnly() { return readOnly },
     set readOnly(value: boolean) { setReadOnly(value) },
+    get reordering() { return reordering },
+    set reordering(value: boolean) {
+      if (reordering === value) return
+      reordering = value
+      for (const child of columnEditors) child.reordering = value
+      host.dispatchEvent(new Event('aa-movement-change'))
+    },
+    get placing() { return placing },
+    set placing(value: boolean) {
+      if (placing === value) return
+      placing = value
+      for (const child of columnEditors) child.placing = value
+      host.dispatchEvent(new Event('aa-movement-change'))
+    },
     get placeholder() { return placeholder },
     set placeholder(value: string) { placeholder = value; showPlaceholder(); describe() },
     focus() {
@@ -1752,7 +1776,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
     blockAction(action) { if (readOnly) return; const selection = readSelection(); if (selection) changeBlocks(action, selected ?? select(blocks, selection.anchor.block, selection.focus.block)) },
     moveBlock(from, to, count = 1) {
-      if (readOnly || count < 1 || from < 0 || to < 0 || from + count > blocks.length || to + count > blocks.length || from === to) return
+      if (readOnly || !reordering || count < 1 || from < 0 || to < 0 || from + count > blocks.length || to + count > blocks.length || from === to) return
       const next = [...blocks], moved = next.splice(from, count)
       next.splice(to, 0, ...moved)
       const pos = { block: to, offset: moved[0].prefix }

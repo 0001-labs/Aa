@@ -833,3 +833,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 :where(.aa-partial-properties > *) { display: block; margin-bottom: var(--ds-unit, 20px); }
 :where(.aa-partial-properties > label > ds-select) { display: block; }
 :where(.aa-partial-properties > .aa-partial-actions) { display: flex; justify-content: flex-end; gap: var(--ds-half, 10px); margin-bottom: 0; }
+
+/* Optional product-rendered slash-command specimen, beside the command menu. */
+.aa-command-preview { position: fixed; z-index: 1001; width: calc(16 * var(--aa-square, 20px)); pointer-events: none; }
+.aa-command-preview[hidden] { display: none; }

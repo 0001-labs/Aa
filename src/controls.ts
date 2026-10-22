@@ -11,7 +11,7 @@ import { initTooltips } from './ds1/0-face/tooltips'
 export type ToolbarAction = { id: string; label: string; icon: string; shortcut?: string; run(editor: Editor): void }
 /** `ink`: one of the text colours its row's mark is drawn in. */
 /** `swatch`: a callout fill its row's mark is drawn as, a filled square. */
-export type Command = ToolbarAction & { keywords?: string; ink?: string; swatch?: CalloutColor; enabled?(editor: Editor): boolean }
+export type Command = ToolbarAction & { keywords?: string; ink?: string; swatch?: CalloutColor; enabled?(editor: Editor): boolean; preview?(element: HTMLElement): void | (() => void) }
 const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'paragraph', label: 'Text', icon: 'text' }, { kind: 'h1', label: 'Heading 1', icon: 'h1' },
   { kind: 'h2', label: 'Heading 2', icon: 'h2' }, { kind: 'h3', label: 'Heading 3', icon: 'h3' },
@@ -67,7 +67,7 @@ export function defineAaToolbar() { if (!customElements.get('aa-toolbar')) custo
 function inserting(atom: NonNullable<EditorOptions['atoms']>[number]): Command | null {
   const insert = atom.insert
   if (!insert) return null
-  return { id: `insert-${atom.name}`, label: insert.label, icon: insert.icon, keywords: insert.keywords, run: editor => {
+  return { id: `insert-${atom.name}`, label: insert.label, icon: insert.icon, keywords: insert.keywords, preview: insert.preview, run: editor => {
     const block = editor.activeBlock()
     const empty = !block || !block.block.source.trim()
     const start = block ? (empty ? block.start : block.end) : editor.value.length
@@ -201,6 +201,31 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   closeRow.querySelector('.aa-icon')?.remove()
   const esc = document.createElement('kbd'); esc.textContent = 'esc'; closeRow.append(esc)
   const findBar = document.createElement('div'); findBar.className = 'aa-controls aa-find'; findBar.hidden = true; findBar.setAttribute('role', 'search')
+  const preview = document.createElement('div')
+  preview.className = 'aa-controls aa-command-preview'; preview.hidden = true
+  preview.setAttribute('aria-hidden', 'true')
+  let previewed: Command | undefined, stopPreview: (() => void) | void
+  const clearPreview = () => { stopPreview?.(); stopPreview = undefined; previewed = undefined; preview.replaceChildren(); preview.hidden = true; preview.remove() }
+  const positionPreview = () => {
+    if (!previewed?.preview || menu.hidden) { preview.hidden = true; return }
+    const view = visible(), unit = 20 * scaleOf(host), box = menu.getBoundingClientRect()
+    const width = preview.getBoundingClientRect().width || 16 * unit
+    const right = box.right + unit / 2, left = box.left - unit / 2 - width
+    if (right + width > view.left + view.width && left < view.left) { preview.hidden = true; return }
+    preview.hidden = false
+    preview.style.left = `${right + width <= view.left + view.width ? right : left}px`
+    const height = preview.getBoundingClientRect().height
+    preview.style.top = `${Math.max(view.top, Math.min(box.top, view.top + view.height - height))}px`
+  }
+  const showPreview = () => {
+    const command = choices[active]
+    if (command === previewed) { positionPreview(); return }
+    clearPreview()
+    if (!command?.preview) return
+    previewed = command; preview.hidden = false; overlayRoot.append(preview)
+    stopPreview = command.preview(preview)
+    positionPreview()
+  }
   overlayRoot.append(menu, findBar)
   const linkBar = document.createElement('form')
   linkBar.className = 'aa-controls aa-find aa-link-editor'; linkBar.hidden = true
@@ -289,7 +314,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const room = under + height <= view.top + view.height
     menu.style.top = `${room || over < view.top ? Math.max(view.top, Math.min(under, view.top + view.height - height)) : over}px`
   }
-  const close = () => { menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
+  const close = () => { clearPreview(); menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
   const run = (command: Command) => {
     if (editor.readOnly) return
     const query = slash
@@ -311,17 +336,23 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       }
       node.tabIndex = index === active ? 0 : -1
       node.toggleAttribute('data-current', index === active)
+      node.addEventListener('pointerenter', () => {
+        active = index
+        Array.from(list.children).forEach((row, at) => row.toggleAttribute('data-current', at === active))
+        showPreview()
+      })
       return node
     }))
     if (!choices.length) { const empty = document.createElement('span'); empty.className = 'aa-menu-empty'; empty.textContent = 'No matching commands'; list.append(empty) }
     menu.replaceChildren(list, closeRow)
+    showPreview()
     // The row the arrows reach is scrolled into the list's view.
     const current = list.children[active] as HTMLElement | undefined
     if (current && typeof current.scrollIntoView === 'function') current.scrollIntoView({ block: 'nearest' })
   }
   function open(commands: readonly Command[], rect: DOMRect) {
     choices = commands.filter(command => command.enabled?.(editor) !== false)
-    active = 0; menu.hidden = false; paint(); moveMenu(rect)
+    active = 0; menu.hidden = false; paint(); moveMenu(rect); positionPreview()
   }
   const builtin: Command[] = [...kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), ...inserts]
   if (options.onFiles) builtin.push({ id: 'image', label: 'Image or file', icon: 'image', run: () => {
@@ -337,8 +368,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const commands: Command[] = [
       ...builtin, { id: 'duplicate', label: 'Duplicate', icon: 'duplicate', run: () => editor.blockAction('duplicate') },
       { id: 'delete', label: 'Delete', icon: 'delete', run: () => editor.blockAction('delete') },
-      { id: 'up', label: 'Move up', icon: 'up', run: () => editor.blockAction('up') },
-      { id: 'down', label: 'Move down', icon: 'down', run: () => editor.blockAction('down') },
+      { id: 'up', label: 'Move up', icon: 'up', enabled: e => e.reordering, run: () => editor.blockAction('up') },
+      { id: 'down', label: 'Move down', icon: 'down', enabled: e => e.reordering, run: () => editor.blockAction('down') },
       { id: 'indent', label: 'Indent', icon: 'indent', run: () => editor.indent(1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
       { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => editor.indent(-1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
       ...(['add-row', 'delete-row', 'add-column', 'delete-column'] as const).map(action => ({ id: action, label: action.replace('-', ' ').replace(/^./, letter => letter.toUpperCase()), icon: 'table', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'table', run: () => editor.table(action) })),
@@ -439,7 +470,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     if (!menu.hidden) {
       const block = editor.activeBlock()
       const rect = block ? host.children[block.index]?.getBoundingClientRect() : null
-      if (rect) moveMenu(rect)
+      if (rect) { moveMenu(rect); positionPreview() }
     }
   }
   host.addEventListener('aa-selectionchange', selectionChanged)
@@ -453,6 +484,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   window.visualViewport?.addEventListener('scroll', viewport)
   const stopDragging = createDragging(editor, options, overlayRoot)
   return () => {
+    clearPreview(); preview.remove()
     disposed = true; clearTimeout(timer); stopDragging()
     toolbar.remove(); menu.remove(); findBar.remove(); linkBar.remove(); host.removeEventListener('aa-link-request', requestLink)
     host.removeEventListener('aa-selectionchange', selectionChanged); host.removeEventListener('aa-change', changed)
