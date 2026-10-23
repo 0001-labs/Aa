@@ -122,9 +122,11 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       for (let parent = host.parentElement; parent; parent = parent.parentElement) if (parent.classList.contains('aa')) surface = parent;
       const existing = new Set(surface.querySelectorAll('.aa-block'));
       applyDrop(result);
+      return () => {
       if (source?.isConnected && surface.contains(source)) return source;
       const matches = Array.from(surface.querySelectorAll<HTMLElement>('.aa-block')).filter(block => !block.querySelector('.aa-block') && block.textContent === text);
       return matches.find(block => !existing.has(block)) ?? matches[0] ?? null;
+      }
     },
     onDragEnd: result => { if (!preparedDrop) applyDrop(result); preparedDrop = false },
   })

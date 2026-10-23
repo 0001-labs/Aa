@@ -141,7 +141,7 @@ export type SortableOptions = {
   /** Commit the final layout before landing. Return its authored item (which may have been redrawn).
    * Await layout work here; the preview then animates directly to this measured destination.
    * When supplied, this owns the commit; onDragEnd remains a completion notification. */
-  prepareDrop?: (result: SortableResult) => HTMLElement | null | Promise<HTMLElement | null>;
+  prepareDrop?: (result: SortableResult) => HTMLElement | null | (() => HTMLElement | null) | Promise<HTMLElement | null | (() => HTMLElement | null)>;
   /** How long a finger holds before the item lifts, in milliseconds. */
   touchHold?: number;
   /** How far a mouse or pen moves before the item lifts, in pixels. */
@@ -295,6 +295,7 @@ type Session = {
   scrollFrame: number | null;
   impactFrame: number | null;
   dropping: boolean;
+  preparing?: boolean;
   landing?: { element: HTMLElement; visibility: string };
   /** The sibling the lifted item is held over, to combine with; the gap stays as it was. */
   combine: { container: ContainerSnapshot; slot: Slot } | null;
@@ -1167,12 +1168,15 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
 
     let finalElement: HTMLElement | null = null;
     if (reason === 'DROP' && options.prepareDrop) {
+      current.preparing = true;
       // Preserve the visual positions while the adapter commits the actual final structure.
       const siblings = [...current.shifts.keys()].filter(element => element.isConnected);
       const before = new Map(siblings.map(element => [element, element.getBoundingClientRect()]));
       for (const [element, saved] of current.shifts) { element.style.transition = 'none'; element.style.translate = saved.translate; }
       const prepared = options.prepareDrop({ ...startOf(current), destination: returning ? null : locationOf(current.destination!), combine: null, reason });
-      finalElement = prepared instanceof Promise ? await prepared : prepared;
+      const resolved = prepared instanceof Promise ? await prepared : prepared;
+      const locate = typeof resolved === 'function' ? resolved : () => resolved;
+      finalElement = locate();
       if (session !== current) return;
       if (finalElement?.isConnected) {
         current.landing = { element: finalElement, visibility: finalElement.style.visibility };
@@ -1180,6 +1184,12 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       }
       await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
       if (session !== current) return;
+      const updated = locate();
+      if (updated !== finalElement) {
+        if (current.landing) current.landing.element.style.visibility = current.landing.visibility;
+        finalElement = updated;
+        if (finalElement?.isConnected) { current.landing = { element: finalElement, visibility: finalElement.style.visibility }; finalElement.style.visibility = 'hidden'; }
+      }
       if (!reducedMotion) for (const element of siblings) {
         if (!element.isConnected || element === finalElement) continue;
         const old = before.get(element)!, next = element.getBoundingClientRect();
@@ -1388,7 +1398,9 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     destroy: () => {
       destroyed = true;
       clearPending();
-      if (session) cleanup(session);
+      // A prepared layout may destroy its old editor while replacing columns.
+      // The landing overlay owns its lifetime until the already-started handoff finishes.
+      if (session && !session.preparing) cleanup(session);
       window.removeEventListener('pointerdown', onPointerDown, true);
       window.removeEventListener('keydown', onHandleKeyDown, true);
       instructions?.remove();
