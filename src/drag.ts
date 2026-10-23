@@ -90,6 +90,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   let sideTargets: DOMRect[] = []
   let liftedScroll = { x: 0, y: 0 }
 
+  let preparedDrop = false
   const sortable = createSortable({
     inheritProperties: CARRIED,
     renderPreview: source => {
@@ -114,6 +115,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       keepClear()
     },
     prepareDrop: result => {
+      preparedDrop = true
       const source = children()[result.source.index];
       const text = source?.textContent;
       let surface = host;
@@ -124,7 +126,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       const matches = Array.from(surface.querySelectorAll<HTMLElement>('.aa-block')).filter(block => !block.querySelector('.aa-block') && block.textContent === text);
       return matches.find(block => !existing.has(block)) ?? matches[0] ?? null;
     },
-    onDragEnd: result => { if (result.reason !== 'DROP' || !result.destination) applyDrop(result); },
+    onDragEnd: result => { if (!preparedDrop) applyDrop(result); preparedDrop = false },
   })
   function applyDrop(result: SortableResult) {
       const { caret, group } = carried ?? { caret: null, group: [] as HTMLElement[] }

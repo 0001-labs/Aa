@@ -1166,12 +1166,12 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     }
 
     let finalElement: HTMLElement | null = null;
-    if (!returning && options.prepareDrop) {
+    if (reason === 'DROP' && options.prepareDrop) {
       // Preserve the visual positions while the adapter commits the actual final structure.
       const siblings = [...current.shifts.keys()].filter(element => element.isConnected);
       const before = new Map(siblings.map(element => [element, element.getBoundingClientRect()]));
       for (const [element, saved] of current.shifts) { element.style.transition = 'none'; element.style.translate = saved.translate; }
-      const prepared = options.prepareDrop({ ...startOf(current), destination: locationOf(current.destination!), combine: null, reason });
+      const prepared = options.prepareDrop({ ...startOf(current), destination: returning ? null : locationOf(current.destination!), combine: null, reason });
       finalElement = prepared instanceof Promise ? await prepared : prepared;
       if (session !== current) return;
       if (finalElement?.isConnected) {
