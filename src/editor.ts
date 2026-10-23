@@ -1,3 +1,5 @@
+import { createSourceEditor, type SourceCommentsOptions } from './comments-editor'
+import { exportMarkdown } from './comments-markdown'
 /**
  * The editor: one editable element a block, each drawn from the document and
  * read back from the screen after every change, the way Notion's blocks are.
@@ -171,6 +173,8 @@ export type EditorOptions = {
    * at the words or in the store's `panel`. Without it, nothing is commented.
    */
   comments?: CommentStore
+  /** Keep threads in editable Markdown; author identity and permissions belong to the host. */
+  sourceComments?: SourceCommentsOptions
 }
 
 /** The comments from outside: open a thread, start one on the selection, close what is open. */
@@ -184,6 +188,8 @@ export type EditorComments = {
 export type Editor = {
   readonly element: HTMLElement
   value: string
+  /** Downloadable Markdown, with comment markers and metadata removed. */
+  exportMarkdown(): string
   readOnly: boolean
   placeholder: string
   focus(): void
@@ -244,6 +250,11 @@ type Selection2 = { anchor: Pos; focus: Pos }
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
 export function createEditor(host: HTMLElement, options: EditorOptions = {}): Editor {
+  if (options.sourceComments || /(?:^|\n) {0,3}[`~]{3,}aa-comments(?:\s|$)/.test(options.value ?? '')) return createSourceEditor(host, options, createCoreEditor)
+  return createCoreEditor(host, options)
+}
+
+function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Editor {
   let blocks: Block[] = fromMarkdown(options.value ?? '')
   let readOnly = !!options.readOnly
   let reordering = options.reordering !== false, placing = options.placing !== false
@@ -1721,6 +1732,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 
   const editor: Editor = {
     element: host,
+    exportMarkdown() { return exportMarkdown(toMarkdown(blocks)) },
     get value() { return toMarkdown(blocks) },
     set value(text: string) {
       if (toMarkdown(blocks) === text) return

@@ -103,3 +103,13 @@ Canonical short code: `AA`, an explicit two-character exception to the studio’
 ## Reorder settling
 
 Reordering and placing blocks must settle once into the final layout. Aa commits the destination, including new or removed column wrappers, through Drag’s `prepareDrop` hook before the overlay measures and animates its landing. Return the final authored node after redraw, retain one history step, and keep the source hidden until the handoff finishes. A later grid correction or second snap is a regression; cover actual pointer placement with mixed-height blocks and columns.
+
+## Markdown-backed comments and CLI
+
+`src/comments-markdown.ts` owns the versioned `aa-comments v1` YAML fence and paired HTML anchors. `sourceComments` opts an editor into document-backed threads; existing embedded threads are read automatically. `editor.value` and `onChange` retain comments. Markdown downloads must use `editor.exportMarkdown()` or the DOM-free `exportMarkdown(source)`, which strip live markers and metadata and refuse unreadable comment metadata. Never download `editor.value` directly.
+
+IDv1 account validation and item-code generation are copied through Sync 1 into `src/vendor/idv1`. `src/comments-editor.ts` projects source onto prose while keeping public offsets in the editable source. External source replacement resets local undo. Source comments do not support the optional Yjs text adapter yet, nor anchors inside nested columns/tabs; consumers must use revision-checked saves and enforce authenticated authors/permissions themselves. Existing product-backed stores are not migrated automatically.
+
+After `vp run build`, `node bin/aa.mjs` (installed as `aa`) provides `comments list`, `add`, `reply`, `edit`, `resolve`, `reopen`, `remove`, `export`, and `completion bash`; `--help` lists flags and all operations support `--json`. `AA_AUTHOR` or `--author` supplies a local IDv1 account, not a credential. `--from`/`--to` address UTF-16 offsets in clean Markdown. `export` always strips comments and never overwrites an existing output. CLI checks build the DOM-free entry before running against temporary files.
+
+System selections for this feature: `editing`, `documentation`, `sharing`, `id1`, `platform-cli`, `platform-web`. CLI exceptions: Aa is a local-file library command in its existing package, with no remote API, device sign-in or credential storage. Web hosting remains the existing documentation Worker; no product backend or authentication changes are shipped here.

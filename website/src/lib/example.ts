@@ -22,6 +22,8 @@ export interface ExampleSpec {
   comments?: { quote: string; author: string; body: string; resolved?: boolean }[];
   /** Comments in a panel beside the text rather than at the words. */
   commentsPanel?: boolean;
+  /** Portable comments and a clean Markdown download. */
+  sourceComments?: boolean;
   readOnly?: boolean;
   placeholder?: string;
 }

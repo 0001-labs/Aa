@@ -9,7 +9,7 @@ A comment is a thread on a run of the words, kept on those words as the text aro
 
 <Example name="comments-thread" />
 
-Comments change nothing in the Markdown. The commented words are marked on a decoration layer of their own, `comments`, and the threads are kept by your app, in a store it gives the editor. Without a store, nothing is commented.
+Comments can live in the editable Markdown with `sourceComments`, or in an external `CommentStore`. Both use the same orange marks, popover and panel. Markdown downloads strip comment markers and thread metadata; saving the editable source preserves them.
 
 ## Try it
 
@@ -167,8 +167,81 @@ createEditor(host, { value: markdown, comments })
 
 Pictures on a comment, and drafts kept across reloads, are not in this version.
 
-## Person IDs
+## Comments in Markdown
 
-For portable author references, use an account code from [IDv1](https://idv1.0001.dev), such as `Jo4712`. The app resolves that code to a person's name and checks who may write. An ID identifies a person; it does not authenticate them. Aa currently accepts the app's person IDs through `CommentStore`; storing comments and IDv1 author references inside the Markdown is a proposed extension, not an available format yet.
+<Example name="comments-source" />
+
+The editable source holds paired markers around the words and one `aa-comments v1` block at the end. Thread and comment IDs are [IDv1](https://idv1.0001.dev) item codes; `author` and `resolvedBy` are account codes. IDs are case-sensitive. Names and avatars come from your app; an unknown author is shown by their code.
+
+````markdown
+Ship <!--aa:start Ab12Cd-->the new editor<!--aa:end Ab12Cd--> on Friday.
+
+```aa-comments v1
+threads:
+  - id: Ab12Cd
+    quote: the new editor
+    status: open
+    comments:
+      - id: Ef34Gh
+        author: Jo4712
+        created: "2026-10-23T07:00:00Z"
+        body: |
+          Can we finish **keyboard testing** first?
+```
+````
+
+Replies are more entries in `comments`, each with its own ID, author, UTC `created` timestamp and Markdown `body`. An edit adds `edited`. Resolving sets `status: resolved`, `resolved` (UTC) and `resolvedBy`. Optional `mentions` holds account codes; `reactions` maps an emoji to account codes. `quote` provides context when the anchor is gone; Aa does not guess a new position from matching words. Overlapping and cross-paragraph ranges are supported. Code spans, code fences and indented code remain literal examples.
+
+Use YAML without aliases or custom tags. A fence inside a comment body needs a longer enclosing fence. IDs must be unique within the document. Duplicate anchors, unreadable data and unsupported versions produce an error rather than silently discarding a thread. Missing or empty anchors retain the thread as orphaned. Keep the metadata block last, separated from the prose by two newlines.
+
+```ts
+const editor = createEditor(host, {
+  value: savedSource,
+  sourceComments: {
+    me: { id: 'Jo4712', name: 'Joachim' },
+    people: [{ id: 'An1234', name: 'Ann' }],
+    // panel: document.querySelector('#comments'),
+  },
+  onChange: source => saveEditableSource(source),
+})
+```
+
+Existing embedded comments are read automatically. Supply `sourceComments.me` to write, or omit it for read-only comments. Do not combine `sourceComments` with an external `comments` store. `editor.value`, `onChange`, selection and replacement offsets refer to the full editable source. Comment changes are undoable with the document. Setting a different `editor.value` loads external changes and resets local undo, preserving newly loaded replies.
+
+## Download as Markdown
+
+```ts
+// Save this inside your app:
+const editableSource = editor.value
+
+// Put this in the .md download:
+const markdown = editor.exportMarkdown()
+const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+```
+
+For source without an editor, import `exportMarkdown` from `@0001-labs/aa/comments-markdown`. It removes live comment markers and metadata, retaining the prose and literal code examples. It refuses malformed or unsupported comment metadata so a download cannot silently expose it. There is no include-comments switch on Markdown export. Raw editable source includes all comments and is not a private export.
+
+## CLI
+
+The package provides the `aa` command. From a source checkout, build it and run `node bin/aa.mjs`; an installed package exposes `aa`.
+
+```sh
+aa comments list note.md --json
+aa comments add note.md --author Jo4712 --quote "the new editor" --body "Check keyboard navigation."
+aa comments reply note.md Ab12Cd --author An1234 --body "Tested."
+aa comments edit note.md Ef34Gh --author Jo4712 --body "Check keyboard and touch."
+aa comments resolve note.md Ab12Cd --author Jo4712
+aa comments reopen note.md Ab12Cd --author Jo4712
+aa comments remove note.md Ab12Cd --author Jo4712
+aa export note.md --output download.md
+```
+
+`AA_AUTHOR` supplies the author when `--author` is omitted. A quote must match exactly once; otherwise use `--from N --to N`, UTF-16 offsets into the clean Markdown (the output of `aa export`). Editing and deleting check the supplied author; local file attribution is not authenticated identity. The host must authenticate authors and enforce permissions for remote writes.
+
+Comment writes use an adjacent `.aa-lock` file and compare the source before atomic replacement; other writers must cooperate with that lock or use revision-checked saves. Export writes clean Markdown to stdout or a new output file and refuses to overwrite an existing file. `--json` returns structured results. Exit codes are 0 for success, 1 for filesystem errors, 2 for invalid input and 3 for a refused author operation. Use `aa --help` for usage and `aa completion bash` for completion.
+
+## Integration limits
+
+Source comments are opt-in for writing and do not migrate an existing backend store. Keep unread state, notifications and access checks in the host. The current Yjs text adapter is not supported for source comments: use revision-checked whole-document saves until metadata-aware collaboration is available. Version 1 anchors are for the main writing surface, not nested columns or tabs. Existing external-store comments keep their current behavior.
 
 [Toolbar](/editing/toolbar/) · [Decorations](/building/decorations/) · [Shared editing](/together/shared-editing/) · [Options](/building/options/)

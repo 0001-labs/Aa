@@ -15,6 +15,7 @@ const { title, hint, source = true, ...options } = example;
     {source && <p class="aa-example-label">What it stores</p>}
     {source && <div class="aa-example-stored"><aside class="aa-example-comments" hidden></aside><pre class="aa-example-source"></pre></div>}
   </div>
+  {options.sourceComments && <><button type="button" class="ds-button" data-aa-download>Download Markdown</button><p role="status" data-aa-download-status></p></>}
 </figure>
 
 <script>

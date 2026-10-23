@@ -92,3 +92,13 @@ A Convex component is exported at `@0001-labs/aa/convex.config`. Register it in 
 `convexTransport` from `@0001-labs/aa/convex` supports `ConvexClient`; applications using `ConvexReactClient` can implement the same transport with `watchQuery` and `mutation`. Convex is an optional peer dependency. The core imports neither React nor Yjs.
 
 Run the playground with `vp run dev` at http://localhost:5195, and the documentation (`website/`) with `vp run docs:dev` at http://localhost:5196. Run `vp test`, `vp run check` and `vp run build` before a release.
+
+## Portable comments and Markdown downloads
+
+Use `sourceComments: { me: { id: 'Jo4712', name: 'Joachim' } }` with `createEditor` to keep threads in the editable Markdown. Authors use [IDv1](https://idv1.0001.dev) account codes. Existing embedded threads render automatically; the external `CommentStore` remains available.
+
+Save `editor.value` as the editable source. Use `editor.exportMarkdown()` for a Markdown download: it removes comment anchors and metadata. The DOM-free `exportMarkdown(source)` and source parser/writer are exported from `@0001-labs/aa/comments-markdown`.
+
+The package supplies `aa comments list|add|reply|edit|resolve|reopen|remove` and `aa export`. After building this checkout, run `node bin/aa.mjs --help`; package installations expose `aa`. All commands accept `--json`. Local author codes provide attribution, not authentication. Source comments currently use revision-checked saves, not the optional Yjs text adapter.
+
+See [comment syntax, CLI commands and the live download example](https://aa.0001.dev/together/comments/#comments-in-markdown).

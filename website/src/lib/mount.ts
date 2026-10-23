@@ -67,12 +67,23 @@ async function mount(figure: HTMLElement) {
     placeholder: spec.placeholder,
     atoms,
     comments,
+    ...(spec.sourceComments ? { sourceComments: { me: { id: 'Jo4712', name: 'Joachim' } } } : {}),
     drawEquation,
     onFiles: keepFiles(() => editor),
     ...(spec.ai ? { prompt, correct } : { correcting: false }),
     onChange: markdown => { if (stored) stored.textContent = markdown; },
   });
   if (stored) stored.textContent = editor.value;
+  figure.querySelector('[data-aa-download]')?.addEventListener('click', () => {
+    const status = figure.querySelector<HTMLElement>('[data-aa-download-status]');
+    try {
+      const blob = new Blob([editor!.exportMarkdown()], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href = url; link.download = 'document.md'; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (status) status.textContent = 'Downloaded without comments.';
+    } catch (error) { if (status) status.textContent = error instanceof Error ? error.message : 'Could not export Markdown.'; }
+  });
 }
 
 /** Puts the editor into every example on the page, once. */

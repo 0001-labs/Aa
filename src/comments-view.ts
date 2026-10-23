@@ -148,6 +148,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   const receive = (threads: readonly CommentThread[]) => {
     if (destroyed) return
     stored = threads
+    lastValue = options.value()
     placed = anchorThreads(threads, options.value())
     if (openId && !placed.some(thread => thread.id === openId)) openId = null
     if (awaiting) {
@@ -171,7 +172,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     placed = applyEdit(placed, edit, value).map(thread => {
       if (!thread.orphaned) return thread
       const kept = stored.find(each => each.id === thread.id)
-      const found = kept && relocate(kept, value)
+      const found = kept && !kept.orphaned && relocate(kept, value)
       return found ? { ...thread, ...found, quote: kept!.quote, orphaned: false } : thread
     })
     if (draft) { const mapped = mapRange(draft, edit); draft = mapped ? { ...mapped, quote: value.slice(mapped.from, mapped.to) } : null; if (!draft) closeDraft() }

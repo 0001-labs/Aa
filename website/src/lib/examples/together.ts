@@ -1,6 +1,12 @@
 import type { ExampleSpec } from '../example';
 
 export default {
+  'comments-source': {
+    title: 'Comments in the source',
+    hint: 'Select words and choose Comment. The source keeps the thread; Download Markdown leaves it out.',
+    sourceComments: true,
+    markdown: 'Ship <!--aa:start Ab12Cd-->the new editor<!--aa:end Ab12Cd--> on Friday.\n\n```aa-comments v1\nthreads:\n  - id: Ab12Cd\n    quote: the new editor\n    status: open\n    comments:\n      - id: Ef34Gh\n        author: Jo4712\n        created: "2026-10-23T07:00:00Z"\n        body: Can we finish keyboard testing first?\n```',
+  },
   'comments-thread': {
     title: 'Threads on the words',
     hint: 'Put the caret in the orange words to open a thread, or select other words and press ⌘⇧M to start one.',

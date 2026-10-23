@@ -55,6 +55,11 @@
         "to": "src/vendor/drag",
         "grid": true
       }
+    },
+    "ID 1": {
+      "ids": {
+        "to": "src/vendor/idv1"
+      }
     }
   }
 }

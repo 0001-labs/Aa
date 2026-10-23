@@ -140,5 +140,20 @@
       "src/vendor/drag/types.ts": "7ba2e49e0cd117f292dd6a5c612a82299b3aecd8fbb1043a2d7558d8f7508ccc",
       "src/vendor/drag/util.ts": "20ea31f691c42d2b127fbb4d9ac565f1abd19323e64fc4ab64fb7c7f42640ba9"
     }
+  },
+  "ID 1": {
+    "commit": "c5c5a16c82f0fdeaa501e130fdde2232af869110",
+    "version": "0.3.1",
+    "owned": ["src/vendor/idv1"],
+    "files": {
+      "src/vendor/idv1/README.md": "fc0baa60001b95c46938f1d7e762139524a3604edb50a77af07b9a87c48ba852",
+      "src/vendor/idv1/advanced.ts": "9516a1706baf856caaabbb4ca62521aeb0ac0c12120347496d834874148d9f55",
+      "src/vendor/idv1/index.ts": "9ffcc4a0ab5059b10f2e97ac31f42a45306d07e7c86c0b85f2b30eea97c67fbc",
+      "src/vendor/idv1/scanCode.ts": "10ce0dd8f89e8e0899f17dc0ba86d8352e36dd2c10bc3e5cf7a861f76ad27348",
+      "src/vendor/idv1/scanCodeDrawing.ts": "d4855d483ad59f55f2a485828c79a136edc3b7ae92a6c8826101d77e75a0cbaa",
+      "src/vendor/idv1/shapes.ts": "847786dd6a9cac468a9c39742385897aa7975b825c8c73b99032dbdc988df8b7",
+      "src/vendor/idv1/space.ts": "4e274f92f91d892dc284de26664bea518c196eb5a7ab7a0cccd81e769f1de81b",
+      "src/vendor/idv1/words.ts": "d68e87838ec0e406e2f127289bf8f71e4ee094931696e2611e0d5247ba47cd6a"
+    }
   }
 }

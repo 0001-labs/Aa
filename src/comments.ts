@@ -36,6 +36,8 @@ export type Comment = {
 export const REACTION_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '👏', '😊', '🔥', '✅', '👀', '🤔', '💡', '🚀', '✨', '🙌', '💯'] as const
 
 export type CommentThread = CommentRange & {
+  /** An explicitly missing source anchor must never be guessed from a duplicate quote. */
+  orphaned?: boolean
   id: string
   comments: readonly Comment[]
   createdAt: number
@@ -158,7 +160,7 @@ export function relocate(thread: CommentRange, text: string): { from: number; to
 /** The store's threads placed in this text. */
 export function anchorThreads(threads: readonly CommentThread[], text: string): AnchoredThread[] {
   return threads.map(thread => {
-    const placed = relocate(thread, text)
+    const placed = thread.orphaned ? null : relocate(thread, text)
     return placed ? { ...thread, ...placed, orphaned: false } : { ...thread, orphaned: true }
   })
 }
