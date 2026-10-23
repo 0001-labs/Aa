@@ -411,7 +411,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   const positionToolbar = () => {
     if (toolbar.hidden) return
-    if (coarse()) dock(toolbar)
+    if (coarse()) { if (toolbar.below && toolbar.lastElementChild !== toolbar.below) toolbar.append(toolbar.below); dock(toolbar) }
     else {
       delete toolbar.dataset.docked; toolbar.style.width = ''
       // Over the selected words, measured from where they are in the Markdown: with the focus in the bar's own
@@ -422,6 +422,11 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       const bounds = words?.getBoundingClientRect?.() ?? host.getBoundingClientRect()
       const rect = line.length ? { left: Math.min(...line.map(rect => rect.left)), top: Math.min(...line.map(rect => rect.top)), width: Math.max(...line.map(rect => rect.right)) - Math.min(...line.map(rect => rect.left)), bottom: bounds.bottom } : bounds
       const position = selectionToolbarPosition(rect, toolbar.getBoundingClientRect(), visible(), scaleOf(host))
+      if (toolbar.below) {
+        const belowSelection = rect.top - toolbar.getBoundingClientRect().height < visible().top
+        if (belowSelection && toolbar.firstElementChild !== toolbar.below) toolbar.prepend(toolbar.below)
+        else if (!belowSelection && toolbar.lastElementChild !== toolbar.below) toolbar.append(toolbar.below)
+      }
       toolbar.style.left = `${position.left}px`; toolbar.style.top = `${position.top}px`
     }
   }

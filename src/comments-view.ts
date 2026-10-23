@@ -556,7 +556,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
 
   let picker: HTMLElement | null = null
   const hidePicker = () => { picker?.remove(); picker = null }
-  /** The sixteen, in the Context face just under the button and inside its panel or popover, eight a row; a press gives one and the picker goes. */
+  /** The sixteen, in the Context face beside the button when there is room and inside its panel or popover, eight a row; a press gives one and the picker goes. */
   const openPicker = (button: HTMLElement, commentId: string) => {
     hidePicker()
     picker = doc.createElement('div')
@@ -573,11 +573,12 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     root.append(picker)
     const rect = button.getBoundingClientRect(), square = 20 * (parseFloat(getComputedStyle(host).getPropertyValue('--aa-sf')) || 1)
     const width = 8 * square, height = 2 * square, gap = 4 * square / 20
-    // Within the panel or popover the plus stands in, its first cell right under the plus.
+    // Prefer beside the plus within its panel; fall back vertically when neither side fits.
     const frame = button.closest('.aa-comments')?.getBoundingClientRect()
     const from = Math.max(0, frame?.left ?? 0), to = Math.min(view.innerWidth, frame?.right ?? view.innerWidth)
-    picker.style.left = `${Math.max(from, Math.min(rect.left, to - width))}px`
-    picker.style.top = `${rect.bottom + gap + height <= view.innerHeight ? rect.bottom + gap : Math.max(0, rect.top - gap - height)}px`
+    const beside = rect.right + gap + width <= to ? rect.right + gap : rect.left - gap - width >= from ? rect.left - gap - width : null
+    picker.style.left = `${beside ?? Math.max(from, Math.min(rect.left, to - width))}px`
+    picker.style.top = `${beside !== null ? Math.max(0, Math.min(rect.top, view.innerHeight - height)) : rect.bottom + gap + height <= view.innerHeight ? rect.bottom + gap : Math.max(0, rect.top - gap - height)}px`
     picker.querySelector<HTMLButtonElement>('button')?.focus()
   }
 
