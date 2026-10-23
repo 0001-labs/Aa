@@ -167,4 +167,8 @@ createEditor(host, { value: markdown, comments })
 
 Pictures on a comment, and drafts kept across reloads, are not in this version.
 
+## Person IDs
+
+For portable author references, use an account code from [IDv1](https://idv1.0001.dev), such as `Jo4712`. The app resolves that code to a person's name and checks who may write. An ID identifies a person; it does not authenticate them. Aa currently accepts the app's person IDs through `CommentStore`; storing comments and IDv1 author references inside the Markdown is a proposed extension, not an available format yet.
+
 [Toolbar](/editing/toolbar/) · [Decorations](/building/decorations/) · [Shared editing](/together/shared-editing/) · [Options](/building/options/)
