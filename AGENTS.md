@@ -53,13 +53,11 @@ Toolbar, slash menu, block selection, block dragging with no handle on Drag's so
 - `vp run check` — type check
 - `vp test` — the tests
 
-## Aa and Consistency
+## Product expansions
 
-Aa is the vanilla TypeScript text-editing engine. Caret/focus, native selection, text keyboard behavior, formatting, Markdown, text history and generic editor extension points belong here. Fix those in Aa and test them without Consistency. `createEditor` is the framework-independent API; `<aa-editor>` and optional framework adapters wrap it. `editor.dismiss()` leaves text editing without changing content or history.
+Aa is the shared vanilla TypeScript text-editing engine. Caret/focus, native selection, text keyboard behavior, formatting, Markdown, text history and generic extension points belong here. Fix and test those in Aa independently of its consumers. `createEditor` is the framework-independent API; `<aa-editor>` and optional framework adapters wrap it. `editor.dismiss()` leaves editing without changing content or history.
 
-Consistency is the site-building expansion: page composition, visual spacing/bounds/resizing, component design consistency, site-specific atoms/actions and responsive previews. It consumes Aa through Sync 1 and must not patch Aa internals or duplicate its focus/keyboard rules. Shared geometry and controls belong to Design system 1; Drag provides the shared movement engine used by both layers.
-
-The current development surface is the private editor at `https://neweditor.c9y.site/`, locally `http://127.0.0.1:4187/private-consistency/`. Its Editor guide at `/private-consistency/guide/` documents this boundary. The standalone Aa playground remains `https://aa.0001.dev/`; working on the integrated development site does not move ownership out of Aa.
+Each product owns its expansion: domain atoms, commands, persistence, permissions and authenticated services. Compose these through Aa's public options and adapters, keeping the copied core unchanged. Document product expansions in their private product/System records; Aa's public documentation covers the shared editor and generic extension API only. Shared geometry and controls belong to Design system 1; shared movement belongs to Drag.
 
 ## Plain text
 
