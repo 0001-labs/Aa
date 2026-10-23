@@ -125,7 +125,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const restore = () => { if (saved) editor.selectRange(saved.start, saved.end) }
   // On touch the kinds are a sheet from the foot of the screen (sheet.ts), a row each with the Markdown that writes it.
   const kindRows = (run: (kind: TurnKind) => void) => kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, key: keys[kind.kind], run: () => { restore(); run(kind.kind) } }))
-  const sheet = (title: string, groups: SheetGroup[]) => { toolbar.hidden = true; openSheet({ title, groups, root: overlayRoot, onClose: chosen => { if (!chosen) { const end = saved?.end ?? editor.selection()?.end; saved = null; if (end !== undefined) { dismissedSelection = { start: end, end }; editor.selectRange(end) } toolbar.hidden = true } } }) }
+  const sheet = (title: string, groups: SheetGroup[]) => { toolbar.hidden = true; openSheet({ title, groups, root: overlayRoot, nonModal: options.nonModalSheets, onClose: chosen => { if (!chosen) { const end = saved?.end ?? editor.selection()?.end; saved = null; if (end !== undefined) { dismissedSelection = { start: end, end }; editor.selectRange(end) } toolbar.hidden = true } } }) }
   /** A new block of a kind: in place of the empty paragraph the caret is in, or after the block it is in, written as the kind writes an empty block. */
   const insertKind = (kind: TurnKind) => {
     const block = editor.activeBlock()

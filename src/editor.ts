@@ -137,6 +137,8 @@ export type EditorOptions = {
   partials?: boolean
   /** Files pasted or dropped into the editor. Without it, they are ignored. */
   onFiles?: (files: File[]) => void
+  /** Keep touch formatting sheets modeless so the host page stays interactive. */
+  nonModalSheets?: boolean
   toolbar?: boolean | readonly ToolbarAction[]
   commands?: readonly Command[]
   blockCommands?: readonly Command[]

@@ -17,6 +17,7 @@ export type SheetRow = { id: string; label: string; icon?: string; key?: string;
 export type SheetGroup = { label?: string; rows: readonly SheetRow[] }
 export type SheetOptions = {
   title: string
+  nonModal?: boolean
   groups: readonly SheetGroup[]
   /** Where the sheet is appended: the page's body, or the dialog the editor is in. */
   root: Element
@@ -32,6 +33,7 @@ export function openSheet(options: SheetOptions): () => void {
   const dialog = doc.createElement('dialog')
   dialog.className = 'aa-sheet ds-overlay ds-overlay--sheet'
   dialog.setAttribute('aria-label', options.title)
+  if (options.nonModal) dialog.style.zIndex = 'var(--ds-overlay-layer, 1)'
   const head = doc.createElement('div'); head.className = 'aa-sheet-head'
   const title = doc.createElement('h2'); title.className = 'aa-sheet-title'; title.textContent = options.title
   const cancel = doc.createElement('button'); cancel.type = 'button'; cancel.className = 'aa-sheet-cancel'; cancel.textContent = 'Cancel'
@@ -70,7 +72,14 @@ export function openSheet(options: SheetOptions): () => void {
     row?.run()
   }, { once: true })
   options.root.append(dialog)
-  if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', '')
+  if (options.nonModal && typeof dialog.show === 'function') dialog.show()
+  else if (typeof dialog.showModal === 'function') dialog.showModal()
+  else dialog.setAttribute('open', '')
+  const escape = (event: KeyboardEvent) => {
+    if (options.nonModal && event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); event.stopPropagation(); dialog.close() }
+  }
+  dialog.addEventListener('keydown', escape)
+  dialog.addEventListener('close', () => dialog.removeEventListener('keydown', escape), { once: true })
   // The sheet itself holds the focus at first, so no row or Cancel opens ringed; Tab reaches them.
   dialog.tabIndex = -1; dialog.focus()
   return () => { if (dialog.open) dialog.close(); else dialog.remove() }
