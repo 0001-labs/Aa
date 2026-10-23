@@ -11,6 +11,8 @@ export const GRID_PRESSES = 5;
  * behind a user, an owner or a development check. Escape hides both. Presses
  * typed into a field, with a modifier or held down never count, and any other
  * key starts the count again.
+ * A nested scrolling viewport opts in with data-ds-grid-scroll: its grid follows
+ * its content while the page grid remains aligned outside the viewport.
  */
 export function initGridShortcut(): void {
   if (typeof document === "undefined") return;
@@ -56,18 +58,61 @@ export function initGridShortcut(): void {
   document.body.appendChild(overlay);
   const layout = createLayoutInspector();
 
+  const pageGrid = shadow.querySelector<HTMLElement>('.grid')!;
+  const scopedGrids = new Map<HTMLElement, HTMLElement>();
+  let tracking = false;
+  const resize = new ResizeObserver(() => { if (tracking) updatePosition(); });
+  const regionsChanged = new MutationObserver(() => { if (tracking) updatePosition(); });
   const updatePosition = () => {
     overlay.style.setProperty("--ds-grid-scroll-x", `${window.scrollX}px`);
     overlay.style.setProperty("--ds-grid-scroll-y", `${window.scrollY}px`);
+    const present = new Set<HTMLElement>();
+    const holes: string[] = [];
+    document.querySelectorAll<HTMLElement>('[data-ds-grid-scroll]').forEach(element => {
+      const rect = element.getBoundingClientRect();
+      let left = rect.left + element.clientLeft, top = rect.top + element.clientTop;
+      let right = left + element.clientWidth, bottom = top + element.clientHeight;
+      // The overlay must respect enclosing scroll viewports as the content does.
+      for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+        const style = getComputedStyle(parent), box = parent.getBoundingClientRect();
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) { left = Math.max(left, box.left + parent.clientLeft); right = Math.min(right, box.left + parent.clientLeft + parent.clientWidth); }
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) { top = Math.max(top, box.top + parent.clientTop); bottom = Math.min(bottom, box.top + parent.clientTop + parent.clientHeight); }
+      }
+      left = Math.max(0, left); top = Math.max(0, top); right = Math.min(innerWidth, right); bottom = Math.min(innerHeight, bottom);
+      if (right <= left || bottom <= top || !element.getClientRects().length) return;
+      present.add(element);
+      let grid = scopedGrids.get(element);
+      if (!grid) { grid = document.createElement('div'); grid.className = 'grid'; grid.setAttribute('data-ds-grid-region', ''); shadow.append(grid); scopedGrids.set(element, grid); resize.observe(element); }
+      const style = getComputedStyle(element);
+      for (const property of ['--ds-grid-unit', '--unit', '--sf', '--ds-grid-color', '--ds-grid-origin-x', '--ds-grid-origin-y', '--ds-grid-line-offset']) {
+        const value = style.getPropertyValue(property); if (value) grid.style.setProperty(property, value); else grid.style.removeProperty(property);
+      }
+      Object.assign(grid.style, { inset: 'auto', left: `${left}px`, top: `${top}px`, width: `${right - left}px`, height: `${bottom - top}px` });
+      grid.style.setProperty('--ds-grid-scroll-x', `${window.scrollX + left + element.scrollLeft}px`);
+      grid.style.setProperty('--ds-grid-scroll-y', `${window.scrollY + top + element.scrollTop}px`);
+      // Opposite winding makes each viewport a hole in the page grid.
+      holes.push(`M${left},${top}V${bottom}H${right}V${top}Z`);
+    });
+    scopedGrids.forEach((grid, element) => { if (!present.has(element)) { resize.unobserve(element); grid.remove(); scopedGrids.delete(element); } });
+    pageGrid.style.clipPath = holes.length ? `path("M0,0H${innerWidth}V${innerHeight}H0Z ${holes.join(' ')}")` : '';
   };
   const setVisible = (visible: boolean) => {
     overlay.hidden = !visible;
     root.toggleAttribute("data-ds-grid-visible", visible);
     if (visible) {
+      tracking = true;
       updatePosition();
-      window.addEventListener("scroll", updatePosition, { passive: true });
+      document.addEventListener('scroll', updatePosition, { passive: true, capture: true });
+      window.addEventListener('scroll', updatePosition, { passive: true });
+      window.addEventListener('resize', updatePosition, { passive: true });
+      regionsChanged.observe(document.body, { childList: true, subtree: true });
     } else {
-      window.removeEventListener("scroll", updatePosition);
+      tracking = false;
+      document.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+      regionsChanged.disconnect(); resize.disconnect();
+      scopedGrids.forEach(grid => grid.remove()); scopedGrids.clear(); pageGrid.style.clipPath = '';
     }
     window.dispatchEvent(new CustomEvent("design-system-grid-changed", { detail: { visible } }));
   };

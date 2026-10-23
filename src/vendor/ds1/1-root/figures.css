@@ -65,13 +65,17 @@
   letter-spacing: inherit;
 }
 
+/* Optional spacing between distinct text groups, independent of line height. */
+.ds-stat__label { margin-block-end: var(--ds-stat-label-gap, 0px); }
+.ds-stat__figure { margin-block-end: var(--ds-stat-figure-gap, 0px); }
+
 .ds-stat__label,
 .ds-stat__caption {
   display: flex;
   align-items: flex-start;
   min-height: var(--ds-unit);
   color: var(--ds-text-color-muted);
-  overflow-wrap: anywhere;
+  overflow-wrap: var(--ds-stat-text-overflow-wrap, anywhere);
 }
 
 .ds-stat__icon {
@@ -93,7 +97,8 @@
   line-height: calc(var(--ds-stat-lines, 2) * var(--ds-unit));
   min-height: calc(var(--ds-stat-lines, 2) * var(--ds-unit));
   letter-spacing: calc(var(--ds-display-text-tracking, -0.4px) * var(--ds-sf, 1));
-  white-space: nowrap;
+  white-space: var(--ds-stat-figure-white-space, nowrap);
+  overflow-wrap: var(--ds-stat-figure-overflow-wrap, normal);
   text-overflow: clip;
 }
 

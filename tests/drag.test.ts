@@ -30,37 +30,37 @@ function pointer(type: string, target: EventTarget, y: number, init: PointerEven
 /** The blocks being carried: the one lifted into the overlay, hidden in its place, and the selected ones dimmed beside it. */
 const lifted = () => Array.from(host!.children).filter(element => (element as HTMLElement).style.visibility === 'hidden' || element.hasAttribute('data-ghost')).map(element => Array.from(host!.children).indexOf(element))
 /** The block lands, or goes home, once its drop has played. */
-const settle = () => vi.runAllTimers()
+const settle = () => vi.runAllTimersAsync()
 
 describe('moving blocks without a handle, on the Drag library', () => {
-  it('places beside blocks when shuffling is disabled, but does not shuffle in flow', () => {
+  it('places beside blocks when shuffling is disabled, but does not shuffle in flow', async () => {
     const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)', { reordering: false })
     pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
     pointer('pointermove', document, 10, { clientX: 200 })
-    pointer('pointerup', document, 10, { clientX: 200 }); settle()
+    pointer('pointerup', document, 10, { clientX: 200 }); await settle()
     expect(e.value).toBe('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
     pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
     pointer('pointermove', document, 10, { clientX: 395 })
-    pointer('pointerup', document, 10, { clientX: 395 }); settle()
+    pointer('pointerup', document, 10, { clientX: 395 }); await settle()
     expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
   })
-  it('disables side placement independently and cancels active drags on runtime changes', () => {
+  it('disables side placement independently and cancels active drags on runtime changes', async () => {
     const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)', { placing: false })
     pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
     pointer('pointermove', document, 10, { clientX: 395 })
     expect((document.querySelector('.aa-drop-side') as HTMLElement).hidden).toBe(true)
-    pointer('pointerup', document, 10, { clientX: 395 }); settle()
+    pointer('pointerup', document, 10, { clientX: 395 }); await settle()
     expect(e.value).toBe('![Cup](cup.jpg)\n\n![Lake](lake.jpg)')
     place()
     pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
     pointer('pointermove', document, 10, { clientX: 200 })
     expect(lifted()).toEqual([1])
     e.reordering = false
-    pointer('pointerup', document, 10, { clientX: 200 }); settle()
+    pointer('pointerup', document, 10, { clientX: 200 }); await settle()
     expect(e.value).toBe('![Cup](cup.jpg)\n\n![Lake](lake.jpg)')
     expect(host!.hasAttribute('data-dragging')).toBe(false)
   })
-  it('blocks file drop placement while preserving explicit file insertion', () => {
+  it('blocks file drop placement while preserving explicit file insertion', async () => {
     const files = vi.fn()
     const e = setup('One\n\nTwo', { placing: false, onFiles: files })
     const file = new File(['x'], 'x.png', { type: 'image/png' })
@@ -79,27 +79,27 @@ describe('moving blocks without a handle, on the Drag library', () => {
     block(1).dispatchEvent(drop)
     expect(files).toHaveBeenCalledTimes(2)
   })
-  it('carries an image horizontally with the pointer', () => {
+  it('carries an image horizontally with the pointer', async () => {
     setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
     const image = block(0).querySelector('img')!
     pointer('pointerdown', image, 10, { clientX: 100 })
     pointer('pointermove', document, 10, { clientX: 130 })
     expect(lifted()).toEqual([0])
     expect((document.querySelector('[data-drag-preview]') as HTMLElement).style.transform).toBe('translate3d(30px, 0px, 0)')
-    pointer('pointerup', document, 10, { clientX: 130 }); settle()
+    pointer('pointerup', document, 10, { clientX: 130 }); await settle()
   })
 
-  it('drops a picture beside another using the actual pointer gesture', () => {
+  it('drops a picture beside another using the actual pointer gesture', async () => {
     const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
     pointer('pointerdown', block(1).querySelector('img')!, 50, { clientX: 100 })
     pointer('pointermove', document, 50, { clientX: 120 })
     pointer('pointermove', document, 10, { clientX: 395 })
-    pointer('pointerup', document, 10, { clientX: 395 }); settle()
+    pointer('pointerup', document, 10, { clientX: 395 }); await settle()
     expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
     e.undo(); expect(e.value).toBe('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
   })
 
-  it('accepts a picture just outside the other picture’s edge, even when sorting has moved the target', () => {
+  it('accepts a picture just outside the other picture’s edge, even when sorting has moved the target', async () => {
     const e = setup('![Lake](lake.jpg)\n\n![Cup](cup.jpg)')
     const target = block(0)
     // The pointer is beside the original picture. Sorting shifts it down to
@@ -109,11 +109,11 @@ describe('moving blocks without a handle, on the Drag library', () => {
     Object.defineProperty(target, 'getBoundingClientRect', { configurable: true, value: () => new DOMRect(0, 40, 400, 20) })
     pointer('pointermove', document, 10, { clientX: 410 })
     expect((document.querySelector('.aa-drop-side') as HTMLElement).hidden).toBe(false)
-    pointer('pointerup', document, 10, { clientX: 410 }); settle()
+    pointer('pointerup', document, 10, { clientX: 410 }); await settle()
     expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
   })
 
-  it('reorders images across columns using the actual pointer gesture', () => {
+  it('reorders images across columns using the actual pointer gesture', async () => {
     const original = writeColumns(['![Lake](lake.jpg)', '![Cup](cup.jpg)'])
     const e = setup(original)
     const row = host!.querySelector<HTMLElement>('.aa-columns')!
@@ -128,18 +128,18 @@ describe('moving blocks without a handle, on the Drag library', () => {
     pointer('pointermove', document, 20, { clientX: 130 })
     expect(columns[0].hasAttribute('data-dragging')).toBe(true)
     pointer('pointermove', document, 20, { clientX: 395 })
-    pointer('pointerup', document, 20, { clientX: 395 }); settle()
+    pointer('pointerup', document, 20, { clientX: 395 }); await settle()
     expect(readColumns(parseBlocks(e.value)[0].source)).toEqual(['![Cup](cup.jpg)', '![Lake](lake.jpg)'])
     e.undo(); expect(e.value).toBe(original)
   })
 
-  it('draws no grip and no plus beside a block, hovered or not', () => {
+  it('draws no grip and no plus beside a block, hovered or not', async () => {
     setup('One\n\nTwo', { toolbar: true })
     block(0).dispatchEvent(new MouseEvent('mousemove', { bubbles: true }))
     expect(document.querySelector('.aa-grip, [aria-label="Block menu"], [aria-label="Add a block"]')).toBeNull()
   })
 
-  it('lifts a block after a still press and puts it where the press is let go', () => {
+  it('lifts a block after a still press and puts it where the press is let go', async () => {
     const e = setup('One\n\nTwo\n\nThree')
     e.selectRange(1)
     pointer('pointerdown', block(0), 10)
@@ -154,7 +154,7 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(block(1).style.translate).toMatch(/^0(px)? -20px$/)
     pointer('pointermove', window, 115)
     pointer('pointerup', window, 115)
-    settle()
+    await settle()
     expect(e.value).toBe('Two\n\nThree\n\nOne')
     expect(block(2).hasAttribute('data-selected')).toBe(true)
     expect(host!.hasAttribute('data-dragging')).toBe(false)
@@ -162,7 +162,7 @@ describe('moving blocks without a handle, on the Drag library', () => {
     e.undo(); expect(e.value).toBe('One\n\nTwo\n\nThree')
   })
 
-  it('leaves a press that first moves along the line to select words', () => {
+  it('leaves a press that first moves along the line to select words', async () => {
     const e = setup('One\n\nTwo')
     pointer('pointerdown', block(0), 10)
     pointer('pointermove', window, 12, { clientX: 30 })
@@ -173,18 +173,18 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(e.value).toBe('One\n\nTwo')
   })
 
-  it('lifts a block at once when the press first moves up or down, without waiting for the hold', () => {
+  it('lifts a block at once when the press first moves up or down, without waiting for the hold', async () => {
     const e = setup('One\n\nTwo\n\nThree')
     pointer('pointerdown', block(0), 10)
     pointer('pointermove', window, 17, { clientX: 11 })
     expect(lifted()).toEqual([0])
     pointer('pointermove', window, 115)
     pointer('pointerup', window, 115)
-    settle()
+    await settle()
     expect(e.value).toBe('Two\n\nThree\n\nOne')
   })
 
-  it('takes a block in hand when the pointer rests on it, and a press then lifts it whichever way it moves', () => {
+  it('takes a block in hand when the pointer rests on it, and a press then lifts it whichever way it moves', async () => {
     const e = setup('One\n\nTwo\n\nThree')
     pointer('pointermove', block(0), 10, { buttons: 0 })
     vi.advanceTimersByTime(REST - 1)
@@ -199,11 +199,11 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(lifted()).toEqual([0])
     pointer('pointermove', window, 115, { clientX: 40 })
     pointer('pointerup', window, 115, { clientX: 40 })
-    settle()
+    await settle()
     expect(e.value).toBe('Two\n\nThree\n\nOne')
   })
 
-  it('lets a block in hand go when the pointer moves on, leaves, or the person types', () => {
+  it('lets a block in hand go when the pointer moves on, leaves, or the person types', async () => {
     setup('One\n\nTwo')
     const rest = (index: number, y: number) => { pointer('pointermove', block(index), y, { buttons: 0 }); vi.advanceTimersByTime(REST) }
     rest(0, 10)
@@ -217,20 +217,20 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(block(1).hasAttribute('data-grab')).toBe(false)
   })
 
-  it('puts the caret back where the press put it when a lifted block is let go where it began', () => {
+  it('puts the caret back where the press put it when a lifted block is let go where it began', async () => {
     const e = setup('One\n\nTwo')
     e.selectRange(6)
     pointer('pointerdown', block(1), 50)
     vi.advanceTimersByTime(HOLD)
     expect(lifted()).toEqual([1])
     pointer('pointerup', window, 50)
-    settle()
+    await settle()
     expect(e.value).toBe('One\n\nTwo')
     expect(e.selection()).toEqual({ start: 6, end: 6 })
     expect(block(1).hasAttribute('data-selected')).toBe(false)
   })
 
-  it('drags selected blocks at once, without a caret from the press', () => {
+  it('drags selected blocks at once, without a caret from the press', async () => {
     const e = setup('One\n\nTwo\n\nThree')
     e.selectBlocks(0, 1)
     const down = pointer('pointerdown', block(0), 10)
@@ -239,12 +239,12 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(lifted()).toEqual([0, 1])
     pointer('pointermove', window, 115)
     pointer('pointerup', window, 115)
-    settle()
+    await settle()
     expect(e.value).toBe('Three\n\nOne\n\nTwo')
     expect([1, 2].map(index => block(index).hasAttribute('data-selected'))).toEqual([true, true])
   })
 
-  it('takes a dragged block back with Escape', () => {
+  it('takes a dragged block back with Escape', async () => {
     const e = setup('One\n\nTwo')
     e.selectRange(1)
     pointer('pointerdown', block(0), 10)
@@ -253,14 +253,14 @@ describe('moving blocks without a handle, on the Drag library', () => {
     const escape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
     block(0).dispatchEvent(escape)
     expect(escape.defaultPrevented).toBe(true)
-    settle()
+    await settle()
     expect(lifted()).toEqual([])
     pointer('pointerup', window, 75)
     expect(e.value).toBe('One\n\nTwo')
     expect(e.selection()).toEqual({ start: 1, end: 1 })
   })
 
-  it('swallows the click that ends a drag', () => {
+  it('swallows the click that ends a drag', async () => {
     setup('One\n\nTwo')
     pointer('pointerdown', block(0), 10)
     vi.advanceTimersByTime(HOLD)
@@ -271,7 +271,7 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(click.defaultPrevented).toBe(true)
   })
 
-  it('leaves touch, other buttons, read-only and menu-less editors to the browser', () => {
+  it('leaves touch, other buttons, read-only and menu-less editors to the browser', async () => {
     let e = setup('One\n\nTwo')
     pointer('pointerdown', block(0), 10, { pointerType: 'touch' })
     pointer('pointerdown', block(0), 10, { pointerId: 2, button: 2 })
@@ -289,7 +289,7 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(lifted()).toEqual([])
   })
 
-  it('leaves a press on a diagram board, with a modifier key, or a double click to the page', () => {
+  it('leaves a press on a diagram board, with a modifier key, or a double click to the page', async () => {
     const e = setup('One\n\nTwo')
     const board = document.createElement('span'); board.setAttribute('data-aa-interactive', ''); block(0).append(board)
     pointer('pointerdown', board, 10)
@@ -307,7 +307,7 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect(e.value).toBe('One\n\nTwo')
   })
 
-  it('makes each block an item of the engine, kept while blocks are drawn again', () => {
+  it('makes each block an item of the engine, kept while blocks are drawn again', async () => {
     const e = setup('One\n\nTwo')
     expect(block(0).getAttribute('data-drag-handle')).toBe('text')
     expect(block(0).hasAttribute('aria-describedby')).toBe(false)
@@ -317,10 +317,10 @@ describe('moving blocks without a handle, on the Drag library', () => {
     vi.advanceTimersByTime(HOLD)
     expect(lifted()).toEqual([0])
     pointer('pointerup', window, 10)
-    settle()
+    await settle()
   })
 
-  it('lands files dropped from outside between blocks, the caret where they land', () => {
+  it('lands files dropped from outside between blocks, the caret where they land', async () => {
     const files = vi.fn()
     const e = setup('One\n\nTwo', { onFiles: files })
     // As a browser hands over files from outside: happy-dom's drag events carry neither the files nor the place.
@@ -334,7 +334,7 @@ describe('moving blocks without a handle, on the Drag library', () => {
     expect((document.querySelector('.aa-drop-line') as HTMLElement).hidden).toBe(true)
   })
 
-  it('moves several blocks to a place in one step', () => {
+  it('moves several blocks to a place in one step', async () => {
     const e = setup('A\n\nB\n\nC\n\nD')
     e.moveBlock(0, 2, 2)
     expect(e.value).toBe('C\n\nD\n\nA\n\nB')
@@ -346,7 +346,7 @@ describe('moving blocks without a handle, on the Drag library', () => {
 
 describe('writing without a plus', () => {
   const key = (key: string, init: KeyboardEventInit = {}) => host!.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))
-  it('starts a new block with Enter at the end of one, and breaks the line with Shift-Enter', () => {
+  it('starts a new block with Enter at the end of one, and breaks the line with Shift-Enter', async () => {
     const e = setup('# Title')
     e.selectRange(7); key('Enter')
     expect(Array.from(host!.children).map(element => (element as HTMLElement).dataset.kind)).toEqual(['heading', 'paragraph'])
@@ -356,7 +356,7 @@ describe('writing without a plus', () => {
     expect(host!.children).toHaveLength(2)
   })
 
-  it('says how to reach the styles in the empty block the caret is in', () => {
+  it('says how to reach the styles in the empty block the caret is in', async () => {
     const e = setup('One')
     e.selectRange(3); key('Enter')
     expect(block(1).dataset.placeholder).toBe('Type / for commands')
@@ -370,7 +370,7 @@ describe('writing without a plus', () => {
     expect(block(1).dataset.placeholder).toBeUndefined()
   })
 
-  it('keeps the product placeholder for an empty document', () => {
+  it('keeps the product placeholder for an empty document', async () => {
     const e = setup('', { placeholder: 'Write' })
     expect(block(0).dataset.placeholder).toBe('Write')
     e.selectRange(0); document.dispatchEvent(new Event('selectionchange'))

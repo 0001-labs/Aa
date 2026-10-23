@@ -37,6 +37,7 @@
   --ds-card-ink: var(--ds-text-color);
   --ds-card-muted: var(--ds-text-color-muted);
   --ds-card-padding: var(--ds-unit);
+  --ds-card-text-padding: max(var(--ds-card-padding), var(--ds-card-text-inset-min, 0px));
   position: relative;
   box-sizing: border-box;
   display: flex;
@@ -48,10 +49,10 @@
   margin: 0;
   /* In a squares bento the surface reaches a quarter square towards its neighbours (`--ds-bento-inset-*`, 0 elsewhere), and the padding grows by as much so what it holds stays on the squares. */
   padding:
-    calc(var(--ds-card-padding) + var(--ds-bento-inset-top, 0px))
-    calc(var(--ds-card-padding) + var(--ds-bento-inset-end, 0px))
+    calc(var(--ds-card-text-padding) + var(--ds-bento-inset-top, 0px))
+    calc(var(--ds-card-text-padding) + var(--ds-bento-inset-end, 0px))
     var(--ds-bento-inset-bottom, 0px)
-    calc(var(--ds-card-padding) + var(--ds-bento-inset-start, 0px));
+    calc(var(--ds-card-text-padding) + var(--ds-bento-inset-start, 0px));
   overflow: hidden;
   border-radius: var(--ds-radius-card);
   background: var(--ds-card-fill);
@@ -60,6 +61,11 @@
   font-size: var(--ds-type-size-default);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Opt-in safe text inset; media still stands on the card's foot. */
+.ds-card:not(:has(> .ds-card__media:not([hidden]))) {
+  padding-block-end: max(var(--ds-card-text-inset-min, 0px), var(--ds-bento-inset-bottom, 0px));
 }
 
 .ds-card[hidden] {
@@ -105,7 +111,7 @@
 }
 
 .ds-card__label {
-  margin: 0;
+  margin: 0 0 var(--ds-card-label-gap, 0px);
   padding-top: calc(4px * var(--ds-sf, 1));
   color: var(--ds-card-muted);
   font: inherit;
@@ -113,7 +119,7 @@
 }
 
 .ds-card__title {
-  margin: 0;
+  margin: 0 0 var(--ds-card-title-gap, 0px);
   color: var(--ds-card-ink);
   font-family: var(--ds-typeface-medium);
   font-size: var(--ds-type-size-display);
@@ -151,7 +157,7 @@
 
 .ds-card__media--center {
   justify-content: center;
-  margin-inline: calc(-1 * var(--ds-card-padding));
+  margin-inline: calc(-1 * var(--ds-card-text-padding));
 }
 
 /* A picture that bleeds runs on to the end edge and stands on the foot, the space a taller card
@@ -163,7 +169,7 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: safe flex-end;
-  margin-inline-end: calc(-1 * (var(--ds-card-padding) + var(--ds-bento-inset-end, 0px)));
+  margin-inline-end: calc(-1 * (var(--ds-card-text-padding) + var(--ds-bento-inset-end, 0px)));
   margin-block-end: calc(-1 * var(--ds-bento-inset-bottom, 0px));
   --ds-radius: 0px;
   --ds-image-end-radius: 0px;
@@ -207,3 +213,6 @@ a.ds-card:active::after,
 .ds-card[data-interactive]:active::after {
   background: color-mix(in srgb, var(--ds-card-ink) 8%, transparent);
 }
+
+/* Optional spacing before a slotted footer tag; zero preserves the normal card. */
+.ds-card__body ::slotted(ds-tag) { margin-block-start: var(--ds-card-footer-gap, 0px); }

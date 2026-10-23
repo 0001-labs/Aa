@@ -1,7 +1,8 @@
 {
   "Design system 1": {
-    "commit": "09231ae7551809c4795fc09c74776abe5db675e9",
+    "commit": "d569a418c491515a18b13de99ed138a86bbcbbf0",
     "version": "0.3.0-alpha.28",
+    "dirty": true,
     "files": {
       "public/ds1/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
       "public/ds1/component-metrics.css": "1c5c0a1b5e309598e78bd76d95af941688de2d1dcd3e4e14222bd48560ff04c4",
@@ -24,7 +25,7 @@
       "src/ds1/0-face/constraint-site.ts": "82bc97d4f6b501c9745ab7d4e345f6bf1f795da036e657db8ad12d9d2ca19e69",
       "src/ds1/0-face/constraints.ts": "37b7b5a69893be7baa97c6e974b84eeb61675836a307f92cd2fe7832f1b81e8a",
       "src/ds1/0-face/grid-fit.ts": "4c52a6b2f3c0cfaf5a47dba80cf4589c2370481bb4ea1f5fd1318c1f2d85cdaf",
-      "src/ds1/0-face/grid.ts": "75c4511a4e3db07e29b4341663208ea8b9008aed9286fff61ab844b10a56e3e7",
+      "src/ds1/0-face/grid.ts": "94315d84af62ed983b3ea382803967106dbe8b0c33933346190c045ee8b5ea41",
       "src/ds1/0-face/layout-inspector.ts": "ca9ce2b78b2e209331a7b27807d4d17b1d038654cf35bcdd348a7c32cab6136c",
       "src/ds1/0-face/overlay-swipe.ts": "9fa7dfc91bea0f561eeab3921c97d4e1a2cf4b19fe129ede94995ced6c02d631",
       "src/ds1/0-face/scaling.ts": "4467a0aa6606b583ac243815e35b536dc8749775a2e2f4b3e6902e7e9822a8d5",
@@ -73,7 +74,7 @@
       "src/vendor/ds1/0-face/translations/sv.json": "474a0e516bd668c55d99ee8614d8392336892f7cd412ffcec272b252b61ebb91",
       "src/vendor/ds1/0-face/translations/zh.json": "4180eb95f3a8f4e0a5bdcc2f80f4779fb81590697772a220a4641ef1d194f3e2",
       "src/vendor/ds1/1-root/bento.css": "1b2543696c613616a8bf67596b16368b3b6cd27b51af4536987f9f24d7c0d48a",
-      "src/vendor/ds1/1-root/card.css": "6079b3110feda2cf10743adce01524692dad90c2e31ad16e4d868fb58d867de9",
+      "src/vendor/ds1/1-root/card.css": "6c4a2d664e7c718e19d18495dc07e7b89fdfdf874aaeacb3522e248238b7b8df",
       "src/vendor/ds1/1-root/carousel.css": "95077e777bc4b1e21c2fbadc076e06306bc8360c7e106fa1360d94fb324d8a48",
       "src/vendor/ds1/1-root/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
       "src/vendor/ds1/1-root/component-metrics.css": "1c5c0a1b5e309598e78bd76d95af941688de2d1dcd3e4e14222bd48560ff04c4",
@@ -82,7 +83,7 @@
       "src/vendor/ds1/1-root/controls.css": "89cab9c779fee97f302052345e01c582d707569de74d35228ba9d8bf34c30388",
       "src/vendor/ds1/1-root/document.css": "0acff588458f3e5b2f65bf5006f34c71e8cfbaa31b951feffd72a389001bdb52",
       "src/vendor/ds1/1-root/empty.css": "b47aa2b949aafbe63d9af6f6637a1eccec47efa5bbae7e3d4274ba6f21209d77",
-      "src/vendor/ds1/1-root/figures.css": "008c92e59c42e6de55150df962257d053acc378ce1d2949bd761e03bc2490ed2",
+      "src/vendor/ds1/1-root/figures.css": "a46bc6945232f2def777816b9f69046b72d98f6385e9e0a2176aa3546ce92e77",
       "src/vendor/ds1/1-root/footer.css": "36ee988597a7b6870b47ec054d7fe336029e606654449d3a2d373aa7324e1859",
       "src/vendor/ds1/1-root/header.css": "a9f704c441e663aae9b3e4bb5c051ab8234a4ffea577046fea70621745b4687c",
       "src/vendor/ds1/1-root/notice.css": "2c56adda30006ee847d69617a542a9e51108c1dcd0488a779b739a3bb2d4ef79",
@@ -118,7 +119,7 @@
       "src/vendor/ds1/3-unit/styles/ds-table-of-contents.css": "255a5699f95382f438dfab3e6225b610b9a544a358135cf5f47c3832b834a492",
       "src/vendor/ds1/4-page/ds-overlay.ts": "265802ec10908f9ba98b5d8e566c1a4f7c55735c276d5fb7f9583b62cbc4f833",
       "src/vendor/ds1/4-page/styles/ds-overlay.css": "219e05030f962cf447a4da39321c25be528e642283d3d29c80b0f884e610a71e",
-      "src/vendor/ds1/components-manifest.json": "4f3dbc270a440d3b11b1c4787381348d2da616f1afa9926b59b92ffd7479cb4e",
+      "src/vendor/ds1/components-manifest.json": "191d9a5a4b974935bf9d502a93b8bccea50b33d082dfb1061e488a8dd2efb313",
       "src/vendor/ds1/components.ts": "01b17e30b4526d934fe56a2d2ba4efa78991e0250b5549746787790c66089db1",
       "src/vendor/ds1/x-icon/check.svg": "f50904e9cf12dd555cf970ea300960dbabb98c4abdcc0e7f50376b54cefa6516",
       "src/vendor/ds1/x-icon/chevron-down.svg": "7afc5673be7ca066cc20363c135067d6d4839e0a26d9ff6e472a45319b0ec3b2",
@@ -127,7 +128,7 @@
     }
   },
   "Drag": {
-    "commit": "83404d5d2684f8db1f5d9dd0b24fc672abe5ea22",
+    "commit": "02693050ffa361fb2cb7748e596db7dff9a1b9aa",
     "version": "0.2.0-alpha.0",
     "owned": ["src/vendor/drag"],
     "files": {
@@ -135,7 +136,7 @@
       "src/vendor/drag/NOTICE": "9a3ee8064810332a6515ac88b5fbab050a1f58f9c29a89ba702e862d7b9d2985",
       "src/vendor/drag/README.md": "ca08c4cde47cc6045b9b25b0d6b28b3278a8d48283d6bd96812fc754dc651e77",
       "src/vendor/drag/grid.ts": "6d643a2a389033455f9108a834e151dadda47a672e6290e21f2744fa28d15ce0",
-      "src/vendor/drag/sortable.ts": "7a3140cffb9a08443cc6d12af6bcb91000f9ef3dfc6bee8fae97720810774f93",
+      "src/vendor/drag/sortable.ts": "721fb30861eba5ae420926924a07c162d6b2e155ee1e1c117f1f9a5eb2a177c8",
       "src/vendor/drag/types.ts": "7ba2e49e0cd117f292dd6a5c612a82299b3aecd8fbb1043a2d7558d8f7508ccc",
       "src/vendor/drag/util.ts": "20ea31f691c42d2b127fbb4d9ac565f1abd19323e64fc4ab64fb7c7f42640ba9"
     }

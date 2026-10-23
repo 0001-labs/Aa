@@ -26,7 +26,7 @@
  * as a column of its own, so pictures in columns are put in order sideways.
  */
 import type { Editor, EditorOptions } from './editor'
-import { createSortable } from './vendor/drag/sortable'
+import { createSortable, type SortableResult } from './vendor/drag/sortable'
 import { besideChange, parseBlocks } from './markdown'
 
 /** How long a still press waits before it lifts its block, in milliseconds. */
@@ -113,7 +113,18 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       document.addEventListener('selectionchange', keepClear)
       keepClear()
     },
-    onDragEnd: result => {
+    prepareDrop: result => {
+      const source = children()[result.source.index];
+      const text = source?.textContent;
+      const existing = new Set(host.querySelectorAll('.aa-block'));
+      applyDrop(result);
+      if (source?.isConnected && host.contains(source)) return source;
+      const matches = Array.from(host.querySelectorAll<HTMLElement>('.aa-block')).filter(block => block.textContent === text);
+      return matches.find(block => !existing.has(block)) ?? matches[0] ?? null;
+    },
+    onDragEnd: result => { if (result.reason !== 'DROP' || !result.destination) applyDrop(result); },
+  })
+  function applyDrop(result: SortableResult) {
       const { caret, group } = carried ?? { caret: null, group: [] as HTMLElement[] }
       carried = null
       sideTargets = []
@@ -144,8 +155,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       }
       if (caret) editor.selectRange(caret.start, caret.end)
       else if (group.length) editor.selectBlocks(all.indexOf(group[0]), all.indexOf(group[group.length - 1]))
-    },
-  })
+  }
   sortable.container({ element: host, id: 'aa', type: 'aa-block', isDropDisabled: () => !movable() })
 
   /** Follows the carried block over the others: near one's side, the line down that side shows where it would stand. */

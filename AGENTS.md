@@ -93,3 +93,7 @@ It refuses with uncommitted changes or when npm is signed out (`vp pm login`), r
 ## Product code
 
 Canonical short code: `AA`, an explicit two-character exception to the studio’s three-character rule. Keep all letters uppercase. Use it for product-owned libraries and compact ownership labels; the icon-library namespace is `AA/I`. Use this code followed by a colon for commit subjects; keep the full product name in prose.
+
+## Reorder settling
+
+Reordering and placing blocks must settle once into the final layout. Aa commits the destination, including new or removed column wrappers, through Drag’s `prepareDrop` hook before the overlay measures and animates its landing. Return the final authored node after redraw, retain one history step, and keep the source hidden until the handoff finishes. A later grid correction or second snap is a regression; cover actual pointer placement with mixed-height blocks and columns.

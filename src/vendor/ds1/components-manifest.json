@@ -1,6 +1,6 @@
 {
   "source": "Design system 1/DS1",
-  "commit": "09231ae7551809c4795fc09c74776abe5db675e9",
+  "commit": "0ec89edc3ea704b111e6982ceeb1fa8694257694",
   "components": [
     "button",
     "input",
@@ -37,7 +37,7 @@
     "0-face/translations/sv.json": "474a0e516bd668c55d99ee8614d8392336892f7cd412ffcec272b252b61ebb91",
     "0-face/translations/zh.json": "4180eb95f3a8f4e0a5bdcc2f80f4779fb81590697772a220a4641ef1d194f3e2",
     "1-root/bento.css": "1b2543696c613616a8bf67596b16368b3b6cd27b51af4536987f9f24d7c0d48a",
-    "1-root/card.css": "6079b3110feda2cf10743adce01524692dad90c2e31ad16e4d868fb58d867de9",
+    "1-root/card.css": "6c4a2d664e7c718e19d18495dc07e7b89fdfdf874aaeacb3522e248238b7b8df",
     "1-root/carousel.css": "95077e777bc4b1e21c2fbadc076e06306bc8360c7e106fa1360d94fb324d8a48",
     "1-root/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
     "1-root/component-metrics.css": "1c5c0a1b5e309598e78bd76d95af941688de2d1dcd3e4e14222bd48560ff04c4",
@@ -46,7 +46,7 @@
     "1-root/controls.css": "89cab9c779fee97f302052345e01c582d707569de74d35228ba9d8bf34c30388",
     "1-root/document.css": "0acff588458f3e5b2f65bf5006f34c71e8cfbaa31b951feffd72a389001bdb52",
     "1-root/empty.css": "b47aa2b949aafbe63d9af6f6637a1eccec47efa5bbae7e3d4274ba6f21209d77",
-    "1-root/figures.css": "008c92e59c42e6de55150df962257d053acc378ce1d2949bd761e03bc2490ed2",
+    "1-root/figures.css": "a46bc6945232f2def777816b9f69046b72d98f6385e9e0a2176aa3546ce92e77",
     "1-root/footer.css": "36ee988597a7b6870b47ec054d7fe336029e606654449d3a2d373aa7324e1859",
     "1-root/header.css": "a9f704c441e663aae9b3e4bb5c051ab8234a4ffea577046fea70621745b4687c",
     "1-root/notice.css": "2c56adda30006ee847d69617a542a9e51108c1dcd0488a779b739a3bb2d4ef79",

@@ -138,6 +138,10 @@ export type SortableOptions = {
    * (`flushSync` in React): the engine takes its offsets away right after.
    */
   onDragEnd?: (result: SortableResult) => void;
+  /** Commit the final layout before landing. Return its authored item (which may have been redrawn).
+   * Await layout work here; the preview then animates directly to this measured destination.
+   * When supplied, this owns the commit; onDragEnd remains a completion notification. */
+  prepareDrop?: (result: SortableResult) => HTMLElement | null | Promise<HTMLElement | null>;
   /** How long a finger holds before the item lifts, in milliseconds. */
   touchHold?: number;
   /** How far a mouse or pen moves before the item lifts, in pixels. */
@@ -291,6 +295,7 @@ type Session = {
   scrollFrame: number | null;
   impactFrame: number | null;
   dropping: boolean;
+  landing?: { element: HTMLElement; visibility: string };
   /** The sibling the lifted item is held over, to combine with; the gap stays as it was. */
   combine: { container: ContainerSnapshot; slot: Slot } | null;
   /** The line the lifted item keeps to, if any. */
@@ -1108,7 +1113,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     return x || y ? { x, y } : null;
   }
 
-  function drop(reason: SortableResult['reason']): void {
+  async function drop(reason: SortableResult['reason']): Promise<void> {
     const current = session;
     if (!current || current.dropping) return;
     current.dropping = true;
@@ -1160,7 +1165,30 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       applyShifts(current, previous);
     }
 
-    const target = targetPosition(current);
+    let finalElement: HTMLElement | null = null;
+    if (!returning && options.prepareDrop) {
+      // Preserve the visual positions while the adapter commits the actual final structure.
+      const siblings = [...current.shifts.keys()].filter(element => element.isConnected);
+      const before = new Map(siblings.map(element => [element, element.getBoundingClientRect()]));
+      for (const [element, saved] of current.shifts) { element.style.transition = 'none'; element.style.translate = saved.translate; }
+      const prepared = options.prepareDrop({ ...startOf(current), destination: locationOf(current.destination!), combine: null, reason });
+      finalElement = prepared instanceof Promise ? await prepared : prepared;
+      if (session !== current) return;
+      if (finalElement?.isConnected) {
+        current.landing = { element: finalElement, visibility: finalElement.style.visibility };
+        finalElement.style.visibility = 'hidden';
+      }
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      if (session !== current) return;
+      if (!reducedMotion) for (const element of siblings) {
+        if (!element.isConnected || element === finalElement) continue;
+        const old = before.get(element)!, next = element.getBoundingClientRect();
+        const x = old.left - next.left, y = old.top - next.top;
+        if (x || y) element.animate([{ translate: `${x}px ${y}px` }, { translate: getComputedStyle(element).translate }], { duration: settings.outOfTheWay.duration, easing: settings.outOfTheWay.easing });
+      }
+    }
+    const finalBox = finalElement?.isConnected ? finalElement.getBoundingClientRect() : null;
+    const target = finalBox ? { x: finalBox.left - current.liftBox.left, y: finalBox.top - current.liftBox.top } : targetPosition(current);
     const from = parseTranslate(current.preview.style.transform);
     const distance = Math.hypot(target.x - from.x, target.y - from.y);
     const { minDuration, maxDuration, easing } = settings.drop;
@@ -1279,6 +1307,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         for (const [shifted, saved] of restored) shifted.style.transition = saved.transition;
       });
     });
+    if (current.landing) current.landing.element.style.visibility = current.landing.visibility;
     element.style.visibility = current.sourceVisibility;
     element.removeAttribute('data-drag-source');
     current.combine?.slot.item.element.removeAttribute('data-drag-combine');
