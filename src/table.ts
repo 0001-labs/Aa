@@ -21,8 +21,10 @@ export function tableRows(source: string): Cell[][] {
       const start = boundaries[i - 1] + 1, end = boundaries[i]
       if ((i === 1 || i === boundaries.length - 1) && !line.slice(start, end).trim()) continue
       const raw = line.slice(start, end)
-      const from = start + (raw.match(/^\s*/)?.[0].length ?? 0)
-      const to = Math.max(from, end - (raw.match(/\s*$/)?.[0].length ?? 0))
+      // One space is delimiter padding; additional spaces belong to the cell.
+      // Trimming them all moves a typing caret into the next cell after Space.
+      const from = start + (raw.match(/^[ \t]?/)?.[0].length ?? 0)
+      const to = Math.max(from, end - (raw.match(/[ \t]?$/)?.[0].length ?? 0))
       cells.push({ text: line.slice(from, to), from: offset + from, to: offset + to })
     }
     return [cells]

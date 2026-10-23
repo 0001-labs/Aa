@@ -79,6 +79,19 @@ describe('tables', () => {
   })
 
   const source = '| Name | Value |\n| --- | --- |\n| Milk | 2 |'
+  it('keeps a typed trailing space visible with the caret after it in its table cell', () => {
+    const e = setup(source)
+    const cell = tableRows(source)[1][0]
+    e.selectRange(cell.to)
+    e.replace(cell.to, cell.to, ' ')
+    expect(tableRows(e.value)[1][0].text).toBe('Milk ')
+    const current = host!.querySelectorAll<HTMLElement>('[data-cell]')[2]
+    expect(current.lastElementChild!.textContent).toBe('Milk ')
+    const caret = pointAt(host!.children[0] as HTMLElement, cell.to + 1)
+    expect(current.contains(caret.node)).toBe(true)
+    e.replace(cell.to + 1, cell.to + 1, 'and honey')
+    expect(tableRows(e.value)[1][0].text).toBe('Milk and honey')
+  })
   it('keeps every source character while editing cell by cell, including escaped pipes', () => {
     const e = setup(source)
     expect(host!.querySelectorAll('[data-cell]')).toHaveLength(4)
