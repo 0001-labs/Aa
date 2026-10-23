@@ -169,18 +169,29 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   if (options.prompt) {
     const ask = document.createElement('form')
     ask.className = 'aa-toolbar-ask'
-    const field = document.createElement('input')
-    field.type = 'text'; field.placeholder = 'Ask AI'; field.setAttribute('aria-label', 'Ask AI about the selected words'); field.autocomplete = 'off'
+    const field = document.createElement('textarea')
+    field.rows = 1; field.placeholder = 'Ask AI'; field.setAttribute('aria-label', 'Ask AI about the selected words'); field.autocomplete = 'off'
     ask.append(field)
+    const expand = (expanded: boolean) => {
+      toolbar.toggleAttribute('data-asking', expanded)
+      for (const action of toolbar.querySelectorAll<HTMLButtonElement>('button')) action.inert = expanded
+      if (!expanded) field.scrollTop = 0
+    }
+    field.addEventListener('focus', () => expand(true))
+    field.addEventListener('blur', () => expand(false))
     ask.addEventListener('submit', event => {
       event.preventDefault()
       const said = field.value.trim(), range = saved
-      if (!said || !range || field.disabled) return
+      if (!said || !range || field.disabled || editor.readOnly) return
       field.disabled = true
+      expand(false)
       editor.selectRange(range.start, range.end)
       void editor.askAbout(said).then(done => { field.value = done ? '' : field.value; if (!done) field.placeholder = 'Not answered' }).catch(() => { field.placeholder = 'Not answered' }).finally(() => { field.disabled = false; setTimeout(() => { field.placeholder = 'Ask AI' }, 2000) })
     })
-    field.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); field.value = ''; restore() } })
+    field.addEventListener('keydown', event => {
+      if (event.isComposing) return
+      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); ask.requestSubmit() }
+    })
     toolbar.below = ask
   }
   // Touch has no ⌘/ and keeps its long press for selecting words: the block
@@ -324,7 +335,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const room = under + height <= view.top + view.height
     menu.style.top = `${room || over < view.top ? Math.max(view.top, Math.min(under, view.top + view.height - height)) : over}px`
   }
-  const dismissToolbar = () => { clearTimeout(timer); toolbar.hidden = true; const selection = editor.selection(); dismissedSelection = selection ? { ...selection } : null }
+  const dismissToolbar = () => { clearTimeout(timer); if (toolbar.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); toolbar.hidden = true; const selection = editor.selection(); dismissedSelection = selection ? { ...selection } : null }
   const close = () => { delete menu.dataset.palette; clearPreview(); menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
   const run = (command: Command) => {
     if (editor.readOnly) return

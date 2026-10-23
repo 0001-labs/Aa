@@ -59,3 +59,31 @@ test.each(['editor', 'page'])('outside pointerdown in the %s closes immediately 
   expect(document.querySelector<HTMLElement>('aa-toolbar')!.hidden).toBe(false); expect(editor.value).toBe('Select these words')
  } finally { editor.destroy() }
 })
+
+test('Ask AI expands on focus, accepts line breaks and submits Enter without submitting composition', async () => {
+ vi.useFakeTimers()
+ const host = document.createElement('div'); document.body.append(host)
+ const prompt = vi.fn(async () => 'Changed')
+ const editor = createEditor(host, { value: 'Select these words', toolbar: true, prompt })
+ try {
+  editor.selectRange(0, 6); host.dispatchEvent(new Event('aa-selectionchange')); await vi.advanceTimersByTimeAsync(150)
+  const toolbar = document.querySelector<HTMLElement>('aa-toolbar')!
+  const field = toolbar.querySelector<HTMLTextAreaElement>('textarea')!
+  field.focus()
+  expect(toolbar.hasAttribute('data-asking')).toBe(true)
+  expect([...toolbar.querySelectorAll('button')].every(button => button.inert)).toBe(true)
+  field.value = 'Rewrite this\nmore clearly'
+  const newline = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true })
+  field.dispatchEvent(newline); expect(newline.defaultPrevented).toBe(false)
+  field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }))
+  expect(prompt).not.toHaveBeenCalled()
+  field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+  await vi.advanceTimersByTimeAsync(1)
+  expect(prompt).toHaveBeenCalledWith('Rewrite this\nmore clearly', expect.objectContaining({ text: 'Select' }))
+  expect(editor.value).toBe('Changed these words')
+  editor.undo(); expect(editor.value).toBe('Select these words')
+  field.blur()
+  expect(toolbar.hasAttribute('data-asking')).toBe(false)
+  expect([...toolbar.querySelectorAll('button')].every(button => !button.inert)).toBe(true)
+ } finally { editor.destroy() }
+})

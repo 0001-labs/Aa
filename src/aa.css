@@ -265,9 +265,29 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 
 /* As wide as the bar's cells, never wider: the row takes no width of its own to size the bar by. */
 .aa-toolbar-ask { display: flex; flex: 1 0 100%; contain: inline-size; box-sizing: border-box; height: var(--ds-context-row, calc(var(--aa-square) - 1px)); margin: 0; background: var(--aa-menu-fill); }
-.aa-toolbar-ask input { box-sizing: border-box; width: 100%; min-width: 0; height: 100%; padding: calc(3px * var(--aa-sf)) calc(4px * var(--aa-sf)) 0; border: 0; border-radius: 0; background: transparent; color: var(--aa-menu-ink); font: inherit; line-height: calc(16px * var(--aa-sf)); letter-spacing: inherit; outline: none; }
-.aa-toolbar-ask input::placeholder { color: color-mix(in srgb, var(--aa-menu-ink) 60%, var(--aa-menu-fill)); }
-.aa-toolbar-ask input:focus-visible { box-shadow: inset 0 0 0 2px var(--ds-focus-ring, #594dff); }
+.aa-toolbar-ask textarea { box-sizing: border-box; width: 100%; min-width: 0; height: 100%; padding: calc(3px * var(--aa-sf)) calc(4px * var(--aa-sf)) 0; border: 0; border-radius: 0; background: transparent; color: var(--aa-menu-ink); font: inherit; line-height: calc(16px * var(--aa-sf)); letter-spacing: inherit; outline: none; resize: none; }
+.aa-toolbar-ask textarea::placeholder { color: color-mix(in srgb, var(--aa-menu-ink) 60%, var(--aa-menu-fill)); }
+.aa-toolbar-ask textarea:focus-visible { box-shadow: inset 0 0 0 2px var(--ds-focus-ring, #594dff); }
+/* The prompt slides over the cells without resizing the selection toolbar.
+   Its field stays full-sized so the letters never scale during the transition. */
+.aa-toolbar:has(.aa-toolbar-ask) { overflow: hidden; }
+.aa-toolbar-ask::before,
+.aa-toolbar-ask textarea {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  transform: translateY(calc(100% - var(--ds-context-row, calc(var(--aa-square) - 1px))));
+  transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.aa-toolbar-ask::before { content: ""; z-index: 1; background: var(--aa-menu-fill); pointer-events: none; }
+.aa-toolbar-ask textarea { z-index: 2; }
+.aa-toolbar-ask:first-child::before { transform: translateY(calc(-100% + var(--ds-context-row, calc(var(--aa-square) - 1px)))); }
+.aa-toolbar-ask:first-child textarea { transform: none; height: var(--ds-context-row, calc(var(--aa-square) - 1px)); }
+.aa-toolbar[data-asking] .aa-toolbar-ask:first-child textarea { height: 100%; }
+.aa-toolbar[data-asking] .aa-toolbar-ask::before,
+.aa-toolbar[data-asking] .aa-toolbar-ask textarea { transform: translateY(0); }
+.aa-toolbar[data-asking] .aa-toolbar-ask textarea { padding-top: calc(3px * var(--aa-sf)); line-height: var(--aa-square); }
+@media (prefers-reduced-motion: reduce) {
+  .aa-toolbar-ask::before, .aa-toolbar-ask textarea { transition: none; }
+}
 /* Docked (controls.ts), a bar stands across the foot of the view, above the
    keyboard, as wide as the view: its cells scroll sideways when more than
    fit, and with no keyboard up it stands over the home indicator's inset. */

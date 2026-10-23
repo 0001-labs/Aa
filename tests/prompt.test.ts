@@ -379,7 +379,7 @@ describe('asking about selected words from the bar', () => {
     const toolbar = document.querySelector('aa-toolbar') as HTMLElement
     expect(toolbar.hidden).toBe(false)
     const top = toolbar.style.top
-    const input = toolbar.querySelector<HTMLInputElement>('.aa-toolbar-ask input')!
+    const input = toolbar.querySelector<HTMLTextAreaElement>('.aa-toolbar-ask textarea')!
     input.focus()
     const inField = document.createRange(); inField.selectNodeContents(toolbar)
     window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(inField)
@@ -392,7 +392,7 @@ describe('asking about selected words from the bar', () => {
     host = document.createElement('div'); document.body.append(host)
     const e = editor = createEditor(host, { value: 'One two three', toolbar: true, prompt: async (_said, context) => { asked.push(context); return 'TWO' } })
     e.selectRange(4, 7)
-    expect(document.querySelector('aa-toolbar .aa-toolbar-ask input')).not.toBeNull()
+    expect(document.querySelector('aa-toolbar .aa-toolbar-ask textarea')).not.toBeNull()
     expect(await e.askAbout('Shout it')).toBe(true)
     expect(asked[0]).toMatchObject({ kind: 'writing', text: 'two', before: 'One ', after: ' three' })
     expect(e.value).toBe('One TWO three')
