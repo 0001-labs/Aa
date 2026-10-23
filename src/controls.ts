@@ -486,7 +486,13 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     if (event.key === 'Enter' && choices[active]) { event.preventDefault(); event.stopImmediatePropagation(); run(choices[active]) }
   }
   menu.addEventListener('keydown', keyboard)
-  const outside = (event: PointerEvent) => { if (!menu.contains(event.target as Node)) close(); if (!host.contains(event.target as Node) && !toolbar.contains(event.target as Node)) toolbar.hidden = true }
+  const outside = (event: PointerEvent) => {
+    const target = event.target as Node
+    if (!menu.contains(target)) close()
+    if (![toolbar, menu, linkBar, findBar].some(control => control.contains(target))) {
+      dismissToolbar(); linkBar.hidden = true; linkTarget = null
+    }
+  }
   const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; linkBar.hidden = true; linkTarget = null } }
   const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); target = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
   const viewport = (event: Event) => {

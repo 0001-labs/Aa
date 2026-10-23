@@ -46,3 +46,16 @@ test.each(['bold', 'colour'])('%s keeps the formatting toolbar open while closin
   expect(editor.selection()?.start).not.toBe(editor.selection()?.end); expect(editor.value).toContain(mode === 'bold' ? '**Select**' : '<span color="blue">Select</span>')
  } finally { editor.destroy() }
 })
+test.each(['editor', 'page'])('outside pointerdown in the %s closes immediately and latches the old selection until a new selection', async place => {
+ vi.useFakeTimers(); const host = document.createElement('div'), outside = document.createElement('button'); document.body.append(host, outside); const editor = createEditor(host, { value: 'Select these words', toolbar: true })
+ try {
+  editor.selectRange(0, 6); host.dispatchEvent(new Event('aa-selectionchange')); await vi.advanceTimersByTimeAsync(150)
+  const target = place === 'editor' ? host.querySelector('.aa-block')! : outside
+  target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+  expect(document.querySelector<HTMLElement>('aa-toolbar')!.hidden).toBe(true)
+  host.dispatchEvent(new Event('aa-selectionchange')); await vi.advanceTimersByTimeAsync(200)
+  expect(document.querySelector<HTMLElement>('aa-toolbar')!.hidden).toBe(true)
+  editor.selectRange(7, 12); host.dispatchEvent(new Event('aa-selectionchange')); await vi.advanceTimersByTimeAsync(150)
+  expect(document.querySelector<HTMLElement>('aa-toolbar')!.hidden).toBe(false); expect(editor.value).toBe('Select these words')
+ } finally { editor.destroy() }
+})
