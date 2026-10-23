@@ -1,5 +1,5 @@
 import { createSourceEditor, type SourceCommentsOptions } from './comments-editor'
-import { exportMarkdown } from './comments-markdown'
+import { exportMarkdown, hasCommentSource } from './comments-markdown'
 /**
  * The editor: one editable element a block, each drawn from the document and
  * read back from the screen after every change, the way Notion's blocks are.
@@ -250,7 +250,7 @@ type Selection2 = { anchor: Pos; focus: Pos }
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
 export function createEditor(host: HTMLElement, options: EditorOptions = {}): Editor {
-  if (options.sourceComments || /(?:^|\n) {0,3}[`~]{3,}aa-comments(?:\s|$)/.test(options.value ?? '')) return createSourceEditor(host, options, createCoreEditor)
+  if (options.sourceComments || hasCommentSource(options.value ?? '')) return createSourceEditor(host, options, createCoreEditor)
   return createCoreEditor(host, options)
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changeCommentSource, exportMarkdown, readCommentSource, writeCommentSource, moveCommentText } from '../src/comments-markdown'
+import { changeCommentSource, hasCommentSource, exportMarkdown, readCommentSource, writeCommentSource, moveCommentText } from '../src/comments-markdown'
 const at = '2026-10-23T07:00:00Z'
 const add = (source = 'Ship the new editor on Friday.', from = 5, to = 19) => changeCommentSource(source, 'Jo4712', { type: 'add', from, to, body: 'Check **keyboard** first.\nAnd touch.' }, at)
 
@@ -35,6 +35,10 @@ describe('comment source', () => {
     for (const s of ['`'+sample+'`', '```md\n'+sample+'\n```', '    '+sample, '\\<!--aa:start Ab12Cd-->']) expect(exportMarkdown(s)).toBe(s)
     const example = '````markdown\n' + add() + '\n````'
     expect(exportMarkdown(example)).toBe(example)
+    expect(hasCommentSource(example)).toBe(false)
+    expect(hasCommentSource(add())).toBe(true)
+    const nested = '<columns>\n<column>\nHello\n</column>\n</columns>'
+    expect(() => add(nested, nested.indexOf('Hello'), nested.indexOf('Hello') + 5)).toThrow('nested')
     expect(() => add('`hello`', 1, 4)).toThrow('prose')
   })
   it('safely carries fences in comment bodies', () => {

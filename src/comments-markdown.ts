@@ -76,6 +76,11 @@ function scan(source: string) {
   return { fences, protectedAt }
 }
 
+/** Only real top-level metadata opts into source mode, never a fenced documentation example. */
+export function hasCommentSource(source: string): boolean {
+  return /aa-comments/.test(source) && scan(source).fences.some(f => /^aa-comments(?:\s|$)/.test(f.info))
+}
+
 export function readCommentSource(source: string): CommentDocument {
   const { fences, protectedAt } = scan(source)
   const spans: Span[] = [], diagnostics: string[] = []
@@ -188,7 +193,11 @@ export function changeCommentSource(source: string, author: string, action: Comm
     if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to <= from || to > doc.markdown.length) throw Error('Invalid comment range.')
     // Anchors cannot survive inside code or nested writing surfaces in v1.
     const { protectedAt } = scan(doc.markdown)
-    if (protectedAt(from) || protectedAt(to - 1) || /<(?:columns|tabs)>/.test(doc.markdown.slice(from, to))) throw Error('Select prose outside code and nested writing surfaces.')
+    const nestedAt = (at: number) => {
+      const prefix = doc.markdown.slice(0, at)
+      return ['columns', 'tabs'].some(tag => prefix.lastIndexOf(`<${tag}>`) > prefix.lastIndexOf(`</${tag}>`))
+    }
+    if (protectedAt(from) || protectedAt(to - 1) || nestedAt(from) || nestedAt(to - 1) || /<(?:columns|tabs)>/.test(doc.markdown.slice(from, to))) throw Error('Select prose outside code and nested writing surfaces.')
     const thread: SourceThread = { id: id(), quote: doc.markdown.slice(from, to), status: 'open', comments: [comment()] }
     doc.threads.push(thread); doc.anchors[thread.id] = { from, to }
   } else {
