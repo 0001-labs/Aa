@@ -95,6 +95,26 @@ describe('tables', () => {
     expect(host!.children).toHaveLength(2)
     e.undo(); expect(e.value).toBe(source)
   })
+  it.each(['2', ''])('Enter in the final cell adds a row, focuses its first cell and undoes (%s)', value => {
+    const table = `| Name | Value |\n| :--- | ---: |\n| Milk | ${value} |`
+    const e = setup(table + '\n\nAfter')
+    const end = tableRows(table).at(-1)!.at(-1)!.to
+    e.selectRange(end); key('Enter')
+    expect(e.value).toBe(table + '\n|  |  |\n\nAfter')
+    const first = tableRows(parseBlocks(e.value)[0].source).at(-1)![0].from
+    expect(e.selection()).toEqual({ start: first, end: first })
+    e.undo(); expect(e.value).toBe(table + '\n\nAfter')
+    e.redo(); expect(e.value).toBe(table + '\n|  |  |\n\nAfter')
+  })
+  it('keeps Shift+Enter as a way out and ignores Enter during composition or read-only editing', () => {
+    const e = setup(source)
+    const end = tableRows(source).at(-1)!.at(-1)!.to
+    e.selectRange(end); key('Enter', { isComposing: true }); expect(e.value).toBe(source)
+    e.readOnly = true; key('Enter'); expect(e.value).toBe(source)
+    e.readOnly = false; e.selectRange(end); key('Enter', { shiftKey: true })
+    expect(host!.children).toHaveLength(2)
+    expect(tableRows(parseBlocks(e.value)[0].source)).toHaveLength(2)
+  })
   it('adds and removes rows and columns while preserving the header', () => {
     const block = parseBlocks(source)[0]
     expect(tableRows(editTable(block, 'add-row', 0, 0))).toHaveLength(3)

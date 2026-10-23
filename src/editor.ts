@@ -968,6 +968,14 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
   const enter = (selection: Selection2, soft = false) => {
     if (blocks[selection.focus.block].kind === 'table') {
       const index = selection.focus.block
+      const block = blocks[index], rows = tableRows(block.source)
+      const last = rows.at(-1)?.at(-1)
+      if (!soft && comparePos(selection.anchor, selection.focus) === 0 && last && selection.focus.offset >= last.from && selection.focus.offset <= last.to) {
+        const source = editTable(block, 'add-row', rows.length - 1, 0)
+        const change = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: block.source.length }, source)
+        const pos = { block: index, offset: tableRows(source).at(-1)![0].from }
+        commit(change.blocks, pos, pos, 'edit'); return
+      }
       const next = [...blocks.slice(0, index + 1), { kind: 'paragraph' as const, source: '', prefix: 0 }, ...blocks.slice(index + 1)]
       const pos = { block: index + 1, offset: 0 }
       commit(next, pos, pos, 'edit'); return
