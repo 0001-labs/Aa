@@ -33,7 +33,7 @@ export default {
   },
   'selecting-blocks': {
     title: 'Blocks selected',
-    hint: 'Press Escape to select the block the caret is in, Shift-Down to take the next one, then ⌘D, ⌘⇧↑ or Backspace.',
+    hint: 'Press Shift-Down to select blocks, then ⌘D, ⌘⇧↑ or Backspace. Escape clears the selection and leaves editing.',
     markdown: '## Agenda\n\n1. Welcome\n2. Last month’s numbers\n3. The new office\n4. Anything else\n\nPress Escape in any of these lines.',
   },
   'selecting-drag': {
