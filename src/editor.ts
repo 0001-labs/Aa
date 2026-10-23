@@ -1117,12 +1117,13 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     const key = event.key.toLowerCase()
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
-    // ⌘⇧M comments on the selected words; Escape puts an open thread away first of all.
+    // Escape clears transient selection without turning it into a selected block.
     if (mod && event.shiftKey && !event.altKey && key === 'm' && comments) { event.preventDefault(); comments.start(); return }
-    if (event.key === 'Escape' && comments?.close()) { event.preventDefault(); return }
-    // Escape puts the marks of what AI changed away first, then selects the block.
-    if (event.key === 'Escape' && marks?.size) { event.preventDefault(); marks.clear(); return }
-    if (event.key === 'Escape') { event.preventDefault(); selectBlocks(selection.focus.block); return }
+    if (event.key === 'Escape') {
+      const closed = comments?.close(), marked = !!marks?.size
+      if (!closed && !marked && !selected && comparePos(selection.anchor, selection.focus) === 0) return
+      event.preventDefault(); event.stopPropagation(); marks?.clear(); clearBlocks(); setSelection(selection.focus); applyReveal({ anchor: selection.focus, focus: selection.focus }); return
+    }
     if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
       const block = blocks[selection.focus.block]
       if (block.kind === 'paragraph' && !block.source) { event.preventDefault(); ask(selection.focus.block); return }

@@ -54,6 +54,9 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
       node.classList.add('note-menu-row', 'ds-context__item--icon'); node.dataset.action = action.id
       return node
     }))
+    if (!coarse()) for (let index = this.actions.length; index % 5; index++) {
+      const spacer = document.createElement('span'); spacer.className = 'aa-toolbar-spacer'; spacer.setAttribute('aria-hidden', 'true'); this.append(spacer)
+    }
     if (this.below) this.append(this.below)
   }
 }
@@ -104,6 +107,12 @@ function dock(bar: HTMLElement) {
   bar.style.top = `${view.top + view.height - bar.getBoundingClientRect().height - inset}px`
 }
 
+/** A fixed half-square gap, independent of how many rows the bar contains. */
+export function selectionToolbarPosition(rect: Pick<DOMRect, 'left' | 'top' | 'width' | 'bottom'>, box: Pick<DOMRect, 'width' | 'height'>, view: { left: number; top: number; width: number; height: number }, scale: number) {
+  const gap = 10 * scale, above = rect.top - gap - box.height
+  return { left: Math.max(view.left, Math.min(rect.left + (rect.width - box.width) / 2, view.left + view.width - box.width)), top: Math.max(view.top, Math.min(above >= view.top ? above : rect.bottom + gap, view.top + view.height - box.height)) }
+}
+
 export function createControls(editor: Editor, options: EditorOptions): () => void {
   defineAaToolbar()
   initTooltips()
@@ -112,10 +121,11 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const toolbar = document.createElement('aa-toolbar') as AaToolbarElement
   toolbar.className = 'aa-controls aa-toolbar'; toolbar.hidden = true; toolbar.editor = editor
   let saved: { start: number; end: number } | null = null
+  let dismissedSelection: { start: number; end: number } | null = null
   const restore = () => { if (saved) editor.selectRange(saved.start, saved.end) }
   // On touch the kinds are a sheet from the foot of the screen (sheet.ts), a row each with the Markdown that writes it.
   const kindRows = (run: (kind: TurnKind) => void) => kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, key: keys[kind.kind], run: () => { restore(); run(kind.kind) } }))
-  const sheet = (title: string, groups: SheetGroup[]) => { toolbar.hidden = true; openSheet({ title, groups, root: overlayRoot }) }
+  const sheet = (title: string, groups: SheetGroup[]) => { toolbar.hidden = true; openSheet({ title, groups, root: overlayRoot, onClose: chosen => { if (!chosen) { const end = saved?.end ?? editor.selection()?.end; saved = null; if (end !== undefined) { dismissedSelection = { start: end, end }; editor.selectRange(end) } toolbar.hidden = true } } }) }
   /** A new block of a kind: in place of the empty paragraph the caret is in, or after the block it is in, written as the kind writes an empty block. */
   const insertKind = (kind: TurnKind) => {
     const block = editor.activeBlock()
@@ -314,7 +324,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const room = under + height <= view.top + view.height
     menu.style.top = `${room || over < view.top ? Math.max(view.top, Math.min(under, view.top + view.height - height)) : over}px`
   }
-  const close = () => { clearPreview(); menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
+  const dismissToolbar = () => { clearTimeout(timer); toolbar.hidden = true; const selection = editor.selection(); dismissedSelection = selection ? { ...selection } : null }
+  const close = () => { delete menu.dataset.palette; clearPreview(); menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
   const run = (command: Command) => {
     if (editor.readOnly) return
     const query = slash
@@ -322,11 +333,13 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     editor.transaction(() => { if (query) editor.replace(query.from, query.to, ''); command.run(editor) })
     // On touch a block left selected would wear the system's handles: the caret goes to the end of what the command made.
     if (coarse()) { const range = editor.selection(); if (range && range.start !== range.end) editor.selectRange(range.end) }
-    toolbar.hidden = true
+    if (command.id.startsWith('color-')) { toolbar.hidden = false; positionToolbar() }
+    else dismissToolbar()
   }
   const paint = () => {
     list.replaceChildren(...choices.map((command, index) => {
-      const node = button(command.label, command.icon, () => run(command), true)
+      const node = button(command.label, command.icon, () => run(command), !('palette' in menu.dataset))
+      if ('palette' in menu.dataset) { node.classList.add('aa-colour-swatch'); node.querySelector('.aa-icon')?.removeAttribute('style') }
       if (command.ink) (node.querySelector('.aa-icon') as HTMLElement | null)?.setAttribute('data-color', command.ink)
       if (command.swatch) (node.querySelector('.aa-icon') as HTMLElement | null)?.setAttribute('data-fill', command.swatch)
       node.classList.add('note-menu-row'); node.dataset.command = command.id; node.setAttribute('role', 'menuitem');
@@ -352,6 +365,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   function open(commands: readonly Command[], rect: DOMRect) {
     choices = commands.filter(command => command.enabled?.(editor) !== false)
+    menu.toggleAttribute('data-palette', choices.length > 0 && choices.every(command => command.id.startsWith('color-'))); menu.setAttribute('aria-label', 'palette' in menu.dataset ? 'Text colour' : 'Block commands')
     active = 0; menu.hidden = false; paint(); moveMenu(rect); positionPreview()
   }
   const builtin: Command[] = [...kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), ...inserts]
@@ -403,12 +417,12 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       // Over the selected words, measured from where they are in the Markdown: with the focus in the bar's own
       // field the page's selection is the field's, and a pinch-zoomed page pans as it is typed in.
       const words = saved ? editor.rangeOf(saved.start, saved.end) : null
-      const rect = words?.getBoundingClientRect?.() ?? host.getBoundingClientRect()
-      // As Design system 1's context bar: half a square above the selection, below it when there is no room.
-      const box = toolbar.getBoundingClientRect(), half = (box.height + 1) / 2
-      const above = rect.top - half - box.height
-      toolbar.style.left = `${Math.max(0, Math.min(rect.left, window.innerWidth - box.width))}px`
-      toolbar.style.top = `${above >= 0 ? above : rect.bottom + half}px`
+      const fragments = Array.from(words?.getClientRects?.() ?? []).filter(rect => rect.width > 0 && rect.height > 0)
+      const first = fragments[0], line = first ? fragments.filter(rect => Math.abs(rect.top - first.top) < 2) : []
+      const bounds = words?.getBoundingClientRect?.() ?? host.getBoundingClientRect()
+      const rect = line.length ? { left: Math.min(...line.map(rect => rect.left)), top: Math.min(...line.map(rect => rect.top)), width: Math.max(...line.map(rect => rect.right)) - Math.min(...line.map(rect => rect.left)), bottom: bounds.bottom } : bounds
+      const position = selectionToolbarPosition(rect, toolbar.getBoundingClientRect(), visible(), scaleOf(host))
+      toolbar.style.left = `${position.left}px`; toolbar.style.top = `${position.top}px`
     }
   }
   const selectionChanged = () => {
@@ -416,6 +430,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     // The keys in the bar's own field: the words stay selected for it, the bar stays.
     if (toolbar.contains(document.activeElement)) return
     const selection = editor.selection()
+    if (selection && selection.start === dismissedSelection?.start && selection.end === dismissedSelection?.end) { toolbar.hidden = true; return }
+    dismissedSelection = null
     const mobile = coarse() && host.contains(document.activeElement)
     if (!selection || (!mobile && selection.start === selection.end) || editor.readOnly) { toolbar.hidden = true; return }
     saved = selection
@@ -444,6 +460,16 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     editor.replace(0, editor.value.length, value); refreshFind()
   }), result, button('Close find', 'close', closeFind))
   findBar.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); closeFind() } else if (event.key === 'Enter') { event.preventDefault(); nextMatch(event.shiftKey ? -1 : 1) } })
+  const escapeControls = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return
+    const targetNode = event.target as Node | null
+    if (!targetNode || ![host, toolbar, menu, linkBar, findBar].some(node => node.contains(targetNode))) return
+    if (toolbar.hidden && menu.hidden && linkBar.hidden && findBar.hidden) return
+    event.preventDefault(); event.stopImmediatePropagation(); clearTimeout(timer)
+    const selection = editor.selection(), end = linkTarget?.end ?? saved?.end ?? selection?.end
+    close(); toolbar.hidden = true; linkBar.hidden = true; linkTarget = null; findBar.hidden = true; editor.decorate([], 'find'); saved = null
+    if (end !== undefined) { dismissedSelection = { start: end, end }; editor.selectRange(end) }
+  }
   const keyboard = (event: KeyboardEvent) => {
     if (event.isComposing || event.defaultPrevented) return
     const mod = /Mac|iPhone|iPad/.test(navigator.platform) ? event.metaKey : event.ctrlKey
@@ -473,6 +499,9 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       if (rect) { moveMenu(rect); positionPreview() }
     }
   }
+  const freshSelection = () => { dismissedSelection = null }
+  host.addEventListener('pointerdown', freshSelection)
+  document.addEventListener('keydown', escapeControls, true)
   host.addEventListener('aa-selectionchange', selectionChanged)
   host.addEventListener('aa-change', changed)
   host.addEventListener('contextmenu', contextMenu)
@@ -490,7 +519,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     host.removeEventListener('aa-selectionchange', selectionChanged); host.removeEventListener('aa-change', changed)
     host.removeEventListener('keydown', keyboard, true)
     host.removeEventListener('contextmenu', contextMenu)
-    document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', viewport); window.removeEventListener('scroll', viewport, true)
+    host.removeEventListener('pointerdown', freshSelection); document.removeEventListener('keydown', escapeControls, true); document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', viewport); window.removeEventListener('scroll', viewport, true)
     window.visualViewport?.removeEventListener('resize', viewport); window.visualViewport?.removeEventListener('scroll', viewport)
   }
 }

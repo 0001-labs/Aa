@@ -341,7 +341,7 @@ describe('the bar over selected words', () => {
     ;(toolbar.querySelector('[data-action="color"]') as HTMLButtonElement).click()
     const menu = document.querySelector('.aa-menu') as HTMLElement
     expect(menu.hidden).toBe(false)
-    expect([...menu.querySelectorAll('.aa-menu-list button')].map(row => row.textContent)).toEqual(['Default', 'Grey', 'Red', 'Orange', 'Green', 'Blue', 'Purple'])
+    expect([...menu.querySelectorAll('.aa-menu-list button')].map(row => row.getAttribute('aria-label'))).toEqual(['Default', 'Grey', 'Red', 'Orange', 'Green', 'Blue', 'Purple'])
     expect(menu.querySelector('[data-command="color-red"] .aa-icon')?.getAttribute('data-color')).toBe('red')
   })
   it('scrolls the slash menu\'s commands and keeps Close under them', () => {
