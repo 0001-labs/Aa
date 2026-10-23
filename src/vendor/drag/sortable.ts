@@ -503,13 +503,13 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     }
     if (session && event.pointerId === session.pointerId && !session.dropping) {
       suppressClick();
-      drop('DROP');
+      void drop('DROP');
     }
   }
 
   function onPointerCancel(event: PointerEvent): void {
     if (pending && event.pointerId === pending.pointerId) clearPending();
-    if (session && event.pointerId === session.pointerId && !session.dropping) drop('CANCEL');
+    if (session && event.pointerId === session.pointerId && !session.dropping) void drop('CANCEL');
   }
 
   function onKeyDown(event: KeyboardEvent): void {
@@ -518,13 +518,13 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      drop('CANCEL');
+      void drop('CANCEL');
       return;
     }
     if (current.mode !== 'SNAP') return;
     // While lifted by the keyboard, these keys belong to the drag, not the page.
     if (event.key === ' ' || event.key === 'Enter') {
-      drop('DROP');
+      void drop('DROP');
     } else if (event.key in arrows) {
       moveByKey(current, arrows[event.key as keyof typeof arrows]);
     } else if (event.key !== 'Tab') {
@@ -545,7 +545,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
 
   function onBlur(): void {
     clearPending();
-    if (session && !session.dropping) drop('CANCEL');
+    if (session && !session.dropping) void drop('CANCEL');
   }
 
   function onScroll(): void {
@@ -1393,7 +1393,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     isDragging: () => session !== null,
     cancel: () => {
       clearPending();
-      if (session && !session.dropping) drop('CANCEL');
+      if (session && !session.dropping) void drop('CANCEL');
     },
     destroy: () => {
       destroyed = true;
