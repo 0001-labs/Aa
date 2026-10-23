@@ -20,7 +20,7 @@ test('colour choices are icon-only, named by both accessibility and shared toolt
   for (const choice of choices) { expect(choice.textContent).toBe(''); expect(choice.dataset.tooltip).toBe(choice.getAttribute('aria-label')); expect(choice.querySelector('.aa-icon')).not.toBeNull() }
  } finally { editor.destroy() }
 })
-test.each(['toolbar', 'colour', 'link'])('Escape closes %s, collapses selection and never edits or reopens it', async mode => {
+test.each(['toolbar', 'colour', 'link'])('Escape closes %s, leaves editing and never edits or reopens it', async mode => {
  vi.useFakeTimers(); const host = document.createElement('div'); document.body.append(host); const editor = createEditor(host, { value: 'Select these words', toolbar: true })
  try {
   editor.selectRange(0, 6); host.dispatchEvent(new Event('aa-selectionchange')); await vi.advanceTimersByTimeAsync(150)
@@ -31,7 +31,7 @@ test.each(['toolbar', 'colour', 'link'])('Escape closes %s, collapses selection 
   target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
   expect(pageShortcut).not.toHaveBeenCalled(); window.removeEventListener('keydown', pageShortcut)
   host.dispatchEvent(new Event('aa-selectionchange')); await vi.advanceTimersByTimeAsync(200)
-  expect(editor.selection()?.start).toBe(editor.selection()?.end); expect(editor.value).toBe('Select these words')
+  expect(editor.selection()).toBeNull(); expect(host.contains(document.activeElement)).toBe(false); expect(editor.value).toBe('Select these words')
   expect(document.querySelector<HTMLElement>('aa-toolbar')!.hidden).toBe(true); expect(document.querySelector<HTMLElement>('.aa-menu')!.hidden).toBe(true); expect(document.querySelector<HTMLElement>('.aa-link-editor')!.hidden).toBe(true)
  } finally { editor.destroy() }
 })

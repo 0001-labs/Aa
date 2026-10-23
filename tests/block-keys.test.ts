@@ -65,7 +65,7 @@ describe('block keyboard commands', () => {
     expect(editor.selection()).toEqual({ start: 0, end: 15 })
     key('Escape')
     expect(host.querySelectorAll('[data-selected]')).toHaveLength(0)
-    expect(editor.selection()).toEqual({ start: 15, end: 15 })
+    expect(editor.selection()).toBeNull()
     editor.selectBlocks(2)
     key('a', mod)
     expect(host.querySelectorAll('[data-selected]')).toHaveLength(0)

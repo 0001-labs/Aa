@@ -186,6 +186,8 @@ export type Editor = {
   placeholder: string
   focus(): void
   blur(): void
+  /** Leave editing: clear owned selection and transient controls without changing the document. */
+  dismiss(): void
   /** Where the selection is, as offsets into `value`; null when it is not in the editor. */
   selection(): { start: number; end: number } | null
   /** Put `text` in place of `value`'s characters from `start` to `end`, the caret after it, as one step to undo. */
@@ -1097,6 +1099,15 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
     if (action !== 'delete') selectBlocks(change.caret.block, change.caret.block + last - first)
   }
 
+  const dismiss = () => {
+    comments?.close(); marks?.clear(); clearBlocks()
+    const native = host.ownerDocument.getSelection()
+    if (native && (host.contains(native.anchorNode) || host.contains(native.focusNode))) native.removeAllRanges()
+    const active = host.ownerDocument.activeElement
+    if (active instanceof HTMLElement && host.contains(active)) active.blur()
+    applyReveal(); host.dispatchEvent(new Event('aa-dismiss'))
+  }
+
   const onKeyDown = (event: KeyboardEvent) => {
     if (destroyed || readOnly || composing || event.isComposing || event.defaultPrevented) return
     const caption = (event.target as HTMLElement).closest?.('.aa-caption')
@@ -1106,24 +1117,20 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
         const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
         return
       }
-      if (event.key === 'Enter' || event.key === 'Escape') { event.preventDefault(); (event.target as HTMLElement).blur() }
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dismiss() }
+      else if (event.key === 'Enter') { event.preventDefault(); (event.target as HTMLElement).blur() }
       return
     }
     const mod = isMac ? event.metaKey : event.ctrlKey
     if (mod && !event.altKey && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return }
     if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return }
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dismiss(); return }
     const selection = readSelection()
     if (!selection) return
     const key = event.key.toLowerCase()
     plainPaste = false
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
-    // Escape clears transient selection without turning it into a selected block.
     if (mod && event.shiftKey && !event.altKey && key === 'm' && comments) { event.preventDefault(); comments.start(); return }
-    if (event.key === 'Escape') {
-      const closed = comments?.close(), marked = !!marks?.size
-      if (!closed && !marked && !selected && comparePos(selection.anchor, selection.focus) === 0) return
-      event.preventDefault(); event.stopPropagation(); marks?.clear(); clearBlocks(); setSelection(selection.focus); applyReveal({ anchor: selection.focus, focus: selection.focus }); return
-    }
     if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
       const block = blocks[selection.focus.block]
       if (block.kind === 'paragraph' && !block.source) { event.preventDefault(); ask(selection.focus.block); return }
@@ -1755,6 +1762,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
       applyReveal({ anchor: pos, focus: pos })
     },
     blur() { (document.activeElement as HTMLElement | null)?.blur() },
+    dismiss,
     selection() {
       const selection = readSelection()
       if (!selection) return null

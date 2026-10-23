@@ -460,15 +460,18 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     editor.replace(0, editor.value.length, value); refreshFind()
   }), result, button('Close find', 'close', closeFind))
   findBar.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); closeFind() } else if (event.key === 'Enter') { event.preventDefault(); nextMatch(event.shiftKey ? -1 : 1) } })
+  const dismissControls = () => {
+    clearTimeout(timer)
+    const active = document.activeElement
+    if (active instanceof HTMLElement && [toolbar, menu, linkBar, findBar].some(node => node.contains(active))) active.blur()
+    close(); toolbar.hidden = true; linkBar.hidden = true; linkTarget = null; findBar.hidden = true; editor.decorate([], 'find'); saved = null; dismissedSelection = null
+  }
   const escapeControls = (event: KeyboardEvent) => {
     if (event.key !== 'Escape' || event.isComposing || event.defaultPrevented) return
     const targetNode = event.target as Node | null
     if (!targetNode || ![host, toolbar, menu, linkBar, findBar].some(node => node.contains(targetNode))) return
     if (toolbar.hidden && menu.hidden && linkBar.hidden && findBar.hidden) return
-    event.preventDefault(); event.stopImmediatePropagation(); clearTimeout(timer)
-    const selection = editor.selection(), end = linkTarget?.end ?? saved?.end ?? selection?.end
-    close(); toolbar.hidden = true; linkBar.hidden = true; linkTarget = null; findBar.hidden = true; editor.decorate([], 'find'); saved = null
-    if (end !== undefined) { dismissedSelection = { start: end, end }; editor.selectRange(end) }
+    event.preventDefault(); event.stopImmediatePropagation(); editor.dismiss()
   }
   const keyboard = (event: KeyboardEvent) => {
     if (event.isComposing || event.defaultPrevented) return
@@ -507,6 +510,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   const freshSelection = () => { dismissedSelection = null }
   host.addEventListener('pointerdown', freshSelection)
+  host.addEventListener('aa-dismiss', dismissControls)
   document.addEventListener('keydown', escapeControls, true)
   host.addEventListener('aa-selectionchange', selectionChanged)
   host.addEventListener('aa-change', changed)
@@ -523,6 +527,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     disposed = true; clearTimeout(timer); stopDragging()
     toolbar.remove(); menu.remove(); findBar.remove(); linkBar.remove(); host.removeEventListener('aa-link-request', requestLink)
     host.removeEventListener('aa-selectionchange', selectionChanged); host.removeEventListener('aa-change', changed)
+    host.removeEventListener('aa-dismiss', dismissControls)
     host.removeEventListener('keydown', keyboard, true)
     host.removeEventListener('contextmenu', contextMenu)
     host.removeEventListener('pointerdown', freshSelection); document.removeEventListener('keydown', escapeControls, true); document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', viewport); window.removeEventListener('scroll', viewport, true)
