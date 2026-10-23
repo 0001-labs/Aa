@@ -2,13 +2,13 @@ import { afterEach, expect, test, vi } from 'vite-plus/test'
 import { createEditor } from '../src/editor'
 import { AaToolbarElement, defineAaToolbar, selectionToolbarPosition } from '../src/controls'
 afterEach(() => { vi.useRealTimers(); document.body.replaceChildren() })
-test('centres the bar ten scaled pixels above the selected line rather than using bar height as the gap', () => {
- expect(selectionToolbarPosition({ left: 200, top: 200, width: 80, bottom: 220 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 190, top: 130 })
- expect(selectionToolbarPosition({ left: 0, top: 10, width: 20, bottom: 30 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 0, top: 40 })
+test('centres the bar directly above the selection and falls below when there is no room', () => {
+ expect(selectionToolbarPosition({ left: 200, top: 200, width: 80, bottom: 220 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 190, top: 140 })
+ expect(selectionToolbarPosition({ left: 0, top: 10, width: 20, bottom: 30 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 0, top: 30 })
 })
 test('fills the last desktop grid cell without adding an action', () => {
  defineAaToolbar(); const toolbar = new AaToolbarElement(); toolbar.actions = Array.from({ length: 9 }, (_, index) => ({ id: String(index), label: 'Action', icon: 'bold', run() {} })); document.body.append(toolbar)
- expect(toolbar.querySelectorAll('button')).toHaveLength(9); expect(toolbar.querySelectorAll('.aa-toolbar-spacer')).toHaveLength(1); expect(toolbar.lastElementChild?.getAttribute('aria-hidden')).toBe('true')
+ expect(toolbar.querySelectorAll('button')).toHaveLength(9); expect(toolbar.querySelectorAll('.aa-toolbar-spacer')).toHaveLength(1); expect(toolbar.lastElementChild?.getAttribute('aria-hidden')).toBe('true'); expect(toolbar.querySelector<HTMLElement>('.aa-toolbar-spacer .aa-icon')?.style.maskImage).toContain('svg')
 })
 test('colour choices are icon-only, named by both accessibility and shared tooltips', () => {
  const host = document.createElement('div'); document.body.append(host); const editor = createEditor(host, { value: 'Colour these words', toolbar: true })

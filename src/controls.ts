@@ -55,7 +55,7 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
       return node
     }))
     if (!coarse()) for (let index = this.actions.length; index % 5; index++) {
-      const spacer = document.createElement('span'); spacer.className = 'aa-toolbar-spacer'; spacer.setAttribute('aria-hidden', 'true'); this.append(spacer)
+      const spacer = document.createElement('span'); spacer.className = 'aa-toolbar-spacer'; spacer.setAttribute('aria-hidden', 'true'); spacer.append(button('Placeholder', 'plus', () => {}).firstElementChild!); this.append(spacer)
     }
     if (this.below) this.append(this.below)
   }
@@ -107,9 +107,9 @@ function dock(bar: HTMLElement) {
   bar.style.top = `${view.top + view.height - bar.getBoundingClientRect().height - inset}px`
 }
 
-/** A fixed half-square gap, independent of how many rows the bar contains. */
-export function selectionToolbarPosition(rect: Pick<DOMRect, 'left' | 'top' | 'width' | 'bottom'>, box: Pick<DOMRect, 'width' | 'height'>, view: { left: number; top: number; width: number; height: number }, scale: number) {
-  const gap = 10 * scale, above = rect.top - gap - box.height
+/** Sit directly against the selection, independent of how many rows the bar contains. */
+export function selectionToolbarPosition(rect: Pick<DOMRect, 'left' | 'top' | 'width' | 'bottom'>, box: Pick<DOMRect, 'width' | 'height'>, view: { left: number; top: number; width: number; height: number }, _scale: number) {
+  const gap = 0, above = rect.top - box.height
   return { left: Math.max(view.left, Math.min(rect.left + (rect.width - box.width) / 2, view.left + view.width - box.width)), top: Math.max(view.top, Math.min(above >= view.top ? above : rect.bottom + gap, view.top + view.height - box.height)) }
 }
 

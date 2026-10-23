@@ -839,7 +839,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-command-preview[hidden] { display: none; }
 
 /* Keep the final desktop grid cell inactive, without inventing an action. */
-.aa-toolbar-spacer{flex:0 0 var(--ds-context-row,calc(var(--aa-square) - 1px));height:var(--ds-context-row,calc(var(--aa-square) - 1px));background:var(--aa-menu-fill);pointer-events:none}
+.aa-toolbar-spacer{display:flex;align-items:center;justify-content:center;flex:0 0 var(--ds-context-row,calc(var(--aa-square) - 1px));height:var(--ds-context-row,calc(var(--aa-square) - 1px));background:var(--aa-menu-fill);pointer-events:none}
 /* Text colours are named swatches, with shared hover/focus tooltips. */
 .aa-menu[data-palette]{width:max-content;min-width:0}
 .aa-menu[data-palette] .aa-menu-list{display:grid;grid-template-columns:repeat(4,var(--aa-square));gap:1px;overflow:visible}
