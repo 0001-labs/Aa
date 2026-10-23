@@ -31,6 +31,8 @@ An atom's `insert.preview(element, { input })` optionally draws a specimen besid
 
 `selection()`, `selectRange()`, `replace()` and `transaction()` work in Markdown offsets. `decorate([{ from, to, className, label }], layer)` adds comments, matches or peer carets without changing Markdown. `stats()` returns word and character counts. Call `destroy()` to release listeners, menus and atom resources.
 
+`createCommentsView(host, options)` also attaches Aa's comment threads to an existing document surface. Supply one consistent text coordinate space through `value`, `selection`, `selectRange` and `decorate`, plus a persistent `CommentStore`. Its `readOnly` callback controls comment writes independently of whether the document can be edited. Use `store.panel` for a side panel; notify the view with `changed()` after content updates and call `destroy()` when removing the surface. Persistence, access checks and DOM-to-text mapping belong to the host application.
+
 ## Correction while writing
 
 Give the editor a `correct` call and it corrects the person's words as they write, in place, with no suggestions or underlines: the corrected text simply replaces what was written. The product makes the call (Aa holds no model or key); Aa decides when to ask and how much of the answer to take.

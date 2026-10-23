@@ -15,6 +15,7 @@ export type { Corrector, CorrectionContext } from './correction'
 export { glisten, PROMPT_HERE, type Prompter, type PromptAnswer, type PromptContext } from './prompt'
 export { REACTION_EMOJIS, textChange, mapRange, applyEdit, relocate, anchorThreads, movedThreads, sortThreads, threadsAt, countThreads, commentsLabel, mentionsIn, mentionQuery, relativeTime, initialOf, personColour, type CommentStore, type CommentThread, type Comment, type CommentPerson, type CommentReaction, type CommentRange, type CommentMove, type AnchoredThread, type TextEdit } from './comments'
 export { memoryCommentStore, type MemoryCommentStore } from './comments-memory'
+export { createCommentsView, type CommentsView, type CommentsViewOptions } from './comments-view'
 export type { EditorComments } from './editor'
 
 export { BUTTON_STATES, BUTTON_PARTIAL, readButtonPartial, writeButtonPartial, type ButtonState, type ButtonPartial } from './partials'
