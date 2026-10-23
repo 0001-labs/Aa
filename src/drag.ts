@@ -122,8 +122,29 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       let surface = host;
       for (let parent = host.parentElement; parent; parent = parent.parentElement) if (parent.classList.contains('aa')) surface = parent;
       const existing = new Set(surface.querySelectorAll('.aa-block'));
+      const acrossTarget = across && { ...across }, sideTarget = side && { ...side };
+      const row = host.parentElement?.classList.contains('aa-columns') ? host.parentElement : null;
+      const rowIndex = row ? Array.from(surface.querySelectorAll('.aa-columns')).indexOf(row) : -1;
+      const from = result.source.index;
+      const sideIndex = sideTarget ? sideTarget.index - (from < sideTarget.index ? 1 : 0) : -1;
       applyDrop(result);
       return () => {
+      // Destination structure identifies the carried item even when all words/atoms are identical.
+      if (acrossTarget) {
+        const finalRow = row?.isConnected ? row : surface.querySelectorAll('.aa-columns')[rowIndex];
+        const index = 'swap' in acrossTarget ? acrossTarget.swap : acrossTarget.slot;
+        const column = finalRow?.querySelectorAll(':scope > .aa-column')[index];
+        const landed = column?.querySelector<HTMLElement>(':scope > .aa-block');
+        if (landed) return landed;
+      }
+      if (sideTarget) {
+        const parent = host.isConnected ? host : surface;
+        const block = parent.querySelectorAll(':scope > .aa-block')[sideIndex];
+        const columns = block?.querySelectorAll(':scope > .aa-atom.aa-columns > .aa-column');
+        const column = columns?.[sideTarget.at === 'start' ? 0 : columns.length - 1];
+        const landed = column?.querySelector<HTMLElement>(':scope > .aa-block');
+        if (landed) return landed;
+      }
       if (source?.isConnected && surface.contains(source)) return source;
       const matches = Array.from(surface.querySelectorAll<HTMLElement>('.aa-block')).filter(block => atomSource !== undefined ? block.querySelector<HTMLElement>(':scope > .aa-atom')?.dataset.source === atomSource : !block.querySelector('.aa-block') && block.textContent === text);
       return matches.find(block => !existing.has(block)) ?? matches[0] ?? null;
