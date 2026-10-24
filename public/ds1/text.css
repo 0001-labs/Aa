@@ -53,6 +53,13 @@ body {
   font-size: var(--ds-type-size-small);
 }
 
+/* text.whole-words: headings must not inherit emergency wrapping from prose. */
+:is(h1, h2, h3, h4, h5, h6, th, [role="heading"], [role="columnheader"], [role="rowheader"], .ds-text--heading, .ds-text--display) {
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: manual;
+}
+
 .ds-text--heading {
   font-family: var(--ds-typeface-medium);
   font-size: var(--ds-type-size-heading);

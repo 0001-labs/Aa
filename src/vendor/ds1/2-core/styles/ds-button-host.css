@@ -174,29 +174,6 @@
   overflow: hidden !important;
   text-overflow: clip !important;
 }
-/* Cut words fade over the face's last square, never an ellipsis, and the face
-   keeps its fill whole (0-face/cut-fade.ts marks the light-DOM face, or the
-   host face itself, `data-cut="end"`). The words are written straight into
-   the face, so they cannot be masked apart from its fill: the face paints
-   them through the gradient instead, a first background layer in their own
-   colour fading over the last square of its content box, clipped to the
-   glyphs, over the face's own background. A mask on the face would fade the
-   fill and the focus ring with the words. */
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-  :host([control="host"][data-cut="end"]),
-  :host([control="slotted"]) ::slotted(:is(button, a)[data-cut="end"]) {
-    background: linear-gradient(to right, currentColor calc(100% - var(--ds-unit)), transparent) content-box no-repeat, var(--ds-button-background, transparent) !important;
-    -webkit-background-clip: text, border-box !important;
-    background-clip: text, border-box !important;
-    -webkit-text-fill-color: transparent !important;
-  }
-  :host([control="host"][data-cut="end"]:dir(rtl)),
-  :host([control="slotted"]:dir(rtl)) ::slotted(:is(button, a)[data-cut="end"]) {
-    background: linear-gradient(to left, currentColor calc(100% - var(--ds-unit)), transparent) content-box no-repeat, var(--ds-button-background, transparent) !important;
-    -webkit-background-clip: text, border-box !important;
-    background-clip: text, border-box !important;
-  }
-}
 :host([control="slotted"][icon]) ::slotted(:is(button, a)) {
   justify-content: center !important;
 }
@@ -281,4 +258,13 @@
 :host([control="host"]:is([segment="last"], [segment="only"])) {
   border-start-end-radius: var(--ds-radius) !important;
   border-end-end-radius: var(--ds-radius) !important;
+}
+
+:host([control="host"]:not([icon]):not([split]):not([menu-item])) {
+  min-width: max-content !important;
+  min-width: calc-size(max-content, round(up, size, var(--ds-unit))) !important;
+}
+:host([control="slotted"]) ::slotted(:is(button, a)) {
+  min-width: max-content !important;
+  overflow: visible !important;
 }

@@ -10,12 +10,7 @@
   flex: 0 0 auto;
   width: var(--ds-button-width, max-content);
   max-width: 100%;
-  /* Clipped along the line only: a word that runs long is cut and fades over
-     its last square (never an ellipsis), but the descenders of g, y, p and j
-     hang below the 16-unit box as they would anywhere else, instead of being
-     cut off at its edge. */
-  overflow-x: clip;
-  overflow-y: visible;
+  overflow: visible;
 }
 
 /* Label width is standard. Fixed grid widths are explicit layout choices. */
@@ -79,38 +74,6 @@
   text-align: left;
   justify-content: flex-start;
   color: inherit;
-}
-
-/* Cut words fade over their last square, never an ellipsis: the element marks
-   them `data-cut="end"` while they do not fit (0-face/cut-fade.ts). Words in an
-   element of their own fade with a mask, on any face. */
-:is(button, a) ds-text[data-cut="end"],
-:is(button, a) ::slotted([data-cut="end"]) {
-  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
-}
-:host(:dir(rtl)) :is(button, a) ds-text[data-cut="end"],
-:host(:dir(rtl)) :is(button, a) ::slotted([data-cut="end"]) {
-  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
-}
-
-/* Words written straight into the face cannot be masked apart from it, and a
-   mask on the face would fade its fill and its focus ring too. So, filled or
-   not, the face paints its words through the same gradient instead: a first
-   background layer in the words' own colour, fading over the last square of
-   the face's content box and clipped to the glyphs, over the face's own fill,
-   which stays whole to its edge. Icons, drawn as pictures, stay crisp. */
-@supports (background-clip: text) or (-webkit-background-clip: text) {
-  :is(button, a)[data-cut="end"] {
-    background-image: linear-gradient(to right, currentColor calc(100% - var(--ds-unit)), transparent), none;
-    background-origin: content-box, padding-box;
-    background-repeat: no-repeat;
-    -webkit-background-clip: text, border-box;
-    background-clip: text, border-box;
-    -webkit-text-fill-color: transparent;
-  }
-  :host(:dir(rtl)) :is(button, a)[data-cut="end"] {
-    background-image: linear-gradient(to left, currentColor calc(100% - var(--ds-unit)), transparent), none;
-  }
 }
 
 :is(button, a)[primary] {
@@ -228,4 +191,16 @@
 :host(:is([segment="last"], [segment="only"])) :is(button, a) {
   border-start-end-radius: var(--ds-radius) !important;
   border-end-end-radius: var(--ds-radius) !important;
+}
+
+/* A label is never truncated to meet a chosen width. Round its minimum up,
+   so explicit widths and flex layouts retain enough space for all the words. */
+:host(:not([icon]):not([split]):not([menu-item])) {
+  min-width: max-content;
+  min-width: calc-size(max-content, round(up, size, var(--ds-unit)));
+}
+:is(button, a), :is(button, a) ds-text, :is(button, a) ::slotted(*) {
+  overflow: visible;
+  mask-image: none;
+  text-overflow: clip;
 }

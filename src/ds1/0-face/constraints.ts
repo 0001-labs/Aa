@@ -1,3 +1,7 @@
+import { labelledButtons, inspectButtonLabels } from './button-label';
+import { inspectTextContrast, measureTextContrast } from "./text-contrast";
+import { inspectWordWrap, wordHeaders } from './word-wrap';
+
 // Design system 1's small rules: one list, each rule a sentence a component keeps and a check that
 // measures it on a page as it is drawn. Five presses of C show what a page breaks, in a panel at
 // its side, for the page's owner (constraint-panel.ts). The Constraints page
@@ -80,6 +84,49 @@ function rows(found: ReturnType<typeof cards>) {
 }
 
 export const constraints: Constraint[] = [
+  {
+    code: 'select.hug',
+    rule: 'Select and date-picker triggers use hug sizing, never fill sizing or growing to occupy the available row.',
+    components: ['ds-select', 'ds-calendar'],
+    check: { file: 'tests/select-hug.test.ts', test: 'select triggers hug instead of filling their row' },
+    measures: ['select', 'selects'],
+    count: root => root.querySelectorAll('ds-select[data-field]:not([data-listbox]), ds-calendar[picker]').length,
+    inspect: root => Array.from(root.querySelectorAll<HTMLElement>('ds-select[data-field]:not([data-listbox]), ds-calendar[picker]')).flatMap(element => {
+      const control = element.querySelector('select') ?? element.shadowRoot?.querySelector('.trigger');
+      if (!control || !element.getBoundingClientRect().width) return [];
+      const fills = Number(styleOf(element).flexGrow) > 0 || element.getBoundingClientRect().width > control.getBoundingClientRect().width + 1;
+      return fills ? [{ element, message: 'Use hug sizing; the select must not fill its row.' }] : [];
+    }),
+  },
+
+  {
+    code: 'button.visible-label',
+    rule: 'Button labels stay fully visible, never faded, gradient-masked or truncated; round the required width up to whole grid squares.',
+    why: 'The action must remain readable; a chosen width cannot cut off its label.',
+    components: ['ds-button'],
+    check: { file: 'tests/button-cut-fade-measure.test.ts', test: 'button labels stay whole without gradients and snap up to the grid' },
+    measures: ['button', 'buttons'], count: root => labelledButtons(root).length, inspect: inspectButtonLabels,
+  },
+  {
+    code: 'text.whole-words',
+    rule: 'Headings and table headers keep each word intact across lines; only a long word that cannot fit may split at a valid language-specific hyphenation point, with a visible hyphen.',
+    why: 'Wrap between words or give the heading more room; never leave a final letter on its own, use break-all or anywhere, or insert an arbitrary line break inside a word. Use the correct lang with automatic hyphenation, or a soft hyphen at an editorially verified break; scripts with other line-breaking conventions keep their own typesetting rules.',
+    components: ['ds-text', 'ds-table'],
+    check: { file: 'tests/word-wrap.test.ts', test: 'headings and table headers keep whole words or use a typesetting hyphen' },
+    measures: ['heading or table header', 'headings and table headers'],
+    count: root => wordHeaders(root).length,
+    inspect: inspectWordWrap,
+  },
+  {
+    code: 'color.text-contrast',
+    rule: 'Visible text, including muted labels, placeholders and avatar initials, has at least 4.5:1 contrast against the background it is drawn on.',
+    why: 'Measure resolved colours through slots and open shadow roots, including transparency and opacity; image backgrounds and effects that cannot be measured need a visual review.',
+    components: ['ds-color', 'ds-text', 'ds-avatar'],
+    check: { file: 'tests/text-contrast.test.ts', test: 'rendered text contrast catches component overrides, slots, alpha and opacity' },
+    measures: ['text sample', 'text samples'],
+    count: root => measureTextContrast(root).length,
+    inspect: inspectTextContrast,
+  },
   {
     code: 'card.media-level',
     rule: "A card's picture stands on the card's foot, a square below the words at least, so the pictures of cards side by side stand on one level whatever the words above them.",

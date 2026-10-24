@@ -18,6 +18,9 @@
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: manual;
   color: var(--ds-text-tone, inherit);
 }
 :host([hidden]) { display: none !important; }

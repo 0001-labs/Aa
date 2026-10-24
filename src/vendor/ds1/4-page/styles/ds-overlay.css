@@ -35,6 +35,13 @@ ds-overlay > dialog[data-ds-type="popover"] {
   max-width: var(--ds-overlay-available-width, calc(100vw - var(--ds-unit)));
   max-height: var(--ds-overlay-available-height, calc(100dvh - var(--ds-unit)));
 }
+/* A compact calendar is its own menu surface: no extra frame or spacing. */
+ds-overlay > dialog[data-ds-type="popover"]:has(> ds-calendar[compact]) {
+  padding: 0;
+  border: 0;
+  margin: 0;
+  gap: 0;
+}
 ds-overlay > dialog[data-ds-overlay-flush] { padding: 0; gap: 0; }
 ds-overlay > dialog[data-ds-overlay-rotated] {
   inset: auto;

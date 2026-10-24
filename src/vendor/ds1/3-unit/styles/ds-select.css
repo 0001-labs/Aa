@@ -17,6 +17,11 @@
   max-height: none;
   height: var(--ds-control-height);
 }
+:host([data-field]:not([data-listbox])) {
+  width: max-content !important;
+  flex: 0 0 auto !important;
+  justify-self: start !important;
+}
 :host([hidden]) { display: none !important; }
 ::slotted(select) {
   appearance: none !important;
