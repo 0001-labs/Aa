@@ -113,3 +113,7 @@ IDv1 account validation and item-code generation are copied through Sync 1 into 
 After `vp run build`, `node bin/aa.mjs` (installed as `aa`) provides `comments list`, `add`, `reply`, `edit`, `resolve`, `reopen`, `remove`, `export`, and `completion bash`; `--help` lists flags and all operations support `--json`. `AA_AUTHOR` or `--author` supplies a local IDv1 account, not a credential. `--from`/`--to` address UTF-16 offsets in clean Markdown. `export` always strips comments and never overwrites an existing output. CLI checks build the DOM-free entry before running against temporary files.
 
 System selections for this feature: `editing`, `documentation`, `sharing`, `id1`, `platform-cli`, `platform-web`. CLI exceptions: Aa is a local-file library command in its existing package, with no remote API, device sign-in or credential storage. Web hosting remains the existing documentation Worker; no product backend or authentication changes are shipped here.
+
+## Server parsing
+
+`src/parse.ts` and the optional `parse` build export expose the editor’s block/run parser, tables and clean Markdown export without loading DOM components. Server integrations select `entries: ["parse"]` in Sync 1. Product renderers own their output format and must strip source comments with `exportMarkdown` before external export. Build with `vp build --config vite.config.parse.ts`; `tests/parse-entry.test.ts` checks the built entry in a Node process without browser globals.
