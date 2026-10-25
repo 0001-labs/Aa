@@ -128,6 +128,11 @@
     "Total": "합계",
     "End date": "종료일",
     "Include time": "시간 포함",
-    "Time": "시간"
+    "Time": "시간",
+    "Day": "일",
+    "Week": "주",
+    "Month": "월",
+    "Swimlane": "스윔레인",
+    "View": "보기"
   }
 }

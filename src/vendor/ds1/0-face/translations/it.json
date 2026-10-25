@@ -128,6 +128,11 @@
     "Total": "Totale",
     "End date": "Data di fine",
     "Include time": "Includi ora",
-    "Time": "Ora"
+    "Time": "Ora",
+    "Day": "Giorno",
+    "Week": "Settimana",
+    "Month": "Mese",
+    "Swimlane": "Corsie",
+    "View": "Vista"
   }
 }

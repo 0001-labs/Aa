@@ -128,6 +128,11 @@
     "Total": "I alt",
     "End date": "Slutdato",
     "Include time": "Medtag klokkeslæt",
-    "Time": "Klokkeslæt"
+    "Time": "Klokkeslæt",
+    "Day": "Dag",
+    "Week": "Uge",
+    "Month": "Måned",
+    "Swimlane": "Baner",
+    "View": "Visning"
   }
 }

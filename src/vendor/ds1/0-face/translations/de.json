@@ -128,6 +128,11 @@
     "Total": "Gesamt",
     "End date": "Enddatum",
     "Include time": "Uhrzeit hinzufügen",
-    "Time": "Uhrzeit"
+    "Time": "Uhrzeit",
+    "Day": "Tag",
+    "Week": "Woche",
+    "Month": "Monat",
+    "Swimlane": "Bahnen",
+    "View": "Ansicht"
   }
 }

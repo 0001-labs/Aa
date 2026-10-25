@@ -128,6 +128,11 @@
     "Total": "Totalt",
     "End date": "Sluttdato",
     "Include time": "Ta med klokkeslett",
-    "Time": "Klokkeslett"
+    "Time": "Klokkeslett",
+    "Day": "Dag",
+    "Week": "Uke",
+    "Month": "Måned",
+    "Swimlane": "Baner",
+    "View": "Visning"
   }
 }

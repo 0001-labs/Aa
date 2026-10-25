@@ -121,6 +121,11 @@
     "Total": "Samtals",
     "End date": "Lokadagur",
     "Include time": "Taka með tíma",
-    "Time": "Tími"
+    "Time": "Tími",
+    "Day": "Dagur",
+    "Week": "Vika",
+    "Month": "Mánuður",
+    "Swimlane": "Brautir",
+    "View": "Yfirlit"
   }
 }

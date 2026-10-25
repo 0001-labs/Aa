@@ -21,6 +21,9 @@
  *   ds-row--auto           as high as its content, at least one square
  *   ds-row--stacked        the content stacked, each line one square (a tile, a card)
  *   ds-row--nav            a navigation row: the sidebar's two-pixel corners
+ *   ds-row__picture        a record's picture before its words (a date or colour tile, an
+ *                          avatar, a logo, or a button holding one): sixteen square at the
+ *                          start of its square, the words on the next
  *   ds-row__name           a record's words: they hug and give way first; cut, they fade over
  *                          the last square, never an ellipsis (`data-cut="end"`, set by the
  *                          element, or 0-face/cut-fade.ts on a page without Lit)
@@ -219,6 +222,35 @@ button.ds-row[aria-disabled="true"]:hover::after {
 /* The parts of a record's row, as the element draws them: a 16px picture before the name takes
    the first sixteen of its square and the row's 4px gap puts the words on the next; the name
    hugs and gives way first; the value stands at the row's end. */
+/* The picture is exactly one control (16px) square, standing on the lower sixteen: whatever
+   holds it (a button that opens it, a property's trigger) adds no width, padding or margin,
+   so the 4px gap is the only space before the words, as in every record row. The measures
+   are important because a button's own face rules are more specific than a part's. */
+:is(.ds-row, ds-row, .ds-row__target) > .ds-row__picture {
+  flex: none;
+  display: inline-flex;
+  align-items: flex-end;
+  box-sizing: border-box;
+  width: var(--ds-control-height) !important;
+  min-width: 0 !important;
+  height: var(--ds-control-height);
+  margin: 0 !important;
+  padding: 0 !important;
+}
+/* A picture that opens something of its own (a date to change) stands over the row's press
+   layer, as the end slot does; a plain tile lets the press through to the row. */
+.ds-row__picture:has(button, a) {
+  position: relative;
+  z-index: 2;
+}
+.ds-row__picture :is(ds-button, button, a) {
+  display: flex;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+}
 .ds-row .ds-row__name {
   flex: 0 1 auto;
   min-width: 0;

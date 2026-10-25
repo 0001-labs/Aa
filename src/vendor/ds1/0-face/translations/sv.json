@@ -128,6 +128,11 @@
     "Total": "Totalt",
     "End date": "Slutdatum",
     "Include time": "Inkludera tid",
-    "Time": "Tid"
+    "Time": "Tid",
+    "Day": "Dag",
+    "Week": "Vecka",
+    "Month": "Månad",
+    "Swimlane": "Banor",
+    "View": "Vy"
   }
 }

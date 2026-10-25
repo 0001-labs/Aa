@@ -169,3 +169,18 @@
   flex-wrap: wrap;
   gap: calc(var(--ds-unit) / 2);
 }
+
+/* App title bar: two squares high, one square inset, regular title and a hairline. */
+.ds-header--app {
+  height: calc(2 * var(--ds-unit));
+  min-height: calc(2 * var(--ds-unit));
+  padding: 0 var(--ds-unit);
+  gap: var(--ds-unit);
+  background: var(--ds-header-paper, var(--background, Canvas));
+  box-shadow: inset 0 -1px var(--ds-header-line, var(--ds-border-color));
+}
+.ds-header--app .ds-header__brand {
+  min-width: 0;
+  font-family: var(--ds-typeface-regular);
+  font-weight: var(--ds-type-weight-default);
+}

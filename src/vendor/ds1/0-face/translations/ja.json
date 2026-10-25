@@ -128,6 +128,11 @@
     "Total": "合計",
     "End date": "終了日",
     "Include time": "時刻を含める",
-    "Time": "時刻"
+    "Time": "時刻",
+    "Day": "日",
+    "Week": "週",
+    "Month": "月",
+    "Swimlane": "スイムレーン",
+    "View": "表示"
   }
 }

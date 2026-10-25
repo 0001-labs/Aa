@@ -128,6 +128,11 @@
     "Total": "合计",
     "End date": "结束日期",
     "Include time": "包含时间",
-    "Time": "时间"
+    "Time": "时间",
+    "Day": "日",
+    "Week": "周",
+    "Month": "月",
+    "Swimlane": "泳道",
+    "View": "视图"
   }
 }
