@@ -300,8 +300,8 @@ textarea.ds-input {
 
 /*
  * `.ds-switch` is the `ds-switch` element's look on a native
- * `<button role="switch" aria-checked>`: two control heights wide, its thumb
- * one control high less a 2px inset, travelling one control height. A pill with a white
+ * `<button role="switch" aria-checked>`: two control heights wide less 4px (28 × 16),
+ * its thumb one control high less a 2px inset, travelling 12px. A pill with a white
  * round thumb, grey when off and the darker green when on, whatever the page's accent: the
  * one switch (Joachim, 19 October 2026).
  */
@@ -314,7 +314,7 @@ textarea.ds-input {
   display: inline-block;
   flex: 0 0 auto;
   vertical-align: middle;
-  width: calc(2 * var(--ds-choice-unit));
+  width: calc(2 * var(--ds-choice-unit) - 4px * var(--ds-sf));
   height: var(--ds-choice-unit);
   margin: 0;
   padding: calc(2px * var(--ds-sf));
@@ -342,7 +342,7 @@ textarea.ds-input {
 }
 
 .ds-switch[aria-checked="true"]::after {
-  transform: translateX(var(--ds-choice-unit));
+  transform: translateX(calc(var(--ds-choice-unit) - 4px * var(--ds-sf)));
 }
 
 @media (prefers-reduced-motion: reduce) {

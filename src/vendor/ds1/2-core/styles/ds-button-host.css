@@ -11,17 +11,17 @@
   gap: var(--ds-button-gap, calc(4px * var(--ds-sf))) !important;
   min-width: 0 !important;
   max-width: 100% !important;
-  height: var(--ds-button-height, var(--ds-control-height)) !important;
+  height: var(--ds-button-height, var(--_button-height, var(--ds-control-height))) !important;
   /* Important, so a page's `* { padding: 0 }` reset cannot reach it: the
      padding is set through --ds-button-padding. */
   padding: var(--ds-button-padding, 0) !important;
-  border-radius: var(--ds-radius) !important;
+  border-radius: var(--_button-radius, var(--ds-radius)) !important;
   corner-shape: var(--ds-corner-shape, round) !important;
   background: var(--ds-button-background, transparent) !important;
   color: var(--ds-button-color, var(--ds-button-text-color)) !important;
   font-family: var(--ds-typeface-regular) !important;
   font-feature-settings: var(--ds-font-features) !important;
-  font-size: var(--ds-type-size-default) !important;
+  font-size: var(--_button-font-size, var(--ds-type-size-default)) !important;
   font-weight: var(--ds-type-weight-default) !important;
   line-height: var(--ds-type-lineheight-default) !important;
   letter-spacing: var(--ds-type-letterspacing-default) !important;
@@ -46,15 +46,15 @@
 
 :host([control="host"][primary]),
 :host([control="slotted"][primary]) {
-  --ds-button-padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
-  --ds-button-background: var(--ds-button-background-color-primary);
-  --ds-button-color: var(--ds-button-text-color-on-accent);
+  --ds-button-padding: 0 var(--_button-padding, calc(var(--ds-button-inset, 4px) * var(--ds-sf)));
+  --ds-button-background: var(--ds-button-primary-fill, var(--ds-button-background-color-primary));
+  --ds-button-color: var(--ds-button-primary-text, var(--ds-button-text-color-on-accent));
 }
 
 :host([control="host"][secondary]),
 :host([control="slotted"][secondary]) {
-  --ds-button-padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
-  --ds-button-background: var(--ds-button-background-color-secondary);
+  --ds-button-padding: 0 var(--_button-padding, calc(var(--ds-button-inset, 4px) * var(--ds-sf)));
+  --ds-button-background: var(--ds-button-secondary-fill, var(--ds-button-background-color-secondary));
 }
 
 :host([control="host"][secondary]:hover:not([disabled])),
@@ -165,8 +165,8 @@
   border: 0 !important;
   margin: 0 !important;
   width: 100% !important;
-  min-height: var(--ds-button-height, var(--ds-control-height)) !important;
-  max-height: var(--ds-button-height, var(--ds-control-height)) !important;
+  min-height: var(--ds-button-height, var(--_button-height, var(--ds-control-height))) !important;
+  max-height: var(--ds-button-height, var(--_button-height, var(--ds-control-height))) !important;
   box-shadow: none !important;
   text-align: start !important;
   text-transform: none !important;
@@ -188,7 +188,7 @@
   align-items: flex-end;
   min-height: var(--ds-row-height);
   vertical-align: bottom;
-  width: var(--ds-button-width, max-content);
+  width: var(--ds-button-width, var(--_button-inline-size, max-content));
 }
 /* An icon's square: the face takes its first sixteen, the spare four above. */
 :host([control="slotted"][icon]) {

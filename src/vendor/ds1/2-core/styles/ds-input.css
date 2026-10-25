@@ -6,6 +6,19 @@
 :host {
   display: block;
   width: 100%;
+  /* The field's own tokens (variant="field"), unset by default and in unscaled px, resolved
+     here at this field's scale. A context that sets --ds-input-height, --ds-input-padding or
+     --ds-input-radius keeps its own; otherwise the field reads these, then its measure. */
+  --_input-size: var(--ds-input-size);
+  --_input-height: calc(var(--_input-size) * var(--ds-sf));
+  --_input-padding-size: var(--ds-input-padding-size);
+  --_input-padding: calc(var(--_input-padding-size) * var(--ds-sf));
+  --_input-corner-size: var(--ds-input-corner-size);
+  --_input-radius: calc(var(--_input-corner-size) * var(--ds-sf));
+}
+/* Its width: unset fills the row as before, a length fixes it. */
+:host([variant="field"]) {
+  width: var(--ds-input-inline-size, 100%);
 }
 
 .input-wrapper {
@@ -231,6 +244,25 @@ input {
   font-size: var(--ds-type-size-default);
   line-height: var(--ds-type-lineheight-default);
   letter-spacing: var(--ds-type-letterspacing-default);
+}
+/* A field is one control high (16px) on the lower sixteen of its square, as a button and a
+ * select are: the square keeps the row it stands in, the face stands at its foot. */
+:host([variant="field"]) {
+  --_field-height: var(--ds-input-height, var(--_input-height, var(--ds-control-height)));
+}
+:host([variant="field"]) .input-container {
+  min-height: var(--ds-row-height);
+  align-items: flex-end;
+}
+:host([variant="field"]) .password-visibility {
+  top: auto;
+  bottom: 0;
+  height: var(--_field-height);
+}
+:host([variant="field"]) input {
+  height: var(--_field-height);
+  padding: var(--ds-input-padding, 0 var(--_input-padding, calc(4px * var(--ds-sf))));
+  border-radius: var(--ds-input-radius, var(--_input-radius, var(--ds-radius)));
 }
 :host([variant="plain"]) :is(input, textarea) {
   padding: var(--ds-input-padding, 0);

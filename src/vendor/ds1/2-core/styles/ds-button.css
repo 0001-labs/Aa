@@ -8,9 +8,32 @@
   vertical-align: bottom;
   min-width: 0;
   flex: 0 0 auto;
-  width: var(--ds-button-width, max-content);
+  width: var(--ds-button-width, var(--_button-inline-size, max-content));
   max-width: 100%;
   overflow: visible;
+  /* The button's own tokens, unset by default and in unscaled px as --ds-control-size is,
+     resolved here at this button's scale. Each face reads them first and falls back to its
+     own measure, so a page that sets none draws exactly as before. --ds-button-inline-size is
+     the width: unset hugs, 100% fills, a length is fixed. */
+  --_button-size: var(--ds-button-size);
+  --_button-height: calc(var(--_button-size) * var(--ds-sf));
+  --_button-corner-size: var(--ds-button-corner-size);
+  --_button-radius: calc(var(--_button-corner-size) * var(--ds-sf));
+  --_button-text-size: var(--ds-button-text-size);
+  --_button-font-size: calc(var(--_button-text-size) * var(--ds-sf));
+  --_button-padding-size: var(--ds-button-padding-size);
+  --_button-padding: calc(var(--_button-padding-size) * var(--ds-sf));
+  --_button-inline-size: var(--ds-button-inline-size);
+}
+
+/* Other controls drawn on this face keep their own measures: an icon or a count's square, a
+   tab, a menu entry, a split run and a paper tab. Their colours still follow the faces. */
+:host(:is([icon], [square], [split], [menu-item], [role="option"], [role^="menuitem"], [role="tab"], [choice], [segment], [paper])) {
+  --_button-height: initial;
+  --_button-radius: initial;
+  --_button-font-size: initial;
+  --_button-padding: initial;
+  --_button-inline-size: initial;
 }
 
 /* Label width is standard. Fixed grid widths are explicit layout choices. */
@@ -35,9 +58,9 @@
 
 :is(button, a) {
   box-sizing: border-box;
-  max-height: var(--ds-control-height);
-  height: var(--ds-control-height);
-  min-height: var(--ds-control-height);
+  max-height: var(--_button-height, var(--ds-control-height));
+  height: var(--_button-height, var(--ds-control-height));
+  min-height: var(--_button-height, var(--ds-control-height));
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -45,13 +68,13 @@
   align-items: center;
   justify-content: flex-start;
   border: none;
-  border-radius: var(--ds-radius);
+  border-radius: var(--_button-radius, var(--ds-radius));
   corner-shape: var(--ds-corner-shape, round);
   cursor: pointer;
   padding: 0;
   color: var(--button-color, var(--button-text-color));
   font-family: var(--ds-typeface-regular);
-  font-size: var(--ds-type-size-default);
+  font-size: var(--_button-font-size, var(--ds-type-size-default));
   line-height: var(--ds-type-lineheight-default);
   letter-spacing: var(--ds-type-letterspacing-default);
   -webkit-tap-highlight-color: transparent;
@@ -76,21 +99,27 @@
   color: inherit;
 }
 
+/* Words drawn by a translation key take the button's text size too: unset, the expression
+   ds-text resolves for itself (component-metrics.css). */
+:is(button, a) ds-text {
+  --ds-type-size-default: var(--_button-font-size, calc(var(--ds-text-size, 14px) * var(--ds-sf, 1)));
+}
+
 :is(button, a)[primary] {
-  background-color: var(--accent-color);
-  color: var(--button-text-color-on-light, var(--black));
+  background-color: var(--ds-button-primary-fill, var(--accent-color));
+  color: var(--ds-button-primary-text, var(--button-text-color-on-light, var(--black)));
   text-decoration-line: none;
   font-family: var(--ds-typeface-regular);
-  padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
+  padding: 0 var(--_button-padding, calc(var(--ds-button-inset, 4px) * var(--ds-sf)));
 }
 
 /* The secondary face's words are the text's ink, as on `.ds-button--secondary`
    and the host and slotted faces; the grey is the face, not the words. */
 :is(button, a)[secondary] {
-  background-color: var(--button-background-color-secondary);
+  background-color: var(--ds-button-secondary-fill, var(--button-background-color-secondary));
   color: var(--ds-button-color, var(--ds-button-text-color));
   font-family: var(--ds-typeface-regular);
-  padding: 0 calc(var(--ds-button-inset, 4px) * var(--ds-sf));
+  padding: 0 var(--_button-padding, calc(var(--ds-button-inset, 4px) * var(--ds-sf)));
 }
 
 /* An entry in a menu or a list of options is one row high on this face too,
