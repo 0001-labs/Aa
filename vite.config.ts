@@ -14,6 +14,8 @@ export default defineConfig({
     // https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
     clearMocks: false,
     environment: "happy-dom",
+    // aa.css as the editor draws it (styles.ts); other sheets stay out of the tests.
+    css: { include: [/\/aa\.css/] },
     include: ["tests/**/*.test.ts"],
   },
 });

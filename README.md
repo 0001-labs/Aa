@@ -6,7 +6,6 @@ Edit formatted text with the toolbar or typed Markdown shortcuts. Aa stores Mark
 
 ```ts
 import { createEditor } from '@0001-labs/aa'
-import '@0001-labs/aa/aa.css'
 
 const editor = createEditor(host, {
   value: '# A note',
@@ -17,9 +16,11 @@ const editor = createEditor(host, {
 })
 ```
 
+Aa brings its own styles, as a Design system 1 component does: the first editor in a document or a shadow root puts `aa.css` there, with its fonts and the Design system 1 sheets it imports, before it draws (`src/styles.ts`). It goes first in the head, so the product's own rules come after it, and its rules weigh nothing, so any of the product's wins. There is nothing to import beside the script. A page that imports `@0001-labs/aa/aa.css` itself keeps it, and the editor brings no second copy (the sheet sets `--aa-sheet` on the root): that is the way for a page that wants the rules before any script runs, or whose Content Security Policy allows no inline style or `data:` fonts, which the brought copy needs.
+
 Menus are enabled by default. `commands`, `blockCommands` and toolbar actions accept `{ id, label, icon, run(editor) }`; icons name Aa's copied Design system 1 icons. `blockPlaceholder` is what an empty block with the caret says, “Press ‘space’ for AI or ‘/’ for commands” where `prompt` is given and “Type / for commands” otherwise, unless set, `''` for nothing. Uploads and product actions belong to the host application.
 
-The toolbar is Design system 1's context bar, drawn by its own `context.css`, which `aa.css` imports from `ds1/` beside it (in the package and in the Sync 1 copy). Its black fill is `light-dark()`: a build that lowers `light-dark()` for older browsers needs a `color-scheme` declared in that same build, or Design system 1's theme script, or the fill draws nothing.
+The toolbar is Design system 1's context bar, drawn by its own `context.css`, which `aa.css` imports from `ds1/` beside it (in the package and in the Sync 1 copy) and the editor brings inside its script. Its black fill is `light-dark()`, kept as written in the script; a build that lowers `light-dark()` in an imported `aa.css` for older browsers needs a `color-scheme` declared in that same build, or Design system 1's theme script, or the fill draws nothing.
 
 The core supports headings, nested bullets and boxes, numbered lists, quotes, fenced code, dividers, GFM tables, callouts as Notion draws them (`> [!💡] Title`, `> [!💡 yellow] Title`, `> [!] Title`: a box on a fill in one of Notion's colours, its icon an emoji or a picture's address, the body on `> ` lines inside it), Markdown alerts (`> [!note] Title`, a type word alone: a hairline and the type's icon), folded callouts (`> [!note]- Title`), toggle headings (`> [!note]- ## Title`), columns (`<columns>` around a `<column>` each) and tabs (`<tabs>` around a `<tab name="…">` each, the open tab's page written where it stands, the row Design system 1's text tabs). Equations use `$…$` or a `$$` block; highlight uses `==…==`. Image alt text is an editable caption. Audio and video image atoms are drawn by file extension. Files enter through `onFiles`; Aa does not upload them.
 
@@ -53,7 +54,6 @@ createEditor(host, {
 
 ```tsx
 import { AaEditor } from '@0001-labs/aa/react'
-import '@0001-labs/aa/aa.css'
 
 <AaEditor value={markdown} onChange={setMarkdown} toolbar />
 ```

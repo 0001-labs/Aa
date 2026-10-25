@@ -9,11 +9,13 @@ import Example from "../../../components/Example.astro";
 
 <Example name="styling-prose" />
 
+The editor brings the sheet itself, as a Design system 1 component does: the first editor in a document, or in a shadow root, puts it first in the head or that root before it draws, with Design system 1's `context.css` (the toolbar), `overlay.css` (the sheet on touch) and its two fonts inside it. There is nothing to import. A page that wants the rules before any script runs, or whose Content Security Policy allows no inline style or `data:` fonts, imports the sheet itself, and the editor then brings no second copy:
+
 ```ts
 import '@0001-labs/aa/aa.css'
 ```
 
-The sheet imports Design system 1's `context.css` (the toolbar) and `overlay.css` (the sheet on touch) from `ds1/` beside it, and its two fonts from `fonts/`. The package carries all three, and so does a copy made with Sync 1. See [Design system 1](/start-here/design-system-1/) for the measures it shares.
+That sheet imports `ds1/` and `fonts/` from beside it; the package carries both, and so does a copy made with Sync 1. See [Design system 1](/start-here/design-system-1/) for the measures it shares.
 
 ```css
 .notes .aa {
@@ -23,7 +25,7 @@ The sheet imports Design system 1's `context.css` (the toolbar) and `overlay.css
 }
 ```
 
-The editor's own rule, on `.aa` and `aa-editor`, weighs nothing, so any rule of the page's for them wins. Its rules for blocks are a class and an attribute each, which a product's rule of the same weight outweighs when it comes after `aa.css`.
+The editor's own rule, on `.aa` and `aa-editor`, weighs nothing, so any rule of the page's for them wins. Its rules for blocks are a class and an attribute each, which a product's rule of the same weight outweighs, since the editor puts `aa.css` before the page's own sheets.
 
 ## Type
 
@@ -130,7 +132,7 @@ Aa writes these itself. Read them in a product's rules; do not set them.
 
 ## Fonts
 
-Two fonts come with `aa.css`, with their licence in `fonts/LICENSE.md`:
+Two fonts come with the editor's styles, with their licence in `fonts/LICENSE.md`:
 
 - **Arrows are always Inter.** “Inter Arrows” is Inter's arrows alone, limited by `unicode-range` to the arrow blocks. It stands first in every font Aa sets, code included, so → and ⇧ are Inter's whatever the face. A product's own font stack on Aa's elements starts with it too.
 - **Code is Aa Mono**, Iosevka cut down to what code uses. It comes after `--aa-typeface-mono` or `--typeface-mono`, then a system monospace, so code never falls back to a serif when the product's font has not loaded.

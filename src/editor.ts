@@ -18,6 +18,7 @@ import { paintSelection } from './selection'
 import { selectAcrossBlocks } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
+import { drawStyles } from './styles'
 import { icons } from './icons'
 import { createTableOfContents } from './table-of-contents'
 import { buttonPartialAtom, createPartialPicker } from './partials'
@@ -250,6 +251,7 @@ type Selection2 = { anchor: Pos; focus: Pos }
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
 export function createEditor(host: HTMLElement, options: EditorOptions = {}): Editor {
+  drawStyles(host)
   if (options.sourceComments || hasCommentSource(options.value ?? '')) return createSourceEditor(host, options, createCoreEditor)
   return createCoreEditor(host, options)
 }

@@ -40,7 +40,7 @@ The core imports neither React nor Yjs. Each optional part is its own entry, loa
 | Entry | What it holds |
 | --- | --- |
 | `@0001-labs/aa` | The editor, `<aa-editor>`, the Markdown model and comments |
-| `@0001-labs/aa/aa.css` | The editor's stylesheet |
+| `@0001-labs/aa/aa.css` | The editor's stylesheet, which the editor already brings; import it only to have the rules before any script runs, or under a strict Content Security Policy |
 | `@0001-labs/aa/react` | `AaEditor`, for React |
 | `@0001-labs/aa/collaboration` | `connectCollaboration`, shared editing on Yjs |
 | `@0001-labs/aa/convex` and `/convex.config` | A Convex transport and component for shared editing |

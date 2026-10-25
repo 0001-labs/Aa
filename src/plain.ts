@@ -1,5 +1,6 @@
 import { breatheDot, canDictate, dictate } from './prompt'
 import { paintSelection } from './selection'
+import { drawStyles } from './styles'
 
 export type PlainEditorOptions = {
   value?: string
@@ -19,6 +20,7 @@ export type PlainEditorOptions = {
 export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions = {}) {
   // Made in the host's own document, so the editor works in a frame too.
   const doc = host.ownerDocument
+  drawStyles(host)
   const block = doc.createElement('div')
   block.className = 'aa-block'
   block.contentEditable = options.readOnly ? 'false' : 'plaintext-only'

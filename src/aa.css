@@ -33,6 +33,9 @@
   font-display: swap;
 }
 
+/* Says this sheet is on the page, so an editor brings no second copy (styles.ts). */
+:root { --aa-sheet: 1; }
+
 :where(.aa, aa-editor) {
   /* The square and the scale: Design system 1's, or the older copies' names. */
   --aa-sf: var(--ds-sf, var(--sf, 1));
