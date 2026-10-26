@@ -222,7 +222,8 @@ export class Menu extends LitElement {
   }
   private onTriggerClick = (event: MouseEvent) => {
     if (this.triggerMode === "context" || this.triggerMode === "manual" || event.defaultPrevented) return;
-    if (this.hover && this.trigger?.matches("a[href]")) return;
+    // A hover menu's trigger that is a link (`a href`, `ds-button href`) follows its link when pressed.
+    if (this.hover && this.trigger?.matches("a[href], ds-button[href]")) return;
     this.focusOnOpen = true;
     this.openingEdge = "first";
     this.toggleFromTrigger(this.triggerMode === "submenu" || !this.open);

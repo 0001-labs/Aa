@@ -24,6 +24,7 @@ export class Button extends Control {
     labelled: { type: Boolean, reflect: true },
     literal: { type: Boolean, reflect: true },
     compact: { type: Boolean, reflect: true },
+    plain: { type: Boolean, reflect: true },
     _fieldsetDisabled: { state: true },
     primary: { type: Boolean, reflect: true },
     secondary: { type: Boolean, reflect: true },
@@ -55,6 +56,8 @@ export class Button extends Control {
   declare labelled: boolean;
   declare literal: boolean;
   declare compact: boolean;
+  /** A plain split: its segments' words and icons alone, on no ground in any state, as text tabs are. */
+  declare plain: boolean;
   declare private _fieldsetDisabled: boolean;
   private splitRole = false;
   get splitDisabled(): boolean { return this.disabled || this._fieldsetDisabled; }
@@ -107,7 +110,7 @@ export class Button extends Control {
     super();
     if (typeof this.attachInternals === "function") this.attachInternals();
     this.split = false; this.options = ""; this.value = "";
-    this.actions = false; this.labelled = false; this.literal = false; this.compact = false; this._fieldsetDisabled = false;
+    this.actions = false; this.labelled = false; this.literal = false; this.compact = false; this.plain = false; this._fieldsetDisabled = false;
     this.addEventListener("click", event => {
       if (this._fieldsetDisabled) { event.preventDefault(); event.stopImmediatePropagation(); }
     }, { capture: true });
