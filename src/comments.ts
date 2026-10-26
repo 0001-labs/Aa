@@ -11,6 +11,7 @@
  * the storage, the people, the permissions and the notifications are the
  * product's, reached through a `CommentStore`.
  */
+import { aaLanguage, word } from './words'
 
 /** Someone who comments: the product's id for them, their name, and the colour they are drawn in (one from the palette by their id otherwise). */
 export type CommentPerson = { id: string; name: string; colour?: string }
@@ -192,9 +193,9 @@ export function countThreads(threads: readonly CommentThread[]): { open: number;
 
 /** "3 comments · 1 resolved", as Link heads its threads. */
 export function commentsLabel(open: number, resolved: number): string {
-  if (open <= 0 && resolved <= 0) return 'Comments'
-  const words = `${Math.max(0, open)} comment${open === 1 ? '' : 's'}`
-  return resolved > 0 ? `${words} · ${resolved} resolved` : words
+  if (open <= 0 && resolved <= 0) return word('Comments')
+  const words = word(open === 1 ? '{count} comment' : '{count} comments', { count: Math.max(0, open) })
+  return resolved > 0 ? `${words} · ${word('{count} resolved', { count: resolved })}` : words
 }
 
 /** The people among `people` named in `body` as `@Name`, longest names first so "Jo Ann" is not taken for "Jo". */
@@ -230,6 +231,8 @@ export function mentionQuery(text: string, caret: number): { start: number; quer
  * date beyond, with its year once it is another year's.
  */
 export function relativeTime(at: number, now = Date.now(), locale?: string): string {
+  const language = locale ?? aaLanguage()
+  if (!language.startsWith('en')) return relativeIn(language, at, now)
   const seconds = Math.round((now - at) / 1000)
   if (seconds < 45) return 'now'
   const minutes = Math.round(seconds / 60)
@@ -242,6 +245,22 @@ export function relativeTime(at: number, now = Date.now(), locale?: string): str
   if (days === 1) return 'yesterday'
   if (days < 7) return `${days} days ago`
   return then.toLocaleDateString(locale, { day: 'numeric', month: 'short', ...(then.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }) })
+}
+
+/** The same steps in another language, worded by the browser's `Intl.RelativeTimeFormat` ("for 3 minutter siden", "i går"). */
+function relativeIn(language: string, at: number, now: number): string {
+  const words = new Intl.RelativeTimeFormat(language, { numeric: 'auto' })
+  const seconds = Math.round((now - at) / 1000)
+  if (seconds < 45) return words.format(0, 'second')
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return words.format(-minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  const then = new Date(at), today = new Date(now)
+  const day = (date: Date) => Math.floor((date.getTime() - date.getTimezoneOffset() * 60000) / 86400000)
+  const days = day(today) - day(then)
+  if (hours < 24 && days === 0) return words.format(-hours, 'hour')
+  if (days < 7) return words.format(-days, 'day')
+  return then.toLocaleDateString(language, { day: 'numeric', month: 'short', ...(then.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }) })
 }
 
 /** Kanji and kana: a name written in them is a Japanese (or Chinese) one. */

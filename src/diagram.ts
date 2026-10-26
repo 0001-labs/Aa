@@ -31,6 +31,7 @@ import { layoutDiagram, type Diagram, type DiagramChart, type DiagramDay, type D
 import type { Atom } from './editor'
 import { defineAaDiagramBoard, type AaDiagramBoardElement } from './diagram-board'
 import styles from './diagram.css?inline'
+import { word } from './words'
 
 export * from './diagram-language'
 export * from './diagram-edit'
@@ -155,7 +156,7 @@ export class AaDiagramElement extends Base {
       this.style.setProperty('--diagram-columns', String(this.#diagram.columns))
       this.style.setProperty('--diagram-rows', String(this.#diagram.rows))
       const words = [...this.#diagram.labels.map(label => label.text), ...this.#diagram.boxes.map(box => box.text)]
-      this.setAttribute('aria-label', words.join(', ') || 'Diagram')
+      this.setAttribute('aria-label', words.join(', ') || word('Diagram'))
     }
     this.shadowRoot!.replaceChildren(...(this.#style ? [this.#style] : []), ...this.#render())
     this.#measure()

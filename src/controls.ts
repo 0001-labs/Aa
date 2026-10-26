@@ -7,6 +7,7 @@ import { icons } from './icons'
 import { CALLOUT_COLORS, TEXT_COLORS, type CalloutColor } from './markdown'
 import { REACTION_EMOJIS } from './comments'
 import { initTooltips } from './ds1/0-face/tooltips'
+import { word } from './words'
 /** A button on the bar over selected words; `shortcut` is named in its tooltip (⌘B). */
 export type ToolbarAction = { id: string; label: string; icon: string; shortcut?: string; run(editor: Editor): void }
 /** `ink`: one of the text colours its row's mark is drawn in. */
@@ -24,7 +25,8 @@ const kinds: { kind: TurnKind; label: string; icon: string }[] = [
 ]
 /** The Markdown that writes a kind, shown at its row's end in a sheet. */
 const keys: Partial<Record<TurnKind, string>> = { h1: '#', h2: '##', h3: '###', todo: '[ ]', bullet: '-', numbered: '1.', quote: '>', code: '```', divider: '---', callout: '> [!', table: '|', equation: '$$' }
-function button(label: string, icon: string, action: () => void, text = false, shortcut?: string): HTMLButtonElement {
+function button(english: string, icon: string, action: () => void, text = false, shortcut?: string): HTMLButtonElement {
+  const label = word(english)
   const node = document.createElement('button')
   node.type = 'button'; node.setAttribute('aria-label', label)
   // An icon alone is named by Design system 1's tooltip, with its shortcut; a row with words needs none.
@@ -47,7 +49,7 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
   // Drawn as Design system 1's context bar (ds1/context.css), each cell an icon
   // one square. A formatting bar that leaves the caret in the writing is a
   // toolbar, not a menu: it opens without the focus, and Tab reaches its buttons.
-  connectedCallback() { this.classList.add('ds-context', 'ds-context--bar'); this.setAttribute('role', 'toolbar'); this.setAttribute('aria-label', 'Text formatting'); this.refresh() }
+  connectedCallback() { this.classList.add('ds-context', 'ds-context--bar'); this.setAttribute('role', 'toolbar'); this.setAttribute('aria-label', word('Text formatting')); this.refresh() }
   refresh() {
     this.replaceChildren(...this.actions.map(action => {
       const node = button(action.label, action.icon, () => { if (this.editor && !this.editor.readOnly) action.run(this.editor) }, false, action.shortcut)
@@ -170,7 +172,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     const ask = document.createElement('form')
     ask.className = 'aa-toolbar-ask'
     const field = document.createElement('textarea')
-    field.rows = 1; field.placeholder = 'Ask AI'; field.setAttribute('aria-label', 'Ask AI about the selected words'); field.autocomplete = 'off'
+    field.rows = 1; field.placeholder = word('Ask AI'); field.setAttribute('aria-label', word('Ask AI about the selected words')); field.autocomplete = 'off'
     ask.append(field)
     const expand = (expanded: boolean) => {
       toolbar.toggleAttribute('data-asking', expanded)
@@ -186,7 +188,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       field.disabled = true
       expand(false)
       editor.selectRange(range.start, range.end)
-      void editor.askAbout(said).then(done => { field.value = done ? '' : field.value; if (!done) field.placeholder = 'Not answered' }).catch(() => { field.placeholder = 'Not answered' }).finally(() => { field.disabled = false; setTimeout(() => { field.placeholder = 'Ask AI' }, 2000) })
+      void editor.askAbout(said).then(done => { field.value = done ? '' : field.value; if (!done) field.placeholder = word('Not answered') }).catch(() => { field.placeholder = word('Not answered') }).finally(() => { field.disabled = false; setTimeout(() => { field.placeholder = word('Ask AI') }, 2000) })
     })
     field.addEventListener('keydown', event => {
       if (event.isComposing) return
@@ -214,7 +216,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   if (options.toolbar) overlayRoot.append(toolbar)
 
   const menu = document.createElement('div')
-  menu.className = 'aa-controls aa-menu'; menu.hidden = true; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Block commands')
+  menu.className = 'aa-controls aa-menu'; menu.hidden = true; menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', word('Block commands'))
   // The commands scroll within the menu; Close stands under them, as Notion's menu has it.
   const list = document.createElement('div'); list.className = 'aa-menu-list'; list.setAttribute('role', 'none')
   const closeRow = button('Close', 'close', () => close(), true)
@@ -250,10 +252,10 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   overlayRoot.append(menu, findBar)
   const linkBar = document.createElement('form')
   linkBar.className = 'aa-controls aa-find aa-link-editor'; linkBar.hidden = true
-  linkBar.setAttribute('aria-label', 'Edit link')
-  const linkUrl = document.createElement('input'); linkUrl.type = 'text'; linkUrl.placeholder = 'Link URL'; linkUrl.setAttribute('aria-label', 'Link URL')
-  const applyLink = document.createElement('button'); applyLink.type = 'submit'; applyLink.textContent = 'Apply'
-  const cancelLink = document.createElement('button'); cancelLink.type = 'button'; cancelLink.textContent = 'Cancel'
+  linkBar.setAttribute('aria-label', word('Edit link'))
+  const linkUrl = document.createElement('input'); linkUrl.type = 'text'; linkUrl.placeholder = word('Link URL'); linkUrl.setAttribute('aria-label', word('Link URL'))
+  const applyLink = document.createElement('button'); applyLink.type = 'submit'; applyLink.textContent = word('Apply')
+  const cancelLink = document.createElement('button'); cancelLink.type = 'button'; cancelLink.textContent = word('Cancel')
   linkBar.append(linkUrl, applyLink, cancelLink); overlayRoot.append(linkBar)
   let linkTarget: { start: number; end: number; text: string; url: string } | null = null
   const finishLink = () => { linkBar.hidden = true; if (linkTarget) editor.selectRange(linkTarget.start, linkTarget.end); linkTarget = null }
@@ -294,17 +296,17 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     if (editor.readOnly) return
     const picker = document.createElement('div')
     picker.className = 'aa-controls aa-menu aa-reaction-picker aa-callout-icons'
-    picker.setAttribute('role', 'menu'); picker.setAttribute('aria-label', 'Callout icon')
+    picker.setAttribute('role', 'menu'); picker.setAttribute('aria-label', word('Callout icon'))
     const choose = (icon: string | null) => { hideIconPicker(); editor.callout({ icon }, index); editor.focus() }
     for (const emoji of REACTION_EMOJIS) {
       const cell = document.createElement('button')
-      cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = emoji; cell.setAttribute('aria-label', `Icon ${emoji}`)
+      cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = emoji; cell.setAttribute('aria-label', word('Icon {emoji}', { emoji }))
       cell.addEventListener('pointerdown', event => event.preventDefault())
       cell.addEventListener('click', event => { event.preventDefault(); choose(emoji) })
       picker.append(cell)
     }
     const none = document.createElement('button')
-    none.type = 'button'; none.setAttribute('role', 'menuitem'); none.className = 'aa-callout-icons-none'; none.textContent = 'No icon'
+    none.type = 'button'; none.setAttribute('role', 'menuitem'); none.className = 'aa-callout-icons-none'; none.textContent = word('No icon')
     none.addEventListener('pointerdown', event => event.preventDefault())
     none.addEventListener('click', event => { event.preventDefault(); choose(null) })
     picker.append(none)
@@ -355,7 +357,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       if (command.swatch) (node.querySelector('.aa-icon') as HTMLElement | null)?.setAttribute('data-fill', command.swatch)
       node.classList.add('note-menu-row'); node.dataset.command = command.id; node.setAttribute('role', 'menuitem');
       if (command.id === 'count') {
-        node.lastElementChild!.textContent = command.label.split(',')[0]
+        node.lastElementChild!.textContent = word(command.label).split(',')[0]
         node.querySelector('.aa-icon')?.remove()
       }
       node.tabIndex = index === active ? 0 : -1
@@ -367,7 +369,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       })
       return node
     }))
-    if (!choices.length) { const empty = document.createElement('span'); empty.className = 'aa-menu-empty'; empty.textContent = 'No matching commands'; list.append(empty) }
+    if (!choices.length) { const empty = document.createElement('span'); empty.className = 'aa-menu-empty'; empty.textContent = word('No matching commands'); list.append(empty) }
     menu.replaceChildren(list, closeRow)
     showPreview()
     // The row the arrows reach is scrolled into the list's view.
@@ -376,7 +378,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   function open(commands: readonly Command[], rect: DOMRect) {
     choices = commands.filter(command => command.enabled?.(editor) !== false)
-    menu.toggleAttribute('data-palette', choices.length > 0 && choices.every(command => command.id.startsWith('color-'))); menu.setAttribute('aria-label', 'palette' in menu.dataset ? 'Text colour' : 'Block commands')
+    menu.toggleAttribute('data-palette', choices.length > 0 && choices.every(command => command.id.startsWith('color-'))); menu.setAttribute('aria-label', word('palette' in menu.dataset ? 'Text colour' : 'Block commands'))
     active = 0; menu.hidden = false; paint(); moveMenu(rect); positionPreview()
   }
   const builtin: Command[] = [...kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), ...inserts]
@@ -403,7 +405,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       ...(options.blockCommands ?? []),
     ]
     const count = editor.stats()
-    commands.push({ id: 'count', label: `${count.words} words, ${count.characters} characters`, icon: 'text', run: () => {} })
+    commands.push({ id: 'count', label: word('{words} words, {characters} characters', { words: count.words, characters: count.characters }), icon: 'text', run: () => {} })
     slash = null
     open(commands, at ?? (host.children[target] ?? host).getBoundingClientRect())
   }
@@ -416,7 +418,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     if (!match) { if (slash) close(); return }
     const query = match[1].toLocaleLowerCase()
     slash = { from: selection.end - match[1].length - 1, to: selection.end }
-    const commands = [...builtin, ...(options.commands ?? [])].filter(command => `${command.label} ${command.keywords ?? ''}`.toLocaleLowerCase().includes(query))
+    const commands = [...builtin, ...(options.commands ?? [])].filter(command => `${word(command.label)} ${command.label} ${command.keywords ?? ''}`.toLocaleLowerCase().includes(query))
     const rect = host.children[block.index]?.getBoundingClientRect() ?? host.getBoundingClientRect()
     open(commands, rect)
   }
@@ -453,18 +455,18 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     saved = selection
     timer = setTimeout(() => { if (!disposed && options.toolbar && !editor.readOnly) { toolbar.hidden = false; positionToolbar() } }, 140)
   }
-  const query = document.createElement('input'); query.placeholder = 'Find'; query.setAttribute('aria-label', 'Find')
-  const replacement = document.createElement('input'); replacement.placeholder = 'Replace'; replacement.setAttribute('aria-label', 'Replace')
+  const query = document.createElement('input'); query.placeholder = word('Find'); query.setAttribute('aria-label', word('Find'))
+  const replacement = document.createElement('input'); replacement.placeholder = word('Replace'); replacement.setAttribute('aria-label', word('Replace'))
   const result = document.createElement('span'); result.setAttribute('aria-live', 'polite')
   let matches: { start: number; end: number }[] = [], matchIndex = -1
   const refreshFind = () => {
     if (findBar.hidden) return
     matches = editor.find(query.value)
     editor.decorate(matches.map(match => ({ from: match.start, to: match.end, className: 'aa-find-match' })), 'find')
-    result.textContent = `${matches.length} matches`
+    result.textContent = word('{count} matches', { count: matches.length })
     matchIndex = Math.min(matchIndex, matches.length - 1)
   }
-  const nextMatch = (direction: number) => { if (!matches.length) return; matchIndex = (matchIndex + direction + matches.length) % matches.length; const match = matches[matchIndex]; editor.selectRange(match.start, match.end); result.textContent = `${matchIndex + 1} of ${matches.length}` }
+  const nextMatch = (direction: number) => { if (!matches.length) return; matchIndex = (matchIndex + direction + matches.length) % matches.length; const match = matches[matchIndex]; editor.selectRange(match.start, match.end); result.textContent = word('{number} of {count}', { number: matchIndex + 1, count: matches.length }) }
   const closeFind = () => { findBar.hidden = true; editor.decorate([], 'find'); editor.focus() }
   query.addEventListener('input', refreshFind)
   findBar.append(query, replacement, button('Previous match', 'up', () => nextMatch(-1)), button('Next match', 'down', () => nextMatch(1)), button('Replace', 'text', () => {

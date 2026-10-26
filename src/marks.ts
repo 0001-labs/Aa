@@ -14,6 +14,7 @@
  */
 
 import type { Block } from './markdown'
+import { word } from './words'
 
 /**
  * One change an answer made: the blocks it put in, the blocks they took the
@@ -124,11 +125,11 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
       const control = doc.createElement('button')
       control.type = 'button'
       control.className = 'aa-ai-revert'
-      control.setAttribute('aria-label', section ? 'Revert what AI wrote here' : 'Revert what AI changed here')
-      control.title = 'Revert'
+      control.setAttribute('aria-label', word(section ? 'Revert what AI wrote here' : 'Revert what AI changed here'))
+      control.title = word('Revert')
       control.style.left = `${end.x}px`
       control.style.top = `${end.y}px`
-      control.append(Object.assign(doc.createElement('span'), { className: 'aa-ai-dot' }), Object.assign(doc.createElement('span'), { className: 'aa-ai-label', textContent: 'Revert' }))
+      control.append(Object.assign(doc.createElement('span'), { className: 'aa-ai-dot' }), Object.assign(doc.createElement('span'), { className: 'aa-ai-label', textContent: word('Revert') }))
       // A press on it is its own: the caret and the focus stay in the writing.
       control.addEventListener('pointerdown', event => { event.preventDefault(); event.stopPropagation() })
       control.addEventListener('click', event => {

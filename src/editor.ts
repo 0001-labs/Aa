@@ -26,6 +26,7 @@ import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from '.
 import { openPrompt, glisten, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
 import { createCommentsView, type CommentsView } from './comments-view'
 import type { AnchoredThread, CommentStore } from './comments'
+import { word } from './words'
 
 /**
  * An atom the editor reads and draws: what it is in the text, and how it is
@@ -62,7 +63,7 @@ function pictureGrip(element: HTMLElement, alt: string, src: string, width: numb
   grip.setAttribute('data-aa-interactive', '')
   grip.setAttribute('role', 'separator')
   grip.setAttribute('aria-orientation', 'vertical')
-  grip.setAttribute('aria-label', 'Picture width')
+  grip.setAttribute('aria-label', word('Picture width'))
   grip.contentEditable = 'false'
   const write = (squares: number | null) => element.dispatchEvent(new CustomEvent('aa-atom-source', { bubbles: true, detail: { source: writePicture(alt, src, squares) } }))
   grip.addEventListener('pointerdown', event => {
@@ -118,7 +119,7 @@ export const imageAtom: Atom = {
       element.append(image)
       sizePicture(element, source)
     }
-    const caption = document.createElement('span'); caption.className = 'aa-caption'; caption.textContent = alt; caption.contentEditable = 'true'; caption.dataset.placeholder = 'Add a caption'; element.append(caption)
+    const caption = document.createElement('span'); caption.className = 'aa-caption'; caption.textContent = alt; caption.contentEditable = 'true'; caption.dataset.placeholder = word('Add a caption'); element.append(caption)
   },
 }
 
@@ -262,7 +263,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   let reordering = options.reordering !== false, placing = options.placing !== false
   let placeholder = options.placeholder ?? ''
   // As Notion says it: Space asks AI where the product answers, / opens the commands.
-  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? (options.prompt ? 'Press space for AI or / for commands' : 'Type / for commands')
+  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? word(options.prompt ? 'Press space for AI or / for commands' : 'Type / for commands')
   let composing = false
   let destroyed = false
   let selected: BlockSelection | null = null
@@ -274,7 +275,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   let transactionDepth = 0
   let historyProvider: { undo(): boolean; redo(): boolean } | null = null
   const contents = new Map<HTMLElement, () => void>()
-  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), ...(options.partials ? [buttonPartialAtom(() => !readOnly)] : []), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }, { name: 'toc', match: () => 0, draw: element => drawContents(element), insert: { label: 'Table of contents', icon: 'bullet', keywords: 'toc outline headings navigation', source: '<table_of_contents/>' } }, { name: 'tabs', match: () => 0, draw: (element, source) => drawTabs(element, source), insert: { label: 'Tabs', icon: 'tabs', keywords: 'tab pages sections panels', source: writeTabs([{ name: 'Tab 1', content: '' }, { name: 'Tab 2', content: '' }]) } }]
+  const atoms: readonly Atom[] = [...(options.atoms ?? [imageAtom]), ...(options.partials ? [buttonPartialAtom(() => !readOnly)] : []), { ...EQUATION, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.slice(1, -1), false) : void (element.textContent = source.slice(1, -1)) }, { name: 'equation-block', match: () => 0, draw: (element, source) => options.drawEquation ? options.drawEquation(element, source.replace(/^\$\$\n?|\n?\$\$$/g, ''), true) : void (element.textContent = source.replace(/^\$\$\n?|\n?\$\$$/g, '')) }, { name: 'columns', match: () => 0, draw: (element, source) => drawColumns(element, source), insert: { label: 'Columns', icon: 'column', keywords: 'side by side layout pictures images', source: writeColumns(['', '']) } }, { name: 'toc', match: () => 0, draw: element => drawContents(element), insert: { label: 'Table of contents', icon: 'bullet', keywords: 'toc outline headings navigation', source: '<table_of_contents/>' } }, { name: 'tabs', match: () => 0, draw: (element, source) => drawTabs(element, source), insert: { label: 'Tabs', icon: 'tabs', keywords: 'tab pages sections panels', source: writeTabs([{ name: word('Tab {number}', { number: 1 }), content: '' }, { name: word('Tab {number}', { number: 2 }), content: '' }]) } }]
   function drawContents(element: HTMLElement) {
     const update = createTableOfContents(element, () => blocks, host, index => {
       const target = elements()[index]
@@ -404,7 +405,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         if (tab.icon) { const icon = document.createElement('span'); icon.className = 'aa-tab-icon'; icon.textContent = tab.icon; button.append(icon) }
         const words = document.createElement('span')
         words.className = 'aa-tab-name'
-        words.textContent = tab.name || `Tab ${index + 1}`
+        words.textContent = tab.name || word('Tab {number}', { number: index + 1 })
         button.append(words)
         button.addEventListener('pointerdown', event => { if (index === current && !readOnly) event.preventDefault() })
         button.addEventListener('click', event => {
@@ -418,8 +419,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         const add = document.createElement('button')
         add.type = 'button'
         add.className = 'aa-tab aa-tab-add'
-        add.setAttribute('aria-label', 'Add tab')
-        add.dataset.tooltip = 'Add tab'
+        add.setAttribute('aria-label', word('Add tab'))
+        add.dataset.tooltip = word('Add tab')
         const picture = document.createElement('span')
         picture.className = 'aa-icon'
         const svg = icons['./icons/plus.svg']
@@ -428,7 +429,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         add.addEventListener('pointerdown', event => event.preventDefault())
         add.addEventListener('click', event => {
           event.preventDefault(); event.stopPropagation()
-          tabs = [...tabs, { name: `Tab ${tabs.length + 1}`, content: '' }]
+          tabs = [...tabs, { name: word('Tab {number}', { number: tabs.length + 1 }), content: '' }]
           current = tabs.length - 1
           changed(); build()
           const button = row.querySelector<HTMLButtonElement>(`[data-tab="${current}"]`)
@@ -445,7 +446,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       field.type = 'text'
       field.className = 'aa-tab-field'
       field.value = tabs[index].name
-      field.setAttribute('aria-label', 'Tab name')
+      field.setAttribute('aria-label', word('Tab name'))
       field.size = Math.max(1, tabs[index].name.length || 5)
       let done = false
       const finish = (keep: boolean) => {
@@ -537,6 +538,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   const history = new History({ blocks, anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } })
 
   host.classList.add('aa')
+  // An empty heading's "Heading 2" is drawn by aa.css; its word follows the page's language.
+  if (word('Heading') !== 'Heading') host.style.setProperty('--aa-heading-word', JSON.stringify(word('Heading')))
   host.setAttribute('role', 'textbox')
   host.setAttribute('aria-multiline', 'true')
   /** What a screen reader is told beside the text: whether it can be changed, and the placeholder. */
@@ -597,7 +600,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       if (text) element.dataset.placeholder = text
       else if (element.dataset.placeholder !== undefined) delete element.dataset.placeholder
       // At a sentence's end, only the AI is offered, never the commands.
-      if (index === sentence) element.dataset.hint = 'Press space for AI'
+      if (index === sentence) element.dataset.hint = word('Press space for AI')
       else if (element.dataset.hint !== undefined) delete element.dataset.hint
     })
   }
@@ -1478,7 +1481,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       place: () => { const now = element.getBoundingClientRect(); return caret ? new DOMRect(now.left + start, now.top + dy, Math.max(now.width - start - end, 80), line || caret.height) : now },
       indent: dx,
       type: element,
-      placeholder: inline ? 'Ask AI or press space to speak' : undefined,
+      placeholder: inline ? word('Ask AI or press space to speak') : undefined,
       // The block is as tall as the prompt in it, so the blocks under it move down as it grows.
       grow: height => { element.style.minHeight = height ? `${dy + height}px` : '' },
       about: () => sectionOf(blocks.indexOf(block)).map(at => elements()[at]),
@@ -1492,11 +1495,11 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
           document: toMarkdown(blocks.map(each => each === block ? { ...each, source: inline ? `${each.source}${PROMPT_HERE}` : PROMPT_HERE } : each)),
         })
         const now = blocks.indexOf(block)
-        if (destroyed || readOnly || now < 0 || block.source !== (inline ? written : '')) throw new Error('Not answered')
+        if (destroyed || readOnly || now < 0 || block.source !== (inline ? written : '')) throw new Error(word('Not answered'))
         // The room kept for the prompt goes before the answer is drawn, so no gap is left.
         element.style.minHeight = ''
         const done = applyAnswer(now, answer, inline)
-        if (!done) throw new Error('Not answered')
+        if (!done) throw new Error(word('Not answered'))
         elements()[Math.min(done.caret, blocks.length - 1)]?.focus({ preventScroll: true })
       },
       close: sent => {

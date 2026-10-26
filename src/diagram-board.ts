@@ -42,6 +42,7 @@ import connectIcon from './icons/connect.svg?raw'
 import arrowIcon from './icons/right.svg?raw'
 import deleteIcon from './icons/delete.svg?raw'
 import wrapIcon from './icons/column.svg?raw'
+import { word } from './words'
 
 /** Choosing and carrying, or drawing lines from box to box. */
 type Mode = 'choose' | 'line' | 'arrow'
@@ -135,11 +136,11 @@ export class AaDiagramBoardElement extends Base {
     this.#probe = part('div', 'probe')
     this.#tools = part('div', 'tools')
     this.#tools.setAttribute('role', 'toolbar')
-    this.#tools.setAttribute('aria-label', 'Diagram')
+    this.#tools.setAttribute('aria-label', word('Diagram'))
     // The colours open from one tool, in the top layer so nothing around the board cuts them off.
     this.#colors = part('div', 'colors', true)
     this.#colors.setAttribute('role', 'menu')
-    this.#colors.setAttribute('aria-label', 'Colour')
+    this.#colors.setAttribute('aria-label', word('Colour'))
     if ('popover' in HTMLElement.prototype) this.#colors.setAttribute('popover', 'manual')
     this.#paper = part('div', 'paper')
     this.#drawing = document.createElement(tag)
@@ -152,14 +153,15 @@ export class AaDiagramBoardElement extends Base {
     this.#lines.setAttribute('class', 'lines')
     this.#lines.setAttribute('aria-hidden', 'true')
     this.#rename = Object.assign(part('input', 'rename', true), { type: 'text', spellcheck: false })
-    this.#rename.setAttribute('aria-label', 'Name')
+    this.#rename.setAttribute('aria-label', word('Name'))
     layer.append(this.#ring, this.#aim, this.#ghost, this.#lines, this.#grip, this.#rename)
     // The drawing stays in the page, slotted onto the paper, so a product's own rules for its diagram element reach it.
     this.#paper.append(document.createElement('slot'), layer)
     root.append(style, this.#probe, this.#paper, this.#tools, this.#colors)
     this.append(this.#drawing)
 
-    const button = (label: string, run: () => void, content: HTMLElement) => {
+    const button = (english: string, run: () => void, content: HTMLElement) => {
+      const label = word(english)
       const node = document.createElement('button')
       node.type = 'button'; node.title = label; node.setAttribute('aria-label', label)
       node.append(content)
@@ -182,7 +184,7 @@ export class AaDiagramBoardElement extends Base {
       colors: [null, ...DIAGRAM_COLORS].map(color => {
         const entry = button(color ? COLOR_NAMES[color] : 'No colour', () => { this.#closeColours(); this.#colour(color) }, chip(color))
         entry.setAttribute('role', 'menuitemradio')
-        entry.append(Object.assign(document.createElement('span'), { textContent: color ? COLOR_NAMES[color] : 'No colour' }))
+        entry.append(Object.assign(document.createElement('span'), { textContent: word(color ? COLOR_NAMES[color] : 'No colour') }))
         return entry
       }),
       wrap: button('Fit the width', () => this.#wrap(), icon(wrapIcon)),
@@ -208,8 +210,8 @@ export class AaDiagramBoardElement extends Base {
     this.tabIndex = 0
     this.setAttribute('role', 'application')
     this.setAttribute('aria-roledescription', 'diagram')
-    this.setAttribute('aria-label', 'Diagram')
-    this.setAttribute('aria-description', HELP)
+    this.setAttribute('aria-label', word('Diagram'))
+    this.setAttribute('aria-description', word(HELP))
     const index = Array.from(host.children).indexOf(block)
     // Drawn again for the block it was working on, the board carries on where it was.
     const before = states.get(host)
@@ -365,7 +367,7 @@ export class AaDiagramBoardElement extends Base {
   #lineTool(mode: 'line' | 'arrow') {
     const target = this.#state.target
     if (target && 'join' in target) {
-      this.#commit(joinKind(this.#source, this.#layout, target, mode === 'arrow' ? '->' : '--'), { target }, mode === 'arrow' ? 'Made an arrow' : 'Made a line')
+      this.#commit(joinKind(this.#source, this.#layout, target, mode === 'arrow' ? '->' : '--'), { target }, word(mode === 'arrow' ? 'Made an arrow' : 'Made a line'))
       return
     }
     this.#setMode(this.#state.mode === mode ? 'choose' : mode)
@@ -479,7 +481,7 @@ export class AaDiagramBoardElement extends Base {
     }
     const group = this.#layout.groups[target.group]
     if (!group) return ''
-    return `${this.#nameOf(target) ?? 'Unnamed'}, ${target.box !== undefined ? 'item' : KIND_NAMES[group.kind]}`
+    return `${this.#nameOf(target) ?? word('Unnamed')}, ${word(target.box !== undefined ? 'item' : KIND_NAMES[group.kind])}`
   }
 
   /** Hand the editor the block written anew; the board is drawn again with it. */
@@ -609,7 +611,7 @@ export class AaDiagramBoardElement extends Base {
         carry(landing.x * unit, landing.y * unit, true)
         after(() => {
           if (written === this.#source) { this.#drawChoice(); return }
-          this.#commit(written, { target }, `Moved ${this.#nameOf(target) ?? ''}`.trim())
+          this.#commit(written, { target }, word('Moved {name}', { name: this.#nameOf(target) ?? '' }).trim())
         })
       },
       onCancel: () => {
@@ -637,7 +639,7 @@ export class AaDiagramBoardElement extends Base {
     return this.#redrawing(
       ({ point }) => resizeGroup(this.#source, this.#layout, index, group.kind === 'post-it' ? Math.max(point.x - group.x, point.y - group.y) : point.x - group.x),
       { group: index },
-      `Sized ${this.#nameOf({ group: index }) ?? ''}`.trim(),
+      word('Sized {name}', { name: this.#nameOf({ group: index }) ?? '' }).trim(),
       'data-sizing',
     )
   }
@@ -672,15 +674,15 @@ export class AaDiagramBoardElement extends Base {
         const end = referenceOf(this.#layout, to)!
         const source = addJoin(this.#source, name, end, mode === 'arrow' ? '->' : '--')
         const join = layoutDiagram(source).joins.length - 1
-        this.#commit(source, { target: join >= 0 ? { join } : from, mode: 'choose' }, `Joined ${name} to ${end}`)
+        this.#commit(source, { target: join >= 0 ? { join } : from, mode: 'choose' }, word('Joined {name} to {end}', { name, end }))
       },
       onCancel: clear,
       onClick: () => this.#choose(from),
       targets: () => this.#things().filter(thing => !('join' in thing) && over(this.#middleOf(thing))).map(thing => this.#middleOf(thing)),
       announce: (drag, phase) => {
-        if (phase === 'start') return `Joining ${name}. Tab to the one to join it to, then Enter. Escape stops.`
-        if (phase === 'move') { const to = over(drag.point); return to ? this.#describe(to) : 'Nothing here' }
-        return phase === 'cancel' ? 'Not joined' : undefined
+        if (phase === 'start') return word('Joining {name}. Tab to the one to join it to, then Enter. Escape stops.', { name })
+        if (phase === 'move') { const to = over(drag.point); return to ? this.#describe(to) : word('Nothing here') }
+        return phase === 'cancel' ? word('Not joined') : undefined
       },
     }
   }
@@ -729,11 +731,11 @@ export class AaDiagramBoardElement extends Base {
   #add(kind: 'box' | 'post-it', at = this.#freeSpot(kind)) {
     if (!this.#editable()) return
     this.#activate()
-    const name = freeName(this.#layout, kind === 'box' ? 'Item' : 'Note')
+    const name = freeName(this.#layout, word(kind === 'box' ? 'Item' : 'Note'))
     const source = addGroup(this.#source, this.#layout, kind, name, at.x, at.y)
     const index = layoutDiagram(source).groups.findIndex(group => (group.kind === 'box' ? group.boxes[0]?.text : group.name) === name)
     const target = index >= 0 ? { group: index } : null
-    this.#commit(source, { target, renaming: target, mode: 'choose' }, `Added ${name}`)
+    this.#commit(source, { target, renaming: target, mode: 'choose' }, word('Added {name}', { name }))
   }
 
   /** A place on the paper under a mouse, in squares. */
@@ -804,40 +806,40 @@ export class AaDiagramBoardElement extends Base {
     this.#rename.hidden = true
     this.#state.renaming = null
     if (!target) return
-    if (keep && value.trim() && value.trim() !== this.#nameOf(target)) this.#commit(renameTarget(this.#source, this.#layout, target, value), { target, renaming: null }, `Named ${value.trim()}`)
+    if (keep && value.trim() && value.trim() !== this.#nameOf(target)) this.#commit(renameTarget(this.#source, this.#layout, target, value), { target, renaming: null }, word('Named {name}', { name: value.trim() }))
     else this.focus({ preventScroll: true })
   }
 
   #colour(color: DiagramColor | null) {
     const target = this.#state.target
-    if (target) this.#commit(colorTarget(this.#source, this.#layout, target, color), { target }, color ? COLOR_NAMES[color] : 'No colour')
+    if (target) this.#commit(colorTarget(this.#source, this.#layout, target, color), { target }, word(color ? COLOR_NAMES[color] : 'No colour'))
   }
 
   /** Wrapping on or off: fitted to the width it is read in, in strips, or kept as drawn. It is written on the fence (```` ```diagram wrap ````). */
   #wrap() {
     const wraps = !diagramWraps(this.#open)
-    this.#commit(this.#source, {}, wraps ? 'Fits the width' : 'Keeps its layout', diagramFenceWrapped(this.#open, wraps))
+    this.#commit(this.#source, {}, word(wraps ? 'Fits the width' : 'Keeps its layout'), diagramFenceWrapped(this.#open, wraps))
   }
 
   /** A prompt under the board; its answer is the diagram written again, while the drawing glistens. */
   #ask() {
     const available = { available: false } as { available: boolean }
     this.dispatchEvent(new CustomEvent('aa-atom-prompt', { bubbles: true, composed: true, detail: available }))
-    if (!available.available) { say('Asking AI is not set up here'); return }
+    if (!available.available) { say(word('Asking AI is not set up here')); return }
     this.#asking?.close()
     this.#asking = openPrompt({
       place: () => { const board = this.getBoundingClientRect(), tools = this.#tools.getBoundingClientRect(), unit = this.#unit(); return new DOMRect(board.left, (tools.height ? tools.bottom : this.#paper.getBoundingClientRect().bottom) + 1, board.width, unit) },
       type: this,
       // The board makes room under its tools for the prompt, so the writing under it moves down as it grows.
       grow: height => { this.style.paddingBottom = height ? `${height + 1}px` : '' },
-      placeholder: 'Ask AI or press space to speak',
+      placeholder: word('Ask AI or press space to speak'),
       about: () => this.#drawing ? [this.#drawing] : [],
       send: async (prompt, signal) => {
         const detail: { prompt: string; text: string; signal: AbortSignal; answer?: Promise<string> } = { prompt, text: this.#source, signal }
         this.dispatchEvent(new CustomEvent('aa-atom-prompt', { bubbles: true, composed: true, detail }))
         const answer = (await detail.answer)?.replace(/^\s*```[^\n]*\n|\n```\s*$/g, '').trim()
-        if (!answer || !this.isConnected) throw new Error('Not answered')
-        this.#commit(answer, { target: null }, 'Drawn')
+        if (!answer || !this.isConnected) throw new Error(word('Not answered'))
+        this.#commit(answer, { target: null }, word('Drawn'))
       },
       close: sent => { this.#asking = null; if (!sent && this.isConnected) this.focus({ preventScroll: true }) },
     })
@@ -845,7 +847,7 @@ export class AaDiagramBoardElement extends Base {
 
   #delete() {
     const target = this.#state.target
-    if (target) this.#commit(deleteTarget(this.#source, this.#layout, target), { target: null }, `Deleted ${this.#describe(target)}`)
+    if (target) this.#commit(deleteTarget(this.#source, this.#layout, target), { target: null }, word('Deleted {name}', { name: this.#describe(target) }))
   }
 
   #key(event: KeyboardEvent) {
@@ -893,11 +895,11 @@ export class AaDiagramBoardElement extends Base {
       if (event.altKey) {
         // Sized from the keys a whole item at a time: a box across, a post-it every way.
         const by = (group.kind === 'post-it' ? step[0] + step[1] : step[0]) * 4
-        if (by) this.#commit(resizeGroup(this.#source, this.#layout, target.group, group.w + by), { target: { group: target.group } }, `Sized ${this.#nameOf(target) ?? ''}`.trim())
+        if (by) this.#commit(resizeGroup(this.#source, this.#layout, target.group, group.w + by), { target: { group: target.group } }, word('Sized {name}', { name: this.#nameOf(target) ?? '' }).trim())
         return
       }
       const by = event.shiftKey ? 4 : 1
-      this.#commit(moveGroup(this.#source, this.#layout, target.group, Math.max(0, group.x + step[0] * by), Math.max(0, group.y + step[1] * by)), { target: { group: target.group } }, `Moved ${this.#nameOf(target) ?? ''}`.trim())
+      this.#commit(moveGroup(this.#source, this.#layout, target.group, Math.max(0, group.x + step[0] * by), Math.max(0, group.y + step[1] * by)), { target: { group: target.group } }, word('Moved {name}', { name: this.#nameOf(target) ?? '' }).trim())
       return
     }
     if (mod || event.altKey) return

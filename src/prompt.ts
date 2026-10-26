@@ -14,6 +14,7 @@
  */
 
 import { lightness } from './shimmer'
+import { word } from './words'
 
 /**
  * Asked with what the person said and what it is about. For writing it
@@ -61,11 +62,11 @@ const safari = typeof navigator !== 'undefined' && /^((?!chrome|chromium|android
 
 /** What went wrong with listening, in plain words, where the person can do something about it. */
 function listeningFailure(error: string | undefined): string | null {
-  if (error === 'not-allowed') return safari ? 'The microphone is blocked: allow it for this site in Safari › Settings › Websites › Microphone' : 'The microphone is blocked: allow it for this site in the browser’s settings'
-  if (error === 'service-not-allowed') return safari ? 'Turn on Dictation in System Settings › Keyboard to speak here' : 'Speaking is turned off in this browser'
-  if (error === 'audio-capture') return 'No microphone was found'
-  if (error === 'network') return 'Speaking needs a connection'
-  if (error === 'no-speech') return 'Nothing was heard: press Space twice to try again'
+  if (error === 'not-allowed') return word(safari ? 'The microphone is blocked: allow it for this site in Safari › Settings › Websites › Microphone' : 'The microphone is blocked: allow it for this site in the browser’s settings')
+  if (error === 'service-not-allowed') return word(safari ? 'Turn on Dictation in System Settings › Keyboard to speak here' : 'Speaking is turned off in this browser')
+  if (error === 'audio-capture') return word('No microphone was found')
+  if (error === 'network') return word('Speaking needs a connection')
+  if (error === 'no-speech') return word('Nothing was heard: press Space twice to try again')
   return null
 }
 
@@ -166,7 +167,7 @@ export function dictate(options: { lang: string; heard: (words: string) => void;
   speech.onend = end
   speech.onerror = event => { failure = listeningFailure(event.error) ?? failure; end() }
   if (options.audio) speech.onaudiostart = options.audio
-  try { speech.start() } catch { failure = 'Speaking could not start here'; end(); return null }
+  try { speech.start() } catch { failure = word('Speaking could not start here'); end(); return null }
   return { stop: () => speech.stop(), abort: () => { speech.abort(); end() } }
 }
 
@@ -201,8 +202,8 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   const field = doc.createElement('div')
   field.className = 'aa-prompt'
   field.setAttribute('role', 'textbox')
-  field.setAttribute('aria-label', 'Ask AI')
-  field.dataset.placeholder = options.placeholder ?? 'Ask AI or press space to speak'
+  field.setAttribute('aria-label', word('Ask AI'))
+  field.dataset.placeholder = options.placeholder ?? word('Ask AI or press space to speak')
   field.spellcheck = false
   try { field.contentEditable = 'plaintext-only' } catch { field.contentEditable = 'true' }
   if (field.contentEditable !== 'plaintext-only') field.contentEditable = 'true'
@@ -286,7 +287,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
   /** Words heard as they come, in italics: the last ones still being heard, fainter. */
   const listen = () => {
     const speech = recognition()
-    if (!speech) { field.dataset.placeholder = 'Speaking is not available in this browser'; return }
+    if (!speech) { field.dataset.placeholder = word('Speaking is not available in this browser'); return }
     listening = speech
     field.dataset.listening = ''
     dot = Object.assign(doc.createElement('span'), { className: 'aa-prompt-caret', contentEditable: 'false' })
@@ -294,7 +295,7 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
     field.append(dot)
     worded()
     caretAtDot()
-    field.dataset.placeholder = 'Listening…'
+    field.dataset.placeholder = word('Listening…')
     speech.lang = doc.documentElement.lang || navigator.language
     speech.continuous = true
     speech.interimResults = true
@@ -321,11 +322,11 @@ export function openPrompt(options: PromptOptions): OpenPrompt {
       const away = !!selection?.rangeCount && field.contains(selection.anchorNode) && !(selection.isCollapsed && dot && selection.anchorNode === field && field.childNodes[selection.anchorOffset] === dot)
       if (!away) caretAtDot()
     }
-    speech.onend = () => { listening = null; stopDot(); delete field.dataset.listening; field.dataset.placeholder = failure ?? options.placeholder ?? 'Ask AI to write' }
+    speech.onend = () => { listening = null; stopDot(); delete field.dataset.listening; field.dataset.placeholder = failure ?? options.placeholder ?? word('Ask AI to write') }
     // Never failing silently: what went wrong is said where the words would be.
     speech.onerror = event => { failure = listeningFailure(event.error) ?? failure; speech.onend?.() }
     // Started first and alone, within the key's own press, so the browser asks for the microphone once.
-    try { speech.start() } catch { failure = 'Speaking could not start here'; speech.onend?.(); return }
+    try { speech.start() } catch { failure = word('Speaking could not start here'); speech.onend?.(); return }
     const followVoice = breathe()
     if (followVoice) speech.onaudiostart = () => { void followVoice() }
   }

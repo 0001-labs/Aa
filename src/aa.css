@@ -194,7 +194,8 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 /* What to write, until something is; a heading with no words yet names its
    level, since its # is never shown. */
 .aa-block[data-placeholder]::before { content: attr(data-placeholder); }
-.aa-block[data-kind="heading"][data-empty]::before { content: "Heading " attr(data-level); }
+/* "Heading 2" in the page's language: the editor sets --aa-heading-word from its words (words.ts). */
+.aa-block[data-kind="heading"][data-empty]::before { content: var(--aa-heading-word, "Heading") " " attr(data-level); }
 /* At a sentence's end, the AI offered in the placeholder's grey, after the caret. */
 .aa-block[data-hint]::after {
   content: attr(data-hint);

@@ -1,6 +1,7 @@
 import { blockRuns, type Block } from './markdown'
 import './vendor/ds1/3-unit/ds-table-of-contents'
 import { configureI18n } from './vendor/ds1/0-face/i18n'
+import { word } from './words'
 
 // This library's copy must not fetch product translations or change its page's language.
 configureI18n({ autoLoad: false, persist: false, langTarget: false })
@@ -10,12 +11,12 @@ export function createTableOfContents(element: HTMLElement, blocks: () => readon
   element.classList.add('aa-toc')
   element.setAttribute('data-aa-interactive', '')
   const navigation = document.createElement('ds-table-of-contents')
-  navigation.label = 'Table of contents'
+  navigation.label = word('Table of contents')
   navigation.literal = true
   navigation.target = target
   const empty = document.createElement('span')
   empty.className = 'aa-toc-empty'
-  empty.textContent = 'Add headings to show them here.'
+  empty.textContent = word('Add headings to show them here.')
   element.append(navigation, empty)
   const prefix = `aa-heading-${crypto.randomUUID()}`
   let nextId = 0

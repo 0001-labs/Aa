@@ -15,6 +15,7 @@ import { anchorThreads, applyEdit, countThreads, initialOf, mapRange, mentionQue
 import type { Decoration } from './render'
 import { breatheDot, canDictate, dictate, type Prompter } from './prompt'
 import { icons } from './icons'
+import { aaLanguage, word } from './words'
 
 export type CommentsViewOptions = {
   store: CommentStore
@@ -55,7 +56,8 @@ const icon = (name: string): HTMLSpanElement => {
   return picture
 }
 
-const iconButton = (label: string, name: string, action: () => void): HTMLButtonElement => {
+const iconButton = (english: string, name: string, action: () => void): HTMLButtonElement => {
+  const label = word(english)
   const node = document.createElement('button')
   node.type = 'button'; node.className = 'aa-comments-button'; node.dataset.tooltip = label; node.setAttribute('aria-label', label)
   node.append(icon(name))
@@ -65,7 +67,7 @@ const iconButton = (label: string, name: string, action: () => void): HTMLButton
 
 const textButton = (label: string, action: () => void, className = ''): HTMLButtonElement => {
   const node = document.createElement('button')
-  node.type = 'button'; node.className = `aa-comments-word ${className}`.trim(); node.textContent = label
+  node.type = 'button'; node.className = `aa-comments-word ${className}`.trim(); node.textContent = word(label)
   node.addEventListener('click', event => { event.preventDefault(); action() })
   return node
 }
@@ -258,7 +260,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   // ----- writing -----
 
   const refused = (key: string, error: unknown) => {
-    errors.set(key, error instanceof Error && error.message ? error.message : 'Not saved')
+    errors.set(key, error instanceof Error && error.message ? error.message : word('Not saved'))
     render()
     setTimeout(() => { if (errors.get(key)) { errors.delete(key); render() } }, 4000)
   }
@@ -315,7 +317,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       row.addEventListener('click', () => choose(person))
       return row
     }))
-    if (!menuChoices.length) { const empty = doc.createElement('span'); empty.className = 'aa-menu-empty'; empty.textContent = 'Nobody to mention'; menu.append(empty) }
+    if (!menuChoices.length) { const empty = doc.createElement('span'); empty.className = 'aa-menu-empty'; empty.textContent = word('Nobody to mention'); menu.append(empty) }
   }
   const placeMenu = () => {
     if (!menu || !menuField) return
@@ -338,7 +340,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       if (!menu) {
         menu = doc.createElement('div')
         menu.className = 'aa-controls aa-menu aa-comments-people'
-        menu.setAttribute('role', 'listbox'); menu.setAttribute('aria-label', 'People to mention')
+        menu.setAttribute('role', 'listbox'); menu.setAttribute('aria-label', word('People to mention'))
         root.append(menu)
       }
       menuActive = Math.min(menuActive, Math.max(0, menuChoices.length - 1))
@@ -386,7 +388,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     // Space in the empty field speaks the reply where the browser can listen; elsewhere it asks AI about the commented words, where the product answers.
     const speaks = canDictate()
     const lower = `${placeholder.charAt(0).toLowerCase()}${placeholder.slice(1)}`
-    const offered = speaks ? `Press space to speak, or ${lower}` : options.prompt ? `Press space for AI, or ${lower}` : placeholder
+    const offered = speaks ? word('Press space to speak, or {action}', { action: lower }) : options.prompt ? word('Press space for AI, or {action}', { action: lower }) : placeholder
     field.rows = 1; field.placeholder = offered; field.setAttribute('aria-label', placeholder)
     field.value = drafts.get(key) ?? ''
     // A textarea's words are all one colour: the people named are drawn in theirs on a copy of the words behind it, the field's own letters clear over them.
@@ -400,7 +402,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       field.toggleAttribute('data-mentions', named.length > 0)
       if (dot) {
         dot.toggleAttribute('data-after', !!field.value)
-        const waiting = field.value ? [] : [Object.assign(doc.createElement('span'), { className: 'aa-composer-listening', textContent: 'Listening…' })]
+        const waiting = field.value ? [] : [Object.assign(doc.createElement('span'), { className: 'aa-composer-listening', textContent: word('Listening…') })]
         backdrop.replaceChildren(...mentionPieces(field.value, named), dot, ...waiting)
       // A line break at the end takes room only with something after it.
       } else if (named.length) backdrop.replaceChildren(...mentionPieces(field.value, named), '\u200b')
@@ -418,7 +420,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       const sofar = thread ? thread.comments.map(comment => `${comment.author.name}: ${comment.body}`).join('\n\n') : ''
       const { signal } = asking
       // While AI thinks, the field gives way to Thinking…, glistening as the prompt does: a textarea's own letters cannot.
-      const thinking = Object.assign(doc.createElement('span'), { className: 'aa-composer-thinking', textContent: 'Thinking…' })
+      const thinking = Object.assign(doc.createElement('span'), { className: 'aa-composer-thinking', textContent: word('Thinking…') })
       thinking.setAttribute('data-aa-glisten', ''); thinking.setAttribute('role', 'status')
       wrap.before(thinking); wrap.hidden = true; field.readOnly = true
       try {
@@ -471,7 +473,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
         }
       }
       if (event.key === ' ' && !field.value && speaks && !event.isComposing) { event.preventDefault(); listen(); return }
-      if (event.key === ' ' && !field.value && options.prompt && !asking && !event.isComposing) { event.preventDefault(); asking = new AbortController(); field.dataset.asking = ''; field.placeholder = 'Ask AI about these words'; return }
+      if (event.key === ' ' && !field.value && options.prompt && !asking && !event.isComposing) { event.preventDefault(); asking = new AbortController(); field.dataset.asking = ''; field.placeholder = word('Ask AI about these words'); return }
       if (asking) {
         if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void ask() }
         if (event.key === 'Escape' || (event.key === 'Backspace' && !field.value)) { event.preventDefault(); stopAsking(); field.value = ''; drafts.delete(key) }
@@ -499,15 +501,15 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     meta.className = 'aa-comment-meta'
     const name = doc.createElement('span'); name.className = 'aa-comment-author'; name.textContent = comment.author.name
     const time = doc.createElement('time'); time.className = 'aa-comment-time'; time.dateTime = new Date(comment.createdAt).toISOString()
-    time.textContent = `${relativeTime(comment.createdAt)}${editing === comment.id ? ' · Editing' : comment.editedAt ? ' · Edited' : ''}`
-    time.title = new Date(comment.createdAt).toLocaleString()
+    time.textContent = `${relativeTime(comment.createdAt)}${editing === comment.id ? ` · ${word('Editing')}` : comment.editedAt ? ` · ${word('Edited')}` : ''}`
+    time.title = new Date(comment.createdAt).toLocaleString(aaLanguage())
     meta.append(avatar(comment.author), name, time)
     const own = !!store.me && comment.author.id === store.me.id
     if (own && store.edit && canWrite() && !thread.resolvedAt && editing !== comment.id) meta.append(textButton('Edit', () => { editing = comment.id; drafts.set(`edit:${comment.id}`, comment.body); render(); popover?.querySelector<HTMLTextAreaElement>(`[data-edit="${comment.id}"]`)?.focus() }, 'aa-comment-edit'))
     row.append(meta)
     if (editing === comment.id) {
       const field = doc.createElement('textarea')
-      field.className = 'aa-comment-body aa-comment-editing'; field.setAttribute('aria-label', 'Edit comment'); field.dataset.edit = comment.id
+      field.className = 'aa-comment-body aa-comment-editing'; field.setAttribute('aria-label', word('Edit comment')); field.dataset.edit = comment.id
       field.value = drafts.get(`edit:${comment.id}`) ?? comment.body
       field.rows = Math.max(1, field.value.split('\n').length)
       const save = () => { const words = field.value.trim(); if (!words) return; void write(`edit:${comment.id}`, () => store.edit!(comment.id, words), () => { editing = null; drafts.delete(`edit:${comment.id}`) }) }
@@ -565,7 +567,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     picker.setAttribute('role', 'menu'); picker.setAttribute('aria-label', 'Reactions')
     for (const emoji of REACTION_EMOJIS) {
       const cell = doc.createElement('button')
-      cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = emoji; cell.setAttribute('aria-label', `React with ${emoji}`)
+      cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = emoji; cell.setAttribute('aria-label', word('React with {emoji}', { emoji }))
       cell.addEventListener('pointerdown', event => event.preventDefault())
       cell.addEventListener('click', event => { event.preventDefault(); hidePicker(); void write(`react:${commentId}`, () => store.react!(commentId, emoji)) })
       picker.append(cell)
@@ -640,9 +642,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     if (thread.resolvedAt) {
       const note = doc.createElement('p')
       note.className = 'aa-thread-resolved'
-      note.textContent = `Resolved${thread.resolvedBy ? ` by ${thread.resolvedBy.name}` : ''}.`
+      note.textContent = thread.resolvedBy ? word('Resolved by {name}.', { name: thread.resolvedBy.name }) : word('Resolved.')
       article.append(note)
-    } else if (canWrite()) article.append(composer(thread.id, 'Reply'))
+    } else if (canWrite()) article.append(composer(thread.id, word('Reply')))
     return article
   }
 
@@ -651,7 +653,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     article.className = 'aa-thread'
     article.dataset.thread = 'draft'
     article.setAttribute('data-open', '')
-    const field = composer('draft', 'Add a comment')
+    const field = composer('draft', word('Add a comment'))
     if (panel) {
       const head = doc.createElement('div'); head.className = 'aa-thread-head'
       const quote = doc.createElement('span'); quote.className = 'aa-thread-quote'; quote.textContent = draft!.quote.replace(/\s+/g, ' ')
@@ -669,7 +671,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     popover.classList.add('aa-comments')
     popover.dataset.mode = panel ? 'panel' : 'popover'
     popover.setAttribute('role', panel ? 'region' : 'dialog')
-    popover.setAttribute('aria-label', 'Comments')
+    popover.setAttribute('aria-label', word('Comments'))
     popover.addEventListener('keydown', event => { if (event.key === 'Escape' && !menu && !picker && !editing) { event.preventDefault(); close() } })
     // A press inside is its own: the editor's selection is left alone.
     if (!panel) root.append(popover)
@@ -687,12 +689,12 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       // Design system 1's text tabs: the words alone, 4px between tabs, the chosen one in the ink; each state seen on its own.
       const tabs = doc.createElement('div')
       tabs.className = 'aa-comments-tabs'
-      tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Comments')
+      tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', word('Comments'))
       for (const [key, label, count] of [['open', 'Open', counts.open], ['resolved', 'Resolved', counts.resolved]] as const) {
         const tab = doc.createElement('button')
         tab.type = 'button'; tab.setAttribute('role', 'tab'); tab.dataset.tab = key
         tab.setAttribute('aria-selected', String(filter === key)); tab.tabIndex = filter === key ? 0 : -1
-        tab.append(label, Object.assign(doc.createElement('span'), { className: 'aa-comments-tab-count', textContent: ` ${count}` }))
+        tab.append(word(label), Object.assign(doc.createElement('span'), { className: 'aa-comments-tab-count', textContent: ` ${count}` }))
         tab.addEventListener('click', () => { if (filter === key) return; filter = key; if (openId && !shown(openThread()!)) openId = null; decorate(); render() })
         tab.addEventListener('keydown', event => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); const other = tabs.querySelector<HTMLButtonElement>(`[data-tab="${key === 'open' ? 'resolved' : 'open'}"]`); other?.click(); render(); popover?.querySelector<HTMLButtonElement>(`[data-tab="${key === 'open' ? 'resolved' : 'open'}"]`)?.focus() } })
         tabs.append(tab)
@@ -701,7 +703,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       const children: HTMLElement[] = [tabs]
       if (draft && filter === 'open') children.push(draftElement())
       for (const thread of sorted) children.push(threadElement(thread, thread.id === openId))
-      if (!sorted.length && !(draft && filter === 'open')) { const empty = doc.createElement('p'); empty.className = 'aa-comments-empty'; empty.textContent = filter === 'resolved' ? 'Nothing resolved yet.' : canWrite() ? 'Select words and press Comment to start a thread.' : 'No comments yet.'; children.push(empty) }
+      if (!sorted.length && !(draft && filter === 'open')) { const empty = doc.createElement('p'); empty.className = 'aa-comments-empty'; empty.textContent = word(filter === 'resolved' ? 'Nothing resolved yet.' : canWrite() ? 'Select words and press Comment to start a thread.' : 'No comments yet.'); children.push(empty) }
       element.replaceChildren(...children)
     } else {
       const thread = openThread()

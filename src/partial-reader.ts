@@ -1,6 +1,7 @@
 /** Small read-only entry for public guides. No editor, menus, app actions or data access. */
 import { BUTTON_PARTIAL, readButtonPartial, paintButton } from './button-partial'
 import { configureI18n } from './vendor/ds1/0-face/i18n'
+import { word } from './words'
 export { BUTTON_STATES, readButtonPartial, writeButtonPartial, type ButtonState, type ButtonPartial } from './button-partial'
 
 configureI18n({ autoLoad: false, persist: false, langTarget: false })
@@ -23,7 +24,7 @@ export function renderPartials(root: HTMLElement): void {
       fragment.append(source.slice(from, at))
       const illustration = doc.createElement('span')
       illustration.className = 'aa-partial'; illustration.dataset.source = source.slice(at, at + length)
-      illustration.setAttribute('role', 'img'); illustration.setAttribute('aria-label', `Button: ${value.label}, ${value.state}`)
+      illustration.setAttribute('role', 'img'); illustration.setAttribute('aria-label', word('Button: {label}, {state}', { label: value.label, state: value.state }))
       const button = doc.createElement('ds-button'); button.inert = true; button.setAttribute('aria-hidden', 'true')
       paintButton(button, value); illustration.append(button); fragment.append(illustration)
       at += length - 1; from = at + 1

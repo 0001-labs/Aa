@@ -1,6 +1,7 @@
 import { breatheDot, canDictate, dictate } from './prompt'
 import { paintSelection } from './selection'
 import { drawStyles } from './styles'
+import { word } from './words'
 
 export type PlainEditorOptions = {
   value?: string
@@ -31,8 +32,8 @@ export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions
   host.setAttribute('aria-multiline', 'true')
   host.replaceChildren(block)
   const speaks = !!options.speak && canDictate()
-  const lower = options.placeholder ? `${options.placeholder.charAt(0).toLowerCase()}${options.placeholder.slice(1)}` : 'write'
-  const offered = speaks ? `Press space to speak, or ${lower}` : options.placeholder ?? ''
+  const lower = options.placeholder ? `${options.placeholder.charAt(0).toLowerCase()}${options.placeholder.slice(1)}` : word('write')
+  const offered = speaks ? word('Press space to speak, or {action}', { action: lower }) : options.placeholder ?? ''
   if (options.placeholder) host.setAttribute('aria-label', options.placeholder)
   const value = () => block.innerText
   // The placeholder stands in the block while it has no words (a dot listening has none).
@@ -65,7 +66,7 @@ export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions
       },
     })
     if (!speaking) return
-    host.dataset.listening = ''; say('Listening…')
+    host.dataset.listening = ''; say(word('Listening…'))
     block.append(dot)
     breath = breatheDot(dot, doc.defaultView!)
   }

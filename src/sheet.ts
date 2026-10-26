@@ -12,6 +12,7 @@
  */
 import { bindOverlaySwipe } from './ds1/0-face/overlay-swipe'
 import { icons } from './icons'
+import { word } from './words'
 
 export type SheetRow = { id: string; label: string; icon?: string; key?: string; run(): void }
 export type SheetGroup = { label?: string; rows: readonly SheetRow[] }
@@ -32,26 +33,26 @@ export function openSheet(options: SheetOptions): () => void {
   const doc = options.root.ownerDocument
   const dialog = doc.createElement('dialog')
   dialog.className = 'aa-sheet ds-overlay ds-overlay--sheet'
-  dialog.setAttribute('aria-label', options.title)
+  dialog.setAttribute('aria-label', word(options.title))
   if (options.nonModal) dialog.style.zIndex = 'var(--ds-overlay-layer, 1)'
   const head = doc.createElement('div'); head.className = 'aa-sheet-head'
-  const title = doc.createElement('h2'); title.className = 'aa-sheet-title'; title.textContent = options.title
-  const cancel = doc.createElement('button'); cancel.type = 'button'; cancel.className = 'aa-sheet-cancel'; cancel.textContent = 'Cancel'
+  const title = doc.createElement('h2'); title.className = 'aa-sheet-title'; title.textContent = word(options.title)
+  const cancel = doc.createElement('button'); cancel.type = 'button'; cancel.className = 'aa-sheet-cancel'; cancel.textContent = word('Cancel')
   head.append(title, cancel); dialog.append(head)
   let chosen: SheetRow | null = null
   for (const group of options.groups) {
     if (!group.rows.length) continue
     const section = doc.createElement('div'); section.className = 'aa-sheet-group'; section.setAttribute('role', 'group')
     if (group.label) {
-      const label = doc.createElement('div'); label.className = 'aa-sheet-label'; label.textContent = group.label
-      section.append(label); section.setAttribute('aria-label', group.label)
+      const label = doc.createElement('div'); label.className = 'aa-sheet-label'; label.textContent = word(group.label)
+      section.append(label); section.setAttribute('aria-label', word(group.label))
     }
     for (const row of group.rows) {
       const button = doc.createElement('button'); button.type = 'button'; button.className = 'aa-sheet-row'; button.dataset.command = row.id
       const picture = doc.createElement('span'); picture.className = 'aa-icon'
       const svg = row.icon ? icons[`./icons/${row.icon}.svg`] : undefined
       if (svg) picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/currentColor/g, 'black'))}")`
-      const words = doc.createElement('span'); words.className = 'aa-sheet-words'; words.textContent = row.label
+      const words = doc.createElement('span'); words.className = 'aa-sheet-words'; words.textContent = word(row.label)
       button.append(picture, words)
       if (row.key) { const key = doc.createElement('span'); key.className = 'aa-sheet-key'; key.setAttribute('aria-hidden', 'true'); key.textContent = row.key; button.append(key) }
       button.addEventListener('click', () => { chosen = row; dialog.close() })

@@ -7,6 +7,7 @@ import overlayStyles from './vendor/ds1/4-page/styles/ds-overlay.css?inline'
 
 export { BUTTON_STATES, BUTTON_PARTIAL, readButtonPartial, writeButtonPartial, type ButtonState, type ButtonPartial } from './button-partial'
 import { BUTTON_STATES, BUTTON_PARTIAL, readButtonPartial, writeButtonPartial, paintButton, type ButtonState, type ButtonPartial } from './button-partial'
+import { word } from './words'
 
 /** A real component used as an illustration. The wrapper edits even a disabled specimen. */
 export function buttonPartialAtom(canWrite: () => boolean): Atom {
@@ -23,7 +24,7 @@ export function buttonPartialAtom(canWrite: () => boolean): Atom {
     const accessibility = () => {
       element.tabIndex = canWrite() ? 0 : -1
       element.setAttribute('role', canWrite() ? 'button' : 'img')
-      element.setAttribute('aria-label', `${canWrite() ? 'Edit button' : 'Button'}: ${value.label}, ${value.state}`)
+      element.setAttribute('aria-label', word(canWrite() ? 'Edit button: {label}, {state}' : 'Button: {label}, {state}', { label: value.label, state: value.state }))
     }
     accessibility()
     // Initial drawing precedes mounting the block. Observe permission changes on its editor.
@@ -41,15 +42,15 @@ export function buttonPartialAtom(canWrite: () => boolean): Atom {
       overlay.setAttribute('data-aa-interactive', '')
       const rect = element.getBoundingClientRect()
       overlay.anchor = { x: rect.left, y: rect.bottom }
-      const dialog = doc.createElement('dialog'); dialog.className = 'aa-partial-properties'; dialog.setAttribute('aria-label', 'Edit button')
-      const label = doc.createElement('ds-input'); label.labelText = 'Label'; label.value = value.label; label.setAttribute('aria-label', 'Button label')
-      const stateLabel = doc.createElement('label'); stateLabel.textContent = 'State'
-      const select = doc.createElement('ds-select'), state = doc.createElement('select'); state.setAttribute('aria-label', 'Button state')
+      const dialog = doc.createElement('dialog'); dialog.className = 'aa-partial-properties'; dialog.setAttribute('aria-label', word('Edit button'))
+      const label = doc.createElement('ds-input'); label.labelText = word('Label'); label.value = value.label; label.setAttribute('aria-label', word('Button label'))
+      const stateLabel = doc.createElement('label'); stateLabel.textContent = word('State')
+      const select = doc.createElement('ds-select'), state = doc.createElement('select'); state.setAttribute('aria-label', word('Button state'))
       for (const name of BUTTON_STATES) { const option = doc.createElement('option'); option.value = name; option.textContent = name[0].toUpperCase() + name.slice(1); state.append(option) }
       state.value = value.state; select.append(state); stateLabel.append(select)
       const actions = doc.createElement('div'); actions.className = 'aa-partial-actions'
-      const cancel = doc.createElement('ds-button'); cancel.textContent = 'Cancel'
-      const apply = doc.createElement('ds-button'); apply.textContent = 'Apply'; apply.primary = true
+      const cancel = doc.createElement('ds-button'); cancel.textContent = word('Cancel')
+      const apply = doc.createElement('ds-button'); apply.textContent = word('Apply'); apply.primary = true
       const preview = doc.createElement('ds-button'); preview.inert = true; preview.setAttribute('aria-hidden', 'true'); paintButton(preview, value)
       const draft = (): ButtonPartial => ({ label: label.value, state: state.value as ButtonState })
       const refresh = () => paintButton(preview, draft())
@@ -86,7 +87,7 @@ export function buttonPartialAtom(canWrite: () => boolean): Atom {
 export function createPartialPicker(editor: Editor): () => void {
   const host = editor.element, doc = host.ownerDocument
   const menu = doc.createElement('ds-menu')
-  menu.floating = true; menu.focusOnOpen = false; menu.setAttribute('aria-label', 'Button state')
+  menu.floating = true; menu.focusOnOpen = false; menu.setAttribute('aria-label', word('Button state'))
   menu.id = `aa-partials-${crypto.randomUUID()}`
   let query: { start: number; end: number } | null = null, composing = false, dismissed = ''
   const close = () => { menu.open = false; query = null }
