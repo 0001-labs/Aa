@@ -12,7 +12,7 @@ export const PHONE_WIDTHS = [320, 375, 393, 430];
 export const PAGES_AT_ONCE = 3;
 
 /** A rule broken on a page at a width, said in words, since the element stays in its frame. */
-export type SiteFinding = { code: string; rule: string; message: string; element: string };
+export type SiteFinding = { code: string; rule: string; message: string; element: string; review?: boolean };
 /** What one page at one width kept and broke: each rule's count of what it measured, and its findings. */
 export type PageCheck = { findings: SiteFinding[]; measured: Record<string, number> };
 export type PageResult = PageCheck & { url: string; width: number; error?: string };
@@ -104,7 +104,7 @@ export function checkPage(page: ParentNode): PageCheck {
   const findings: SiteFinding[] = [];
   for (const { constraint, measured: count, findings: found } of measureConstraints(page)) {
     measured[constraint.code] = count;
-    for (const { message, element } of found) findings.push({ code: constraint.code, rule: constraint.rule, message, element: describeElement(element) });
+    for (const { message, element, review } of found) findings.push({ code: constraint.code, rule: constraint.rule, message, element: describeElement(element), ...(review ? { review } : {}) });
   }
   return { findings, measured };
 }
@@ -174,7 +174,7 @@ export function summarizeRules(results: PageCheck[]): RuleSummary[] {
       constraint,
       measured: counts.reduce((sum, count) => sum + count, 0),
       views: counts.filter(count => count > 0).length,
-      broken: results.reduce((sum, result) => sum + result.findings.filter(finding => finding.code === constraint.code).length, 0),
+      broken: results.reduce((sum, result) => sum + result.findings.filter(finding => finding.code === constraint.code && !finding.review).length, 0),
     };
   });
 }
@@ -194,7 +194,7 @@ export function ruleLine({ constraint, measured, views, broken }: RuleSummary, t
 export function summarizePages(results: PageResult[]): { url: string; widths: { width: number; broken: number; error?: string }[] }[] {
   const pages = new Map<string, { width: number; broken: number; error?: string }[]>();
   for (const { url, width, findings, error } of results) {
-    pages.set(url, [...(pages.get(url) ?? []), { width, broken: findings.length, error }].sort((a, b) => a.width - b.width));
+    pages.set(url, [...(pages.get(url) ?? []), { width, broken: findings.filter(finding => !finding.review).length, error }].sort((a, b) => a.width - b.width));
   }
   return [...pages].map(([url, widths]) => ({ url, widths }));
 }

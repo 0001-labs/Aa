@@ -157,7 +157,8 @@ export function measureTextContrast(root: ParentNode): TextContrastResult[] {
 export function inspectTextContrast(root: ParentNode) {
   return measureTextContrast(root).flatMap(result => {
     const label = `“${result.text}”`;
-    if (result.reason) return [{ element: result.element, message: `${label}: ${result.reason}` }];
+    // What cannot be measured is a review for a person, not a broken rule; a colour that could not be read is.
+    if (result.reason) return [{ element: result.element, message: `${label}: ${result.reason}`, review: /visual contrast review/.test(result.reason) }];
     return result.ratio! < TEXT_CONTRAST_MINIMUM ? [{ element: result.element, message: `${label} has ${result.ratio!.toFixed(2)}:1 text contrast (${result.foreground} on ${result.background}); at least ${TEXT_CONTRAST_MINIMUM}:1 is required.` }] : [];
   });
 }

@@ -118,7 +118,7 @@
 
 .ds-table thead th,
 .ds-table th[scope="rowgroup"] {
-  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+  color: var(--ds-title-color, light-dark(#6e6e6e, #9a9a9a));
 }
 
 .ds-table tbody th:not([scope="rowgroup"]) {
@@ -150,7 +150,7 @@
   padding-top: calc(var(--ds-table-row) - var(--ds-type-lineheight-default));
   line-height: var(--ds-type-lineheight-default);
   text-align: start;
-  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+  color: var(--ds-title-color, light-dark(#6e6e6e, #9a9a9a));
 }
 
 .ds-table-scroll {
@@ -240,7 +240,7 @@
   inset-inline-start: 0;
   z-index: 1;
   background: var(--ds-table-paper);
-  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+  color: var(--ds-title-color, light-dark(#6e6e6e, #9a9a9a));
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -257,7 +257,7 @@
   z-index: 4;
 }
 .ds-table[data-sheet] .ds-table__letters td {
-  color: var(--ds-title-color, light-dark(#797979, #9a9a9a));
+  color: var(--ds-title-color, light-dark(#6e6e6e, #9a9a9a));
   text-align: center;
 }
 .ds-table[data-sheet] tbody td:not([data-numeric]) {

@@ -13,8 +13,9 @@ import { inspectWordWrap, wordHeaders } from './word-wrap';
 // A new rule: add it here with its `inspect`, make the component keep it, write its source test,
 // then run `vp run constraints:write`.
 
-/** Where a page breaks a rule: the element, and what is wrong with it in a sentence. */
-export type Finding = { element: Element; message: string };
+/** Where a page breaks a rule: the element, and what is wrong with it in a sentence. `review` marks what the
+ *  check could not measure (words over a picture, a blend) and asks a person to look, which breaks no rule. */
+export type Finding = { element: Element; message: string; review?: boolean };
 
 export type Constraint = {
   /** `<component>.<what>`, lower case, never changed once given. */
@@ -55,9 +56,18 @@ function cards(root: ParentNode) {
   });
 }
 
-/** Whether something the element stands in cuts it off or scrolls it, so it cannot widen the page. */
+/** The element's parent as drawn: the slot it is given to, the host of the shadow root it is in, or its parent. */
+function drawnParent(element: Element): Element | null {
+  if (element.assignedSlot) return element.assignedSlot;
+  const parent = element.parentNode;
+  if (parent && parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE && 'host' in parent) return (parent as ShadowRoot).host;
+  return element.parentElement;
+}
+
+/** Whether something the element stands in cuts it off or scrolls it, so it cannot widen the page: a slide in
+ *  a carousel's track stands in the track, whichever side of a shadow root the two are on. */
 function contained(element: Element) {
-  for (let box = element.parentElement; box && box !== element.ownerDocument.documentElement; box = box.parentElement) {
+  for (let box = drawnParent(element); box && box !== element.ownerDocument.documentElement; box = drawnParent(box)) {
     const style = styleOf(box);
     if (/hidden|clip|auto|scroll/.test(style.overflowX) || style.position === 'fixed') return true;
   }
@@ -70,6 +80,15 @@ function drawn(root: ParentNode) {
     const box = element.getBoundingClientRect();
     return box.width > 0 && box.height > 0;
   });
+}
+
+/** Sideways scrolling by design: a carousel's track, a table, a block of code and a matrix scroll in their own frame. */
+const SIDEWAYS_BY_DESIGN = '.ds-carousel__track, .ds-carousel, ds-carousel, .ds-table-scroll, .ds-table, ds-table, table, pre, ds-matrix, .ds-matrix';
+
+/** Every box on the page that scrolls sideways: its overflow lets it, and it holds more than its width. */
+function sidewaysScrollers(root: ParentNode) {
+  return Array.from(root.querySelectorAll<HTMLElement>('body *')).filter(element =>
+    element.clientWidth > 0 && element.scrollWidth > element.clientWidth + 1 && /auto|scroll/.test(styleOf(element).overflowX));
 }
 
 /** Cards side by side: one parent, one top and one height. */
@@ -130,7 +149,7 @@ export const constraints: Constraint[] = [
   {
     code: 'card.media-level',
     rule: "A card's picture stands on the card's foot, a square below the words at least, so the pictures of cards side by side stand on one level whatever the words above them.",
-    why: 'The room a taller card leaves goes above its picture, never below it.',
+    why: 'The room a taller card leaves goes above its picture, never below it, so pictures of one height side by side start on one line too; a taller picture starts higher.',
     components: ['ds-card'],
     check: { file: 'tests/card.test.ts', test: "a picture stands on the card's foot, so pictures side by side stand on one level" },
     measures: ['card with a media picture', 'cards with a media picture'],
@@ -143,7 +162,7 @@ export const constraints: Constraint[] = [
       }
       for (const [first, ...rest] of rows(found)) {
         for (const { picture, face } of rest) {
-          if (!near(face.top, first!.face.top)) findings.push({ element: picture, message: `The picture starts ${px(Math.abs(face.top - first!.face.top))} ${face.top > first!.face.top ? 'lower' : 'higher'} than the one in the first card beside it.` });
+          if (near(face.height, first!.face.height) && !near(face.top, first!.face.top)) findings.push({ element: picture, message: `The picture starts ${px(Math.abs(face.top - first!.face.top))} ${face.top > first!.face.top ? 'lower' : 'higher'} than the one in the first card beside it.` });
         }
       }
       return findings;
@@ -202,6 +221,21 @@ export const constraints: Constraint[] = [
         findings.push({ element, message: `It reaches ${px(reach)} past the window's ${side} edge, in a window ${px(width)} wide.` });
       }
       return findings;
+    },
+  },
+  {
+    code: 'carousel.sideways-scroll',
+    rule: 'Only a carousel scrolls pieces sideways: pieces wider than their column stand in a carousel strip or stack, and nothing else scrolls sideways but a table, a block of code or a matrix in its own frame.',
+    why: 'A box given overflow auto to keep a page in its window hides what is past its edge with nothing to say it is there, no snap and no controls, and a phone slides it where a finger meant to scroll down; make it a ds-carousel strip (slide-width="auto") or stack it.',
+    components: ['ds-carousel'],
+    check: { file: 'tests/carousel.test.ts', test: 'only a carousel scrolls sideways: a plain box that scrolls sideways breaks the rule, a track, a table or a block of code does not' },
+    measures: ['box that scrolls sideways', 'boxes that scroll sideways'],
+    count: root => sidewaysScrollers(root).length,
+    inspect(root) {
+      return sidewaysScrollers(root).filter(element => !element.closest(SIDEWAYS_BY_DESIGN)).map(element => ({
+        element,
+        message: `It holds ${px(element.scrollWidth)} of pieces in ${px(element.clientWidth)} and scrolls them sideways; only a carousel does that.`,
+      }));
     },
   },
 ];

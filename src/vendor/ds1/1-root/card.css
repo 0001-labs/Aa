@@ -95,6 +95,12 @@
 .ds-card[data-tone="red-for-blood"] { --ds-card-fill: var(--one-red-for-blood-pastel); }
 .ds-card[data-tone="dark-red-variant"] { --ds-card-fill: var(--one-dark-red-variant-pastel); }
 .ds-card[data-tone="signal-red"] { --ds-card-fill: var(--one-signal-red-pastel); }
+/* On a pastel fill the muted grey falls under 4.5:1 (color.text-contrast): the muted ink is the card's ink let
+   into its fill instead, 5:1 or more on every pastel. */
+.ds-card[data-tone]:not([data-tone="ink"]) {
+  --ds-card-muted: color-mix(in srgb, var(--ds-card-ink) 72%, var(--ds-card-fill));
+}
+
 .ds-card[data-tone="ink"] {
   --ds-card-fill: var(--ds-black);
   --ds-card-ink: var(--ds-white);

@@ -48,10 +48,10 @@ label {
   padding: 0 calc(2px * var(--ds-sf, 1));
   font-size: var(--ds-type-size-default);
   font-family: var(--ds-typeface-regular);
-  color: var(--base-darker-grey, #797979);
+  /* The field's ink, whole, before focus too: a dimmed grey at half opacity read at 2:1 (color.text-contrast). */
+  color: var(--ds-input-color, #2a2a2a);
   line-height: calc(16px * var(--ds-sf, 1));
   letter-spacing: calc(-0.4px * var(--ds-sf, 1));
-  opacity: 0.5;
   height: var(--ds-input-height, calc(16px * var(--ds-sf, 1)));
   width: 100%;
   box-sizing: border-box;
@@ -70,8 +70,9 @@ input {
 }
 
 :is(input, textarea)::placeholder {
-  color: var(--base-darker-grey, #797979);
-  opacity: 0.5;
+  /* The muted ink, whole: half-transparent grey on the field's fill fell to 1.3:1 (color.text-contrast). */
+  color: var(--ds-input-placeholder-color, var(--ds-text-color-muted));
+  opacity: 1;
 }
 
 :is(input, textarea):disabled {

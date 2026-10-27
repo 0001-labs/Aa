@@ -246,7 +246,7 @@ body {
 }
 
 .ds-input::placeholder {
-  color: var(--base-darker-grey);
+  color: var(--ds-input-placeholder-color, var(--ds-text-color-muted));
 }
 
 .ds-card {
