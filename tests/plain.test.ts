@@ -26,6 +26,21 @@ it('works in another document (a frame), making its block there', () => {
   editor.destroy()
 })
 
+it('selects only a slotted field in its own document', () => {
+  const frame = document.createElement('iframe'); document.body.append(frame)
+  const doc = frame.contentDocument!
+  const card = doc.createElement('div'); card.attachShadow({ mode: 'open' }).innerHTML = '<slot></slot>'
+  const host = doc.createElement('span'); card.append(host); doc.body.append(card)
+  const editor = createPlainEditor(host, { value: 'Editable card title' })
+  const block = host.querySelector<HTMLElement>('.aa-block')!
+  const key = new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, metaKey: true, bubbles: true, cancelable: true })
+  block.dispatchEvent(key)
+  expect(key.defaultPrevented).toBe(true)
+  expect(doc.getSelection()?.toString()).toBe('Editable card title')
+  expect(editor.value).toBe('Editable card title')
+  editor.destroy(); frame.remove()
+})
+
 describe('speaking into a plain field', () => {
   it('says its placeholder, listens on Space when empty, writes in what is heard and stops on another key', () => {
     let speech: { onresult: ((event: unknown) => void) | null; onend: (() => void) | null; started: boolean } | null = null

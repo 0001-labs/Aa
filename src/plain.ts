@@ -71,10 +71,19 @@ export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions
     breath = breatheDot(dot, doc.defaultView!)
   }
   const keydown = (event: KeyboardEvent) => {
-    if (event.isComposing) return
+    if (event.isComposing || event.defaultPrevented) return
     if (speaking) {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); speaking.abort(); return }
       speaking.stop()
+      return
+    }
+    // A field can be slotted inside a native component. Browser Select All may
+    // collapse at that shadow boundary, so select the field's own text explicitly.
+    const mac = /Mac|iPhone|iPad/.test(doc.defaultView?.navigator.platform ?? navigator.platform)
+    if ((mac ? event.metaKey : event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'a') {
+      event.preventDefault(); event.stopPropagation()
+      const range = doc.createRange(); range.selectNodeContents(block)
+      const selection = doc.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
       return
     }
     if (event.key === ' ' && speaks && !value().trim() && !event.metaKey && !event.ctrlKey && !event.altKey && block.isContentEditable) { event.preventDefault(); listen() }
