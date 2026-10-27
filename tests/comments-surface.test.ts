@@ -16,3 +16,26 @@ test('comments on a read-only host surface without enabling document editing', a
  expect(host.isContentEditable).toBe(false)
  view.destroy();expect(panel.children.length).toBe(0);host.remove();panel.remove()
 })
+
+test('shadow-root popup keeps focus on refresh and accepts a composed pointer press', async () => {
+ const host=document.createElement('article'), portal=document.createElement('section')
+ host.textContent='Cloud models'; document.body.append(host,portal)
+ const shadow=portal.attachShadow({mode:'open'}), root=document.createElement('div');shadow.append(root)
+ const store=memoryCommentStore({me:{id:'owner',name:'Owner'}})
+ const view=createCommentsView(host,{store,root,value:()=>host.textContent!,selection:()=>({start:0,end:5}),selectRange:()=>{},decorate:()=>{},readOnly:()=>false})
+ try {
+  expect(view.start()).toBe(true)
+  let field=root.querySelector('textarea')!
+  field.value='Keep them private';field.dispatchEvent(new Event('input',{bubbles:true}));field.focus();field.setSelectionRange(4,4)
+  store.put({id:'existing',from:6,to:12,quote:'models',comments:[],createdAt:1,updatedAt:1})
+  field=root.querySelector('textarea')!
+  expect(shadow.activeElement).toBe(field)
+  expect(field.selectionStart).toBe(4)
+  const send=root.querySelector<HTMLButtonElement>('[aria-label="Comment"]')!
+  send.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true}))
+  expect(send.isConnected).toBe(true)
+  send.click()
+  await new Promise(resolve=>setTimeout(resolve,20))
+  expect(store.threads.some(thread=>thread.comments.some(comment=>comment.body==='Keep them private'))).toBe(true)
+ } finally {view.destroy();host.remove();portal.remove()}
+})

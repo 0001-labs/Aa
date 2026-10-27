@@ -681,7 +681,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   /** What is drawn: in a panel every thread, open ones first; in a popover the open thread or the draft alone. */
   const render = () => {
     if (destroyed) return
-    const focused = popover?.contains(doc.activeElement) ? doc.activeElement as HTMLElement : null
+    const tree = popover?.getRootNode() as Document | ShadowRoot | undefined
+    const active = tree?.activeElement ?? doc.activeElement
+    const focused = popover?.contains(active) ? active as HTMLElement : null
     const focusedKey = focused?.closest<HTMLElement>('[data-thread]')?.dataset.thread, focusedField = focused instanceof HTMLTextAreaElement ? { start: focused.selectionStart, end: focused.selectionEnd, edit: focused.dataset.edit } : null
     if (panel) {
       const element = ensurePopover()
@@ -744,9 +746,11 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
   /** A press anywhere but the popover, the menu or the commented words puts the popover away. */
   const outside = (event: Event) => {
     if (!popover || panel || !(event.target instanceof Node)) return
-    if (picker && !picker.contains(event.target)) hidePicker()
-    if (popover.contains(event.target) || menu?.contains(event.target) || picker?.contains(event.target)) return
-    if (host.contains(event.target)) return
+    // Document listeners see a shadow host as target. The composed path still
+    // identifies presses inside a popup mounted in that host's shadow root.
+    const inside = (element: HTMLElement | null) => !!element && event.composedPath().some(node => node instanceof Node && element.contains(node))
+    if (picker && !inside(picker)) hidePicker()
+    if (inside(popover) || inside(menu) || inside(picker) || inside(host)) return
     close()
   }
   doc.addEventListener('pointerdown', outside, true)
