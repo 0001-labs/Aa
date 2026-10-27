@@ -23,3 +23,5 @@ export { BUTTON_STATES, BUTTON_PARTIAL, readButtonPartial, writeButtonPartial, t
 export { readCommentSource, writeCommentSource, changeCommentSource, exportMarkdown, type CommentDocument, type SourceThread, type SourceComment, type CommentAction } from './comments-markdown'
 export type { SourceCommentsOptions } from './comments-editor'
 export { setAaWords, word as aaWord, aaLanguage, type AaWords } from './words'
+
+export { sidePlacement, type PlacementRect } from './placement'

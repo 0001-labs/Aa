@@ -258,6 +258,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 }
 
 function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Editor {
+  const document = host.ownerDocument, window = document.defaultView!
   let blocks: Block[] = fromMarkdown(options.value ?? '')
   let readOnly = !!options.readOnly
   let reordering = options.reordering !== false, placing = options.placing !== false
@@ -647,7 +648,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   // ----- the selection -----
 
   const blockIndexOf = (node: Node | null): number => {
-    const element = node instanceof HTMLElement ? node : node?.parentElement ?? null
+    const element = node?.nodeType === 1 ? node as HTMLElement : node?.parentElement ?? null
     const block = element?.closest('.aa-block')
     if (!block || block.parentElement !== host) return -1
     return elements().indexOf(block as HTMLElement)
@@ -960,7 +961,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
 
   const onInput = (event: Event) => {
     if (destroyed || readOnly) return
-    if (composing || (event instanceof InputEvent && event.isComposing)) return
+    if (composing || ('isComposing' in event && event.isComposing)) return
     const caption = (event.target as HTMLElement).closest?.('.aa-caption') as HTMLElement | null
     if (caption) {
       const atom = caption.closest('.aa-atom') as HTMLElement
@@ -1040,7 +1041,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       const probed = probe.getClientRects()
       if (probed.length) return probed[probed.length - 1]
     }
-    const element = node instanceof HTMLElement ? node : node.parentElement
+    const element = node?.nodeType === 1 ? node as HTMLElement : node.parentElement
     return element?.getBoundingClientRect() ?? null
   }
 
@@ -1061,7 +1062,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const node = window.getSelection()?.focusNode
     if (!rect || !node || !host.contains(node) || (!rect.width && !rect.height && !rect.top && !rect.left)) return
     let { top, bottom, left, right } = rect
-    for (let box = node instanceof HTMLElement ? node : node.parentElement; box && box !== document.body && box !== document.documentElement; box = box.parentElement) {
+    for (let box = node?.nodeType === 1 ? node as HTMLElement : node.parentElement; box && box !== document.body && box !== document.documentElement; box = box.parentElement) {
       const style = getComputedStyle(box)
       const scrollsY = /auto|scroll|overlay/.test(style.overflowY) && box.scrollHeight > box.clientHeight
       const scrollsX = /auto|scroll|overlay/.test(style.overflowX) && box.scrollWidth > box.clientWidth
@@ -1130,7 +1131,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const native = host.ownerDocument.getSelection()
     if (native && (host.contains(native.anchorNode) || host.contains(native.focusNode))) native.removeAllRanges()
     const active = host.ownerDocument.activeElement
-    if (active instanceof HTMLElement && host.contains(active)) active.blur()
+    if (active?.nodeType === 1 && host.contains(active)) (active as HTMLElement).blur()
     applyReveal(); host.dispatchEvent(new Event('aa-dismiss'))
   }
 

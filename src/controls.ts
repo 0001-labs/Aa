@@ -56,7 +56,7 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
       node.classList.add('note-menu-row', 'ds-context__item--icon'); node.dataset.action = action.id
       return node
     }))
-    if (!coarse()) for (let index = this.actions.length; index % 5; index++) {
+    if (!isCoarse(this.ownerDocument.defaultView!)) for (let index = this.actions.length; index % 5; index++) {
       const spacer = document.createElement('span'); spacer.className = 'aa-toolbar-spacer'; spacer.setAttribute('aria-hidden', 'true'); spacer.append(button('Placeholder', 'plus', () => {}).firstElementChild!); this.append(spacer)
     }
     if (this.below) this.append(this.below)
@@ -84,12 +84,12 @@ function inserting(atom: NonNullable<EditorOptions['atoms']>[number]): Command |
 }
 
 /** The part of the page in view: the visual viewport, which a phone's keyboard shortens and a pinch moves, or the window. */
-function visible() {
+function viewportOf(window: Window) {
   const view = window.visualViewport
   return { top: view?.offsetTop ?? 0, left: view?.offsetLeft ?? 0, width: view?.width ?? window.innerWidth, height: view?.height ?? window.innerHeight }
 }
 /** Whether the page is worked by touch: a phone or a tablet, with no fine pointer. */
-const coarse = () => !!window.matchMedia?.('(pointer: coarse)').matches
+const isCoarse = (window: Window) => !!window.matchMedia?.('(pointer: coarse)').matches
 /** The editor's scale, read as its stylesheet reads it: Design system 1's --ds-sf, or the page's --sf. */
 function scaleOf(host: HTMLElement): number {
   const style = getComputedStyle(host)
@@ -101,7 +101,8 @@ function scaleOf(host: HTMLElement): number {
  * when no keyboard is up. As wide as the view, so it is whole under a pinch.
  */
 function dock(bar: HTMLElement) {
-  const view = visible()
+  const window = bar.ownerDocument.defaultView!
+  const view = viewportOf(window)
   bar.dataset.docked = ''
   bar.style.left = `${view.left}px`
   bar.style.width = `${view.width}px`
@@ -120,7 +121,9 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   initTooltips()
   const inserts = (options.atoms ?? []).map(inserting).filter((command): command is Command => !!command)
   const host = editor.element
-  const toolbar = document.createElement('aa-toolbar') as AaToolbarElement
+  const document = host.ownerDocument, window = document.defaultView!
+  const visible = () => viewportOf(window), coarse = () => isCoarse(window)
+  const toolbar = document.adoptNode(globalThis.document.createElement('aa-toolbar')) as AaToolbarElement
   toolbar.className = 'aa-controls aa-toolbar'; toolbar.hidden = true; toolbar.editor = editor
   let saved: { start: number; end: number } | null = null
   let dismissedSelection: { start: number; end: number } | null = null
@@ -481,7 +484,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const dismissControls = () => {
     clearTimeout(timer)
     const active = document.activeElement
-    if (active instanceof HTMLElement && [toolbar, menu, linkBar, findBar].some(node => node.contains(active))) active.blur()
+    if (active?.nodeType === 1 && [toolbar, menu, linkBar, findBar].some(node => node.contains(active))) (active as HTMLElement).blur()
     close(); toolbar.hidden = true; linkBar.hidden = true; linkTarget = null; findBar.hidden = true; editor.decorate([], 'find'); saved = null; dismissedSelection = null
   }
   const escapeControls = (event: KeyboardEvent) => {
@@ -517,7 +520,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; linkBar.hidden = true; linkTarget = null } }
   const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); target = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
   const viewport = (event: Event) => {
-    if (event.target instanceof Node && menu.contains(event.target)) return
+    if (!!event.target && menu.contains(event.target as Node)) return
     positionToolbar()
     if (!linkBar.hidden && 'docked' in linkBar.dataset) dock(linkBar)
     if (!menu.hidden) {

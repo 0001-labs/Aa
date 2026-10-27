@@ -35,7 +35,8 @@ export function atomElement(name: string, source: string): HTMLElement {
   return element
 }
 
-const isAtom = (node: Node): boolean => node instanceof HTMLElement && node.classList.contains('aa-atom')
+const isElement = (node: Node): node is HTMLElement => node.nodeType === 1
+const isAtom = (node: Node): boolean => isElement(node) && node.classList.contains('aa-atom')
 
 /** Which part of a block the selection is in, in its own offsets; null when the selection is elsewhere. */
 export type Reveal = { from: number; to: number } | null
@@ -242,7 +243,7 @@ export function readBlock(element: HTMLElement): string {
   const walk = (node: Node) => {
     for (const child of Array.from(node.childNodes)) {
       if (child.nodeType === Node.TEXT_NODE) { out += (child.textContent ?? '').replace(/ /g, ' '); continue }
-      if (!(child instanceof HTMLElement)) continue
+      if (!(isElement(child))) continue
       if (isAtom(child)) { out += child.dataset.source ?? ''; continue }
       if (child.tagName === 'BR') { if (!('filler' in child.dataset)) out += '\n'; continue }
       if (/^(DIV|P)$/.test(child.tagName) && out && !out.endsWith('\n')) out += '\n'
@@ -269,7 +270,7 @@ export function offsetIn(element: HTMLElement, node: Node, nodeOffset: number): 
       if (parent === node && index === nodeOffset) { found = count; return true }
       if (child === node && child.nodeType === Node.TEXT_NODE) { found = count + nodeOffset; return true }
       if (child.nodeType === Node.TEXT_NODE) { count += (child.textContent ?? '').length; continue }
-      if (!(child instanceof HTMLElement)) continue
+      if (!(isElement(child))) continue
       if (isAtom(child)) {
         // A point inside an atom is before it at its very start, after it anywhere else.
         const length = (child.dataset.source ?? '').length
@@ -306,7 +307,7 @@ export function pointAt(element: HTMLElement, offset: number): { node: Node; off
         count += length
         continue
       }
-      if (!(child instanceof HTMLElement)) continue
+      if (!(isElement(child))) continue
       if (isAtom(child)) {
         // The caret stands beside an atom, never in it.
         const length = (child.dataset.source ?? '').length

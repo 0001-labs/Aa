@@ -25,9 +25,10 @@ type Point = { node: Node; offset: number }
 type Place = { block: HTMLElement; offset: number }
 
 export function selectAcrossBlocks(host: HTMLElement, readOnly: () => boolean): () => void {
+  const document = host.ownerDocument, window = document.defaultView!
   const blocks = () => (Array.from(host.children) as HTMLElement[]).filter(element => element.classList.contains('aa-block'))
   const blockOf = (node: Node | null) => {
-    const block = (node instanceof Element ? node : node?.parentElement)?.closest('.aa-block') as HTMLElement | null
+    const block = (node?.nodeType === 1 ? node as Element : node?.parentElement)?.closest('.aa-block') as HTMLElement | null
     return block && block.parentElement === host ? block : null
   }
   const caretAt = (x: number, y: number): Point | null => {
@@ -75,7 +76,7 @@ export function selectAcrossBlocks(host: HTMLElement, readOnly: () => boolean): 
   const down = (event: PointerEvent) => {
     press = null
     if (event.pointerType !== 'mouse' || event.button !== 0 || event.altKey || event.metaKey || event.ctrlKey || readOnly()) return
-    const target = event.target instanceof Element ? event.target : null
+    const target = (event.target as Node | null)?.nodeType === 1 ? event.target as Element : null
     const block = blockOf(target)
     if (!block || target?.closest(OWN)) return
     const at = placeAt(event.clientX, event.clientY)
@@ -175,5 +176,5 @@ function scrollerOf(element: HTMLElement): Element | Window {
     const overflow = getComputedStyle(parent).overflowY
     if ((overflow === 'auto' || overflow === 'scroll') && parent.scrollHeight > parent.clientHeight) return parent
   }
-  return window
+  return element.ownerDocument.defaultView!
 }

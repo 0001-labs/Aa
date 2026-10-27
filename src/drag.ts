@@ -1,3 +1,4 @@
+import { sidePlacement } from './placement'
 /**
  * Blocks are moved by hand, with nothing drawn beside them, on Drag's
  * sortable engine (`src/vendor/drag`, copied from /Users/joachim/0001/Drag
@@ -45,6 +46,7 @@ const CARRIED = ['--aa-unit', '--aa-sf', '--aa-rule-color', '--aa-gap', '--aa-in
 
 export function createDragging(editor: Editor, options: EditorOptions, root: Element): () => void {
   const host = editor.element
+  const document = host.ownerDocument, window = document.defaultView!
   const line = document.createElement('div'); line.className = 'aa-drop-line'; line.hidden = true
   root.append(line)
   const sideLine = document.createElement('div'); sideLine.className = 'aa-drop-line aa-drop-side'; sideLine.hidden = true
@@ -77,7 +79,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   /** What a click would have done where a press on a selected block was let go: the caret there. */
   const placeCaret = (x: number, y: number) => {
     const point = caretAt(x, y)
-    const block = (point?.node instanceof Element ? point.node : point?.node.parentElement)?.closest('.aa-block') as HTMLElement | null
+    const block = (point?.node.nodeType === 1 ? point.node as Element : point?.node.parentElement)?.closest('.aa-block') as HTMLElement | null
     if (!point || !block || block.parentElement !== host) return
     block.focus({ preventScroll: true })
     window.getSelection()?.collapse(point.node, point.offset)
@@ -195,15 +197,10 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     const x = event.clientX + dx, y = event.clientY + dy
     // Include one square beyond the edge: a picture is placed beside another,
     // so the pointer need not stay inside the picture it is placed beside.
-    const index = sideTargets.findIndex((rect, index) => index !== carried!.from &&
-      y >= rect.top && y <= rect.bottom && x >= rect.left - unit && x <= rect.right + unit)
-    const original = sideTargets[index]
+    const target = sidePlacement(sideTargets, carried.from, { x, y }, unit)
+    const index = target?.index ?? -1, at = target?.at
+    const original = target?.rect
     const rect = original ? new DOMRect(original.left - dx, original.top - dy, original.width, original.height) : null
-    const zone = rect ? Math.min(rect.width / 5, 4 * unit) : 0
-    const at = !rect ? null
-      : event.clientX < rect.left + zone ? 'start'
-      : event.clientX > rect.right - zone ? 'end'
-      : null
     if (!at || !rect) { side = null; sideLine.hidden = true; return }
     sideLine.removeAttribute('data-swap')
     side = { index, at }
@@ -286,7 +283,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   // Seen before the engine's own listener, which asks canDrag about the press
   // it has just been given: so it is added before the first block is an item.
   const down = (event: PointerEvent) => {
-    const target = event.target instanceof Element ? event.target : null
+    const target = (event.target as Node | null)?.nodeType === 1 ? event.target as Element : null
     const block = target?.closest?.('.aa-block') as HTMLElement | null
     const grabbed = !!block && ready === block
     stopResting()
@@ -357,7 +354,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   }
   const hover = (event: PointerEvent) => {
     if (event.pointerType !== 'mouse' || event.buttons || sortable.isDragging() || !movable()) { stopResting(); return }
-    const target = event.target instanceof Element ? event.target : null
+    const target = (event.target as Node | null)?.nodeType === 1 ? event.target as Element : null
     const block = target?.closest?.('.aa-block') as HTMLElement | null
     if (!block || block.parentElement !== host || ownPress(target, block)) { stopResting(); return }
     if (resting?.block === block && Math.hypot(event.clientX - resting.x, event.clientY - resting.y) < DRIFT) return
