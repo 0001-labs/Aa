@@ -318,10 +318,10 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
   const handles = new Map<HTMLElement, ItemRegistration>();
   let pending: Pending | null = null;
   let session: Session | null = null;
-  let listening = false;
+  const documents = new Map<Document, { view: Window; instructions: HTMLElement; liveRegion: HTMLElement }>();
+  let eventView: Window | null = null;
   let destroyed = false;
   let reducedMotion = false;
-  let instructions: HTMLElement | null = null;
   let liveRegion: HTMLElement | null = null;
 
   function container(args: SortableContainerArgs): Cleanup {
@@ -363,8 +363,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     const addedTabIndex = !args.text && !handle.hasAttribute('tabindex') && !handle.matches(interactive);
     if (addedTabIndex) handle.tabIndex = 0;
     const describedBy = handle.getAttribute('aria-describedby');
-    installDocument(handle.ownerDocument);
-    if (instructions && !args.text) {
+    const { instructions } = installDocument(handle.ownerDocument);
+    if (!args.text) {
       handle.setAttribute('aria-describedby', [describedBy, instructions.id].filter(Boolean).join(' '));
     }
     return once(() => {
@@ -380,23 +380,27 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     });
   }
 
-  function installDocument(document: Document): void {
-    if (listening) return;
-    listening = true;
-    // Listened for first, so a page that stops these events cannot keep them from the engine.
-    window.addEventListener('pointerdown', onPointerDown, true);
-    window.addEventListener('keydown', onHandleKeyDown, true);
+  function installDocument(document: Document) {
+    const existing = documents.get(document);
+    if (existing) return existing;
+    const view = document.defaultView ?? window;
+    // A framed page owns its event stream and its DOM constructors.
+    view.addEventListener('pointerdown', onPointerDown, true);
+    view.addEventListener('keydown', onHandleKeyDown, true);
     if (!document.querySelector(`style[${handleStyleId}]`)) {
       const style = document.createElement('style');
       style.setAttribute(handleStyleId, '');
       style.textContent = handleStyles;
       document.head.appendChild(style);
     }
-    instructions = hiddenText(document, `0001-drag-instructions-${++instanceCount}`);
+    const instructions = hiddenText(document, `0001-drag-instructions-${++instanceCount}`);
     instructions.textContent = messages.instructions;
-    liveRegion = hiddenText(document, `0001-drag-live-${instanceCount}`);
+    const liveRegion = hiddenText(document, `0001-drag-live-${instanceCount}`);
     liveRegion.setAttribute('aria-live', 'assertive');
     liveRegion.setAttribute('aria-atomic', 'true');
+    const registration = { view, instructions, liveRegion };
+    documents.set(document, registration);
+    return registration;
   }
 
   function announce(message: string): void {
@@ -422,21 +426,22 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
   /** Space on a focused handle lifts its item for the keyboard. */
   function onHandleKeyDown(event: KeyboardEvent): void {
     if (destroyed || session || pending || event.key !== ' ' || event.defaultPrevented) return;
-    if (event.target instanceof Element && event.target.matches('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
-    const registration = event.target instanceof HTMLElement ? handles.get(event.target) : undefined;
+    const target = eventElement(event.target);
+    if (target?.matches('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+    const registration = target ? handles.get(target as HTMLElement) : undefined;
     if (!registration || registration.text || !registration.canDrag({ input: 'keyboard', target: registration.handle })) return;
     event.preventDefault();
     event.stopPropagation();
-    addWindowListeners();
+    addWindowListeners(registration.element.ownerDocument.defaultView ?? window);
     const box = measure(registration.element);
     lift(registration, -1, box.left + box.width / 2, box.top + box.height / 2, 'SNAP');
   }
 
   function findHandle(target: EventTarget | null): ItemRegistration | null {
-    let element = target instanceof Element ? target : null;
+    let element = eventElement(target);
     let crossedInteractive = false;
     while (element) {
-      const registration = element instanceof HTMLElement ? handles.get(element) : undefined;
+      const registration = handles.get(element as HTMLElement);
       if (registration) {
         return crossedInteractive && !registration.allowInteractive ? null : registration;
       }
@@ -450,7 +455,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (destroyed || session || pending) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     const registration = findHandle(event.target);
-    const target = event.target instanceof Element ? event.target : null;
+    const target = eventElement(event.target);
     if (!registration || !registration.canDrag({ input: event.pointerType || 'mouse', target })) return;
 
     // Writing lifts after a still press, so a press that moves sooner still selects words.
@@ -469,7 +474,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         if (pending) lift(pending.item, pending.pointerId, pending.startX, pending.startY);
       }, hold || settings.touchHold);
     }
-    addWindowListeners();
+    addWindowListeners(registration.element.ownerDocument.defaultView ?? window);
   }
 
   function onPointerMove(event: PointerEvent): void {
@@ -560,26 +565,33 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     });
   }
 
-  function addWindowListeners(): void {
-    window.addEventListener('pointermove', onPointerMove, true);
-    window.addEventListener('pointerup', onPointerUp, true);
-    window.addEventListener('pointercancel', onPointerCancel, true);
-    window.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
-    window.addEventListener('contextmenu', onContextMenu, true);
-    window.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('blur', onBlur);
-    window.addEventListener('scroll', onScroll, true);
+  function addWindowListeners(view: Window): void {
+    if (eventView === view) return;
+    removeWindowListeners();
+    eventView = view;
+    liveRegion = documents.get(view.document)?.liveRegion ?? null;
+    view.addEventListener('pointermove', onPointerMove, true);
+    view.addEventListener('pointerup', onPointerUp, true);
+    view.addEventListener('pointercancel', onPointerCancel, true);
+    view.addEventListener('touchmove', onTouchMove, { capture: true, passive: false });
+    view.addEventListener('contextmenu', onContextMenu, true);
+    view.addEventListener('keydown', onKeyDown, true);
+    view.addEventListener('blur', onBlur);
+    view.addEventListener('scroll', onScroll, true);
   }
 
   function removeWindowListeners(): void {
-    window.removeEventListener('pointermove', onPointerMove, true);
-    window.removeEventListener('pointerup', onPointerUp, true);
-    window.removeEventListener('pointercancel', onPointerCancel, true);
-    window.removeEventListener('touchmove', onTouchMove, true);
-    window.removeEventListener('contextmenu', onContextMenu, true);
-    window.removeEventListener('keydown', onKeyDown, true);
-    window.removeEventListener('blur', onBlur);
-    window.removeEventListener('scroll', onScroll, true);
+    const view = eventView;
+    if (!view) return;
+    eventView = null;
+    view.removeEventListener('pointermove', onPointerMove, true);
+    view.removeEventListener('pointerup', onPointerUp, true);
+    view.removeEventListener('pointercancel', onPointerCancel, true);
+    view.removeEventListener('touchmove', onTouchMove, true);
+    view.removeEventListener('contextmenu', onContextMenu, true);
+    view.removeEventListener('keydown', onKeyDown, true);
+    view.removeEventListener('blur', onBlur);
+    view.removeEventListener('scroll', onScroll, true);
   }
 
   function clearPending(): void {
@@ -590,12 +602,13 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
   }
 
   function suppressClick(): void {
+    const view = session?.overlay.ownerDocument.defaultView ?? eventView ?? window;
     const stop = (event: Event) => {
       event.preventDefault();
       event.stopPropagation();
     };
-    window.addEventListener('click', stop, { capture: true, once: true });
-    setTimeout(() => window.removeEventListener('click', stop, true), 0);
+    view.addEventListener('click', stop, { capture: true, once: true });
+    setTimeout(() => view.removeEventListener('click', stop, true), 0);
   }
 
   function lift(
@@ -638,7 +651,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     let sourceIndex = 0;
 
     for (const candidate of containers.values()) {
-      if (candidate.type !== registration.type || !candidate.element.isConnected) continue;
+      if (candidate.type !== registration.type || !candidate.element.isConnected || candidate.element.ownerDocument !== document) continue;
       const members = itemsOf(candidate);
       const isHome = candidate === homeRegistration;
       const style = view.getComputedStyle(candidate.element);
@@ -1118,8 +1131,9 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     const current = session;
     if (!current || current.dropping) return;
     current.dropping = true;
-    if (current.scrollFrame !== null) cancelAnimationFrame(current.scrollFrame);
-    if (current.impactFrame !== null) cancelAnimationFrame(current.impactFrame);
+    const view = current.overlay.ownerDocument.defaultView ?? window;
+    if (current.scrollFrame !== null) view.cancelAnimationFrame(current.scrollFrame);
+    if (current.impactFrame !== null) view.cancelAnimationFrame(current.impactFrame);
 
     // Dropped onto another item: it shrinks into it and fades.
     if (reason === 'DROP' && current.combine) {
@@ -1174,7 +1188,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       const before = new Map(siblings.map(element => [element, element.getBoundingClientRect()]));
       for (const [element, saved] of current.shifts) { element.style.transition = 'none'; element.style.translate = saved.translate; }
       const prepared = options.prepareDrop({ ...startOf(current), destination: returning ? null : locationOf(current.destination!), combine: null, reason });
-      const resolved = prepared instanceof Promise ? await prepared : prepared;
+      const resolved = promiseLike(prepared) ? await prepared : prepared;
       const locate = typeof resolved === 'function' ? resolved : () => resolved;
       finalElement = locate();
       if (session !== current) return;
@@ -1182,7 +1196,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         current.landing = { element: finalElement, visibility: finalElement.style.visibility };
         finalElement.style.visibility = 'hidden';
       }
-      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      await new Promise<void>(resolve => (current.overlay.ownerDocument.defaultView ?? window).requestAnimationFrame(() => resolve()));
       if (session !== current) return;
       const updated = locate();
       if (updated !== finalElement) {
@@ -1194,7 +1208,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         if (!element.isConnected || element === finalElement) continue;
         const old = before.get(element)!, next = element.getBoundingClientRect();
         const x = old.left - next.left, y = old.top - next.top;
-        if (x || y) element.animate([{ translate: `${x}px ${y}px` }, { translate: getComputedStyle(element).translate }], { duration: settings.outOfTheWay.duration, easing: settings.outOfTheWay.easing });
+        if (x || y) element.animate([{ translate: `${x}px ${y}px` }, { translate: (element.ownerDocument.defaultView ?? window).getComputedStyle(element).translate }], { duration: settings.outOfTheWay.duration, easing: settings.outOfTheWay.easing });
       }
     }
     const finalBox = finalElement?.isConnected ? finalElement.getBoundingClientRect() : null;
@@ -1401,16 +1415,26 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       // A prepared layout may destroy its old editor while replacing columns.
       // The landing overlay owns its lifetime until the already-started handoff finishes.
       if (session && !session.preparing) cleanup(session);
-      window.removeEventListener('pointerdown', onPointerDown, true);
-      window.removeEventListener('keydown', onHandleKeyDown, true);
-      instructions?.remove();
-      liveRegion?.remove();
-      listening = false;
+      for (const { view, instructions, liveRegion } of documents.values()) {
+        view.removeEventListener('pointerdown', onPointerDown, true);
+        view.removeEventListener('keydown', onHandleKeyDown, true);
+        instructions.remove(); liveRegion.remove();
+      }
+      documents.clear();
       containers.clear();
       items.clear();
       handles.clear();
     },
   };
+}
+
+function promiseLike<T>(value: T | Promise<T>): value is Promise<T> {
+  return !!value && typeof (value as Promise<T>).then === 'function';
+}
+
+// Structural element checks work when registration and events belong to another same-origin window.
+function eventElement(target: EventTarget | null): Element | null {
+  return target && (target as Node).nodeType === 1 ? target as Element : null;
 }
 
 let instanceCount = 0;
