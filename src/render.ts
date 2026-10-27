@@ -26,7 +26,7 @@ export const drawAtomAsText: AtomDrawer = (name, source) => {
   return element
 }
 
-export function atomElement(name: string, source: string): HTMLElement {
+export function atomElement(name: string, source: string, document: Document = globalThis.document): HTMLElement {
   const element = document.createElement('span')
   element.className = 'aa-atom'
   element.contentEditable = 'false'
@@ -55,6 +55,8 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
 }
 
 export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS, draw: AtomDrawer = drawAtomAsText, decorations: readonly Decoration[] = []) {
+  const document = element.ownerDocument
+  if (draw === drawAtomAsText) draw = (name, source) => { const atom = atomElement(name, source, document); atom.textContent = source; return atom }
   element.className = 'aa-block'
   element.dataset.kind = block.kind
   // Code is not words: no spelling marks, and no phone capitalising or correcting it.
@@ -147,7 +149,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     }
     visible = true
     const node = run.href ? document.createElement('a') : document.createElement('span')
-    if (node instanceof HTMLAnchorElement) { node.href = run.href!; node.className = 'aa-link'; node.rel = 'noopener' }
+    if (run.href) { (node as HTMLAnchorElement).href = run.href; node.className = 'aa-link'; (node as HTMLAnchorElement).rel = 'noopener' }
     if (run.bold) node.classList.add('aa-b')
     if (run.italic) node.classList.add('aa-i')
     if (run.strike) node.classList.add('aa-s')
@@ -171,6 +173,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
 }
 
 function decorateNode(node: HTMLElement, offset: number, decorations: readonly Decoration[]) {
+  const document = node.ownerDocument
   const text = node.textContent ?? ''
   const ranges = decorations.filter(range => range.from < offset + text.length && range.to > offset)
   if (!ranges.length) return
@@ -191,6 +194,7 @@ function decorateNode(node: HTMLElement, offset: number, decorations: readonly D
 }
 
 function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) {
+  const document = element.ownerDocument
   for (const caret of decorations.filter(range => range.from === range.to && range.from >= 0 && range.from <= readBlock(element).length)) {
     const marker = document.createElement('span'); marker.className = `${caret.className} aa-peer-caret`; marker.contentEditable = 'false'; marker.dataset.label = caret.label ?? ''; if (caret.label) marker.dataset.initial = initialOf(caret.label); marker.title = caret.label ?? ''
     const point = pointAt(element, caret.from)
@@ -199,6 +203,7 @@ function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) 
 }
 
 function renderTable(element: HTMLElement, block: Block, decorations: readonly Decoration[]) {
+  const document = element.ownerDocument
   element.contentEditable = 'false'
   const rows = tableRows(block.source), alignments = tableAlignments(block.source)
   const fragment = document.createDocumentFragment()
@@ -261,6 +266,7 @@ function isHidden(node: Node): boolean {
 
 /** A DOM point in a block as an offset into its source. */
 export function offsetIn(element: HTMLElement, node: Node, nodeOffset: number): number {
+  const document = element.ownerDocument
   let count = 0
   let found = -1
   const walk = (parent: Node): boolean => {
@@ -290,6 +296,7 @@ export function offsetIn(element: HTMLElement, node: Node, nodeOffset: number): 
 
 /** The DOM point for an offset into a block's source, in text that is displayed. */
 export function pointAt(element: HTMLElement, offset: number): { node: Node; offset: number } {
+  const document = element.ownerDocument
   if (element.dataset.kind === 'table') {
     const cell = Array.from(element.querySelectorAll<HTMLElement>('[data-cell]')).find(cell => offset >= Number(cell.dataset.from) && offset <= Number(cell.dataset.to))
     if (cell?.lastElementChild) return pointAt(cell.lastElementChild as HTMLElement, offset - Number(cell.dataset.from))

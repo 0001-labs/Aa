@@ -510,7 +510,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   }
   const drawn = new Map<HTMLElement, (() => void) | void>()
   const drawAtom = (name: string, source: string) => {
-    const element = atomElement(name, source)
+    const element = atomElement(name, source, document)
     const atom = atoms.find(candidate => candidate.name === name)
     if (atom?.draw) drawn.set(element, atom.draw(element, source))
     else element.textContent = source

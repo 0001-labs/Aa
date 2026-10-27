@@ -27,6 +27,15 @@ describe('an editor in another document', () => {
     editor.blur()
     expect(window.getSelection()?.toString()).toBe('Outside')
   })
+  it('draws native atoms in the host document before they bind nested editors or menus', () => {
+    frame = document.createElement('iframe'); document.body.append(frame)
+    const doc = frame.contentDocument!, host = doc.createElement('div'); doc.body.append(host)
+    let drawnDocument: Document | undefined
+    editor = createEditor(host, { value:'```native\nvalue\n```', atoms:[{ name:'native', fence:'native', match:()=>0, draw(element) { drawnDocument = element.ownerDocument; const field = element.ownerDocument.createElement('input'); element.append(field) } }] })
+    expect(drawnDocument).toBe(doc)
+    expect(host.querySelector('.aa-atom')?.ownerDocument).toBe(doc)
+    expect(host.querySelector('input')?.ownerDocument).toBe(doc)
+  })
   it('uses the canonical bounded side target and ignores the carried block or centre', () => {
     const rects = [{left:0,right:400,top:0,bottom:20,width:400,height:20},{left:0,right:400,top:40,bottom:60,width:400,height:20}]
     expect(sidePlacement(rects,1,{x:395,y:10})).toMatchObject({index:0,at:'end'})
