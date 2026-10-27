@@ -42,7 +42,7 @@ if (at) editor.replace(at.start, at.end, '**world**')
 | `focus()` | Puts the caret at the end of the document. |
 | `blur()` | Takes the focus away. |
 | `selectRange(start, end?)` | Selects from `start` to `end`, or puts the caret at `start`. |
-| `selectBlocks(anchor, focus?)` | Selects whole blocks, by their indices, as Escape does. |
+| `selectBlocks(anchor, focus?)` | Selects whole blocks by their indices, as Shift-Up or Shift-Down does. |
 | `activeBlock()` | The block the caret is in: `{ index, start, end, block }`, its offsets and its parsed `Block`, or `null`. |
 
 ## Formatting and blocks

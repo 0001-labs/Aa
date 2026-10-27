@@ -34,7 +34,7 @@ export default {
   'selecting-blocks': {
     title: 'Blocks selected',
     hint: 'Press Shift-Down to select blocks, then ⌘D, ⌘⇧↑ or Backspace. Escape clears the selection and leaves editing.',
-    markdown: '## Agenda\n\n1. Welcome\n2. Last month’s numbers\n3. The new office\n4. Anything else\n\nPress Escape in any of these lines.',
+    markdown: '## Agenda\n\n1. Welcome\n2. Last month’s numbers\n3. The new office\n4. Anything else\n\nPut the caret in a line and press Shift-Down to select blocks.',
   },
   'selecting-drag': {
     title: 'Moving blocks by hand',

@@ -8,6 +8,7 @@ import { calculateScalingFactor, defaultScalingConfig } from './scaling';
 
 /** The narrowest phone still sold, the common ones and the widest. */
 export const PHONE_WIDTHS = [320, 375, 393, 430];
+export const VIEWPORT_WIDTHS = [...PHONE_WIDTHS, 768, 1024, 1440];
 /** Pages checked side by side, each in its own frame. */
 export const PAGES_AT_ONCE = 3;
 
@@ -61,7 +62,7 @@ const wait = (ms: number) => new Promise(done => setTimeout(done, ms));
  * order of `widths`. The page reflows at each width without loading again. The address carries `ph=out`,
  * the analytics opt-out most trackers honour, so the check counts no visits.
  */
-export async function inspectInFrame(host: Element | ShadowRoot, url: string, widths: number[] = PHONE_WIDTHS, height = 844): Promise<PageCheck[]> {
+export async function inspectInFrame(host: Element | ShadowRoot, url: string, widths: number[] = VIEWPORT_WIDTHS, height = 844): Promise<PageCheck[]> {
   const frame = document.createElement('iframe');
   frame.setAttribute('aria-hidden', 'true');
   frame.tabIndex = -1;
@@ -114,7 +115,7 @@ export function checkPage(page: ParentNode): PageCheck {
  * each width as it comes. Stops starting pages when `signal` aborts. Whatever the pages store in this
  * browser while they are checked is put back afterwards.
  */
-export async function checkSite({ pages, widths = PHONE_WIDTHS, inspect, onResult, signal, atOnce = PAGES_AT_ONCE }: {
+export async function checkSite({ pages, widths = VIEWPORT_WIDTHS, inspect, onResult, signal, atOnce = PAGES_AT_ONCE }: {
   pages: string[];
   widths?: number[];
   /** One page at every width, in the order of `widths`. */

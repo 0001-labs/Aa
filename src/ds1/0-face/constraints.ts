@@ -1,3 +1,4 @@
+import { faultLineGrids, inspectFaultLines } from './fault-lines';
 import { labelledButtons, inspectButtonLabels } from './button-label';
 import { inspectTextContrast, measureTextContrast } from "./text-contrast";
 import { inspectWordWrap, wordHeaders } from './word-wrap';
@@ -34,6 +35,14 @@ export type Constraint = {
   measures: [one: string, many: string];
   count: (root: ParentNode) => number;
 };
+
+/** The actual initial, including a component nested in another open shadow root. */
+function isAvatarInitial(element: Element): boolean {
+  for (let parent: Element | null = element; parent; parent = parent.assignedSlot ?? parent.parentElement ?? (parent.getRootNode() as ShadowRoot).host ?? null) {
+    if (parent.matches('ds-avatar, .ds-avatar')) return true;
+  }
+  return false;
+}
 
 /** A pixel either way is the same place. */
 const near = (a: number, b: number) => Math.abs(a - b) <= 1;
@@ -104,6 +113,14 @@ function rows(found: ReturnType<typeof cards>) {
 
 export const constraints: Constraint[] = [
   {
+    code: 'page.fault-lines',
+    rule: 'Fault lines keep related card and control grids aligned across the whole page, with matching track edges and gaps at every checked viewport width.',
+    why: 'Compare separate sections in the same alignment family; responsive layouts may change together, while unrelated groups and intentional exceptions remain independent.',
+    components: ['ds-page'],
+    check: { file: 'tests/fault-lines.test.ts', test: 'fault lines catch shifted tracks and unequal gaps across sections at each viewport' },
+    measures: ['alignment group', 'alignment groups'], count: root => faultLineGrids(root).length, inspect: inspectFaultLines,
+  },
+  {
     code: 'select.hug',
     rule: 'Select and date-picker triggers use hug sizing, never fill sizing or growing to occupy the available row.',
     components: ['ds-select', 'ds-calendar'],
@@ -145,6 +162,16 @@ export const constraints: Constraint[] = [
     measures: ['text sample', 'text samples'],
     count: root => measureTextContrast(root).length,
     inspect: inspectTextContrast,
+  },
+  {
+    code: 'avatar.initial-contrast',
+    rule: 'Avatar initials have at least 4.5:1 contrast against their rendered fill, including after a theme or identity colour changes.',
+    why: 'Check each initial inside the avatar’s shadow root and in overlapping groups; decorative initials still need to be readable. Explicit ink overrides must pass too.',
+    components: ['ds-avatar'],
+    check: { file: 'tests/avatar-contrast.test.ts', test: 'avatar initials stay readable after theme and CSS-variable changes, and the avatar constraint catches overrides' },
+    measures: ['avatar initial', 'avatar initials'],
+    count: root => measureTextContrast(root).filter(result => isAvatarInitial(result.element)).length,
+    inspect: root => inspectTextContrast(root).filter(finding => isAvatarInitial(finding.element)),
   },
   {
     code: 'card.media-level',

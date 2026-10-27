@@ -278,10 +278,10 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   linkBar.addEventListener('submit', event => {
     event.preventDefault()
-    if (!linkTarget || editor.readOnly || !linkUrl.value.trim()) return
+    if (!linkTarget || editor.readOnly) return
     const url = linkUrl.value.trim().replace(/\(/g, '%28').replace(/\)/g, '%29')
     const label = linkTarget.text || url
-    editor.replace(linkTarget.start, linkTarget.end, `[${label}](${url})`)
+    if (url || linkTarget.url) editor.replace(linkTarget.start, linkTarget.end, url ? `[${label}](${url})` : label)
     linkBar.hidden = true; linkTarget = null
   })
   cancelLink.addEventListener('click', finishLink)

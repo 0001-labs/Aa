@@ -46,7 +46,8 @@
 }
 :host([fit]) :is(button, a) {
   flex: 0 0 auto;
-  width: max-content;
+  /* Hug sizing belongs to the host, including its grid rounding. */
+  width: 100%;
   min-width: var(--ds-button-min-width, 0px);
   justify-content: var(--ds-button-align, flex-start);
 }
@@ -228,7 +229,10 @@
   min-width: max-content;
   min-width: calc-size(max-content, round(up, size, var(--ds-unit)));
 }
-:is(button, a), :is(button, a) ds-text, :is(button, a) ::slotted(*) {
+/* A menu entry keeps a fixed width, so its words may still be cut and fade. */
+:host(:not([menu-item])) :is(button, a),
+:host(:not([menu-item])) :is(button, a) ds-text,
+:host(:not([menu-item])) :is(button, a) ::slotted(*) {
   overflow: visible;
   mask-image: none;
   text-overflow: clip;

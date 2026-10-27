@@ -1,6 +1,6 @@
 {
   "source": "Design system 1/DS1",
-  "commit": "3658f3fe1a051bbc9144c826df36884c02879110",
+  "commit": "d115910ec4063bc427a8ac2bde6ffaf26ac91437",
   "components": [
     "button",
     "input",
@@ -12,7 +12,7 @@
   "files": {
     "0-face/control.ts": "4eb1f58f0899c21bfdd2be82f6f221faeeadfca89fee18033e2f4ffbdcfa58e1",
     "0-face/cut-fade.ts": "5652260db82a76744797a56dfb2eef04d37a874354cb5a7de442a705673f8ff2",
-    "0-face/define.ts": "4385535e24bd8b56519e279e015e9abc59d8cdd2df927fe5650a186ae33b5e7a",
+    "0-face/define.ts": "cf0dca7749c753bbcce8fc2dc8f18ce6fb8eae4ebf90e349ab16d4eac4c79a3a",
     "0-face/i18n.ts": "0aaf5851d57edd2663b6574a346a712e601ae185f0189e25800fcc3fe547c239",
     "0-face/keys.ts": "8905bf6c3a34ed84edfab72b3848709f5d37e97a5cec348b38ba580fd7328bc1",
     "0-face/language-routing.ts": "8fba136db5087cb3660c7cea24ca2ab8781092425867d5b5c0e38fd42d72a226",
@@ -65,9 +65,9 @@
     "2-core/generated/ds-icon-map.ts": "f74e6325c60bdc435126677ae20428171fc6f4855b63a4a364c97fa109db7f84",
     "2-core/generated/icons-extra.ts": "171f1fadfe8a39ba8c57fc61fe5d8e718029d6c91c81f274e828f8f0faac31ba",
     "2-core/generated/icons-immediate.ts": "ad18854f517533312d5f1b3d8d1b3476c47658f1bc51d9366e0e073be5d213a8",
-    "2-core/styles/ds-button-host.css": "dc21dfc3016df796e04cdaa8c7117d482fd80100c2ad40ba9187804518aa7a13",
+    "2-core/styles/ds-button-host.css": "fdc91cd1fc5c55b2f0e71cf94cdc3bc4589cad9e5cd47b0e52de188aaf37cb12",
     "2-core/styles/ds-button-split.css": "db78e1aa9c6f6613d4638ef7a7a40a518cb7cedbbab251ada1f1e14559e42297",
-    "2-core/styles/ds-button.css": "ffe690b15f40abad2e9fc6c127cfb3ededf628856ad2efa05a36fcb66b2cf650",
+    "2-core/styles/ds-button.css": "192ae9ea9a310ae3832ff2b551c76f6b410638801757840651e553c29a2804b9",
     "2-core/styles/ds-file-picker.css": "7ff6f17f39e888552574f8be445aa95bb51fa0e3c7e9e58bfdae21c97ed5e3ac",
     "2-core/styles/ds-icon.css": "6fb85950d0f672f7904509eae4c159d0a94af58e0d8820b08d141c0a49245270",
     "2-core/styles/ds-input.css": "18459f4e5fb85595a84cc4bf6f69deabfcf85cf37006524a5e5bffcd30a80b0a",

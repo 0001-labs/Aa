@@ -11,6 +11,7 @@
  * pointer handler, siblings move by the `translate` property alone, geometry is
  * measured once at lift, and nothing changes layout while the pointer moves.
  */
+import { flowHolds, flowStarts, type Flow, type FlowItem } from './flow';
 import type { Cleanup } from './types';
 import { once } from './util';
 
@@ -171,6 +172,21 @@ export type SortableOptions = {
    * home. `onDragEnd` still follows, with no destination.
    */
   onDropOutside?: (start: SortableStart, point: { x: number; y: number }) => boolean;
+  /**
+   * Every move a sibling makes: making room while the item is carried
+   * ('drag'), and any move after release ('drop'), which means the page drew
+   * it somewhere other than where it had made room. A sibling moves once per
+   * change of place; a 'drop' move is a second one.
+   */
+  onMovement?: (movement: SortableMovement) => void;
+};
+
+export type SortableMovement = {
+  element: HTMLElement;
+  phase: 'drag' | 'drop';
+  /** How far it moved, in screen pixels. */
+  x: number;
+  y: number;
 };
 
 export type SortableController = {
@@ -257,6 +273,12 @@ type ContainerSnapshot = {
   /** Screen pixels to the list's own, for a list inside a scaled parent. */
   scale: number;
   isHome: boolean;
+  /**
+   * The list's flow at lift, every member in its own order (the source
+   * included at home), and the lifted item as it would stand here; null where
+   * the model does not draw the list where the page did.
+   */
+  flow: { items: FlowItem[]; source: FlowItem; flow: Flow; origin: number } | null;
 };
 
 type Pending = {
@@ -289,7 +311,7 @@ type Session = {
   overlay: HTMLElement;
   preview: HTMLElement;
   destination: { container: ContainerSnapshot; index: number } | null;
-  shifts: Map<HTMLElement, { value: number; translate: string; transition: string }>;
+  shifts: Map<HTMLElement, { value: number; scale: number; translate: string; transition: string }>;
   sourceVisibility: string;
   reserved: ContainerSnapshot | null;
   scrollFrame: number | null;
@@ -661,12 +683,25 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       const scale = scaleOf(candidate.element, box);
       const gap = parsePixels(vertical ? style.rowGap : style.columnGap) * scale;
       const slots: Slot[] = [];
+      const flowItems: FlowItem[] = [];
+      const along = (element: HTMLElement, box: Box): FlowItem => {
+        const style = view.getComputedStyle(element);
+        const scale = scaleOf(element, box);
+        return {
+          start: vertical ? box.top : box.left,
+          size: vertical ? box.height : box.width,
+          marginStart: parsePixels(vertical ? style.marginTop : style.marginLeft) * scale,
+          marginEnd: parsePixels(vertical ? style.marginBottom : style.marginRight) * scale,
+        };
+      };
       members.forEach((member, original) => {
+        const memberBox = member === registration ? liftBox : measure(member.element);
+        if (!candidate.still) flowItems.push(along(member.element, memberBox));
         if (member === registration) {
           sourceIndex = original;
           return;
         }
-        slots.push({ item: member, original, box: measure(member.element) });
+        slots.push({ item: member, original, box: memberBox });
       });
       const scrollElement = scrollParent(candidate.element);
       let scroller = scrollers.get(scrollElement) ?? null;
@@ -691,6 +726,7 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         room: candidate.still ? 0 : (vertical ? liftBox.height + margins.vertical * itemScale : liftBox.width + margins.horizontal * itemScale) + gap,
         marginStart: (vertical ? margins.top : margins.left) * itemScale,
         isHome,
+        flow: candidate.still ? null : flowOf(style, box, scale, vertical, flowItems, isHome ? flowItems[sourceIndex] : along(registration.element, liftBox)),
       });
     }
 
@@ -1034,11 +1070,15 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (destination) touched.add(destination.container);
 
     for (const snapshot of touched) {
+      const drawn = flowOrder(current, snapshot);
       snapshot.slots.forEach((slot, position) => {
         let value = 0;
-        if (snapshot.isHome && slot.original > current.sourceIndex) value -= snapshot.room;
-        if (destination?.container === snapshot && position >= destination.index) value += snapshot.room;
-        shift(current, slot.item.element, value / snapshot.scale, snapshot.registration.axis);
+        if (drawn) value = drawn.shifts[position];
+        else {
+          if (snapshot.isHome && slot.original > current.sourceIndex) value -= snapshot.room;
+          if (destination?.container === snapshot && position >= destination.index) value += snapshot.room;
+        }
+        shift(current, slot.item.element, value, snapshot);
       });
     }
 
@@ -1058,12 +1098,29 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     }
   }
 
-  function shift(current: Session, element: HTMLElement, value: number, axis: SortableAxis): void {
+  /** Where the list draws its items with the lifted one where it is now, and how far each sibling stands off; null without a flow. */
+  function flowOrder(current: Session, snapshot: ContainerSnapshot): { shifts: number[]; source: number | null } | null {
+    const model = snapshot.flow;
+    if (!model) return null;
+    const order = snapshot.slots.map((slot) => model.items[slot.original]);
+    const at = current.destination?.container === snapshot ? current.destination.index : -1;
+    if (at >= 0) order.splice(at, 0, model.source);
+    const starts = flowStarts(order, model.flow, model.origin);
+    const shifts = snapshot.slots.map((slot, position) => starts[at >= 0 && position >= at ? position + 1 : position] - model.items[slot.original].start);
+    return { shifts, source: at >= 0 ? starts[at] : null };
+  }
+
+  /** Moves a sibling `value` screen pixels off along the list's axis. */
+  function shift(current: Session, element: HTMLElement, screen: number, snapshot: ContainerSnapshot): void {
+    const axis = snapshot.registration.axis;
+    const value = screen / snapshot.scale;
     const existing = current.shifts.get(element);
-    if ((existing?.value ?? 0) === value) return;
+    const before = existing?.value ?? 0;
+    if (Math.abs(before - value) < 0.01) return;
     if (!existing) {
       current.shifts.set(element, {
         value,
+        scale: snapshot.scale,
         translate: element.style.translate,
         transition: element.style.transition,
       });
@@ -1072,6 +1129,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     } else {
       existing.value = value;
     }
+    const moved = (value - before) * snapshot.scale;
+    options.onMovement?.({ element, phase: 'drag', x: axis === 'vertical' ? 0 : moved, y: axis === 'vertical' ? moved : 0 });
     element.style.translate = value === 0 ? 'none' : axis === 'vertical' ? `0 ${value}px` : `${value}px 0`;
     // How far it stands off, for what inside it stays where it is (`translate: calc(-1 * var(--drag-shift)) 0`).
     element.style.setProperty('--drag-shift', `${value}px`);
@@ -1184,8 +1243,9 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     if (reason === 'DROP' && options.prepareDrop) {
       current.preparing = true;
       // Preserve the visual positions while the adapter commits the actual final structure.
-      const siblings = [...current.shifts.keys()].filter(element => element.isConnected);
+      const siblings = siblingsOf(current);
       const before = new Map(siblings.map(element => [element, element.getBoundingClientRect()]));
+      const resting = restingBoxes(current, siblings);
       for (const [element, saved] of current.shifts) { element.style.transition = 'none'; element.style.translate = saved.translate; }
       const prepared = options.prepareDrop({ ...startOf(current), destination: returning ? null : locationOf(current.destination!), combine: null, reason });
       const resolved = promiseLike(prepared) ? await prepared : prepared;
@@ -1204,11 +1264,12 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         finalElement = updated;
         if (finalElement?.isConnected) { current.landing = { element: finalElement, visibility: finalElement.style.visibility }; finalElement.style.visibility = 'hidden'; }
       }
-      if (!reducedMotion) for (const element of siblings) {
+      for (const element of siblings) {
         if (!element.isConnected || element === finalElement) continue;
         const old = before.get(element)!, next = element.getBoundingClientRect();
+        reportDrop(element, resting.get(element)!, next);
         const x = old.left - next.left, y = old.top - next.top;
-        if (x || y) element.animate([{ translate: `${x}px ${y}px` }, { translate: (element.ownerDocument.defaultView ?? window).getComputedStyle(element).translate }], { duration: settings.outOfTheWay.duration, easing: settings.outOfTheWay.easing });
+        if (!reducedMotion && (x || y)) element.animate([{ translate: `${x}px ${y}px` }, { translate: (element.ownerDocument.defaultView ?? window).getComputedStyle(element).translate }], { duration: settings.outOfTheWay.duration, easing: settings.outOfTheWay.easing });
       }
     }
     const finalBox = finalElement?.isConnected ? finalElement.getBoundingClientRect() : null;
@@ -1255,8 +1316,13 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
     const still = snapshot.registration.still;
     const over = still ? stillSlot(snapshot, destination.index) : undefined;
 
+    const flowed = still ? null : flowOrder(current, snapshot)?.source ?? null;
+
     if (snapshot.isHome && destination.index === current.sourceIndex) {
       start = vertical ? current.liftBox.top : current.liftBox.left;
+    } else if (flowed !== null) {
+      // The list's flow says where the dropped order draws it.
+      start = flowed;
     } else if (over) {
       start = vertical ? over.box.top : over.box.left;
     } else if (still && slots.length > 0) {
@@ -1299,10 +1365,18 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
 
   function finish(current: Session, result: SortableResult): void {
     const at = announcement(current);
+    // Without prepareDrop the page draws the drop in onDragEnd: once it has, nothing should have moved.
+    const siblings = options.onMovement && !current.preparing ? siblingsOf(current) : [];
+    const resting = restingBoxes(current, siblings);
     try {
       options.onDragEnd?.(result);
     } finally {
       cleanup(current);
+    }
+    if (siblings.length) {
+      (current.overlay.ownerDocument.defaultView ?? window).requestAnimationFrame(() => {
+        for (const element of siblings) if (element.isConnected) reportDrop(element, resting.get(element)!, element.getBoundingClientRect());
+      });
     }
     if (result.combine && current.combine) announce(messages.combined(current.item.label(), current.combine.slot.item.label()));
     else if (at) announce(result.reason === 'DROP' && result.destination ? messages.dropped(at) : messages.returned(at));
@@ -1315,6 +1389,21 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
         }
       }
     }
+  }
+
+  /** Every item that stayed in a list the lifted item could reach. */
+  function siblingsOf(current: Session): HTMLElement[] {
+    return [...new Set(current.containers.flatMap((snapshot) => snapshot.slots.map((slot) => slot.item.element)))].filter((element) => element.isConnected);
+  }
+
+  function restingBoxes(current: Session, elements: HTMLElement[]): Map<HTMLElement, Box> {
+    return new Map(elements.map((element) => [element, restingBox(element, current.shifts.get(element)?.scale ?? 1)]));
+  }
+
+  /** A sibling drawn more than a pixel from where it had made room has moved a second time. */
+  function reportDrop(element: HTMLElement, resting: Box, next: Box): void {
+    const x = next.left - resting.left, y = next.top - resting.top;
+    if (Math.abs(x) > 1 || Math.abs(y) > 1) options.onMovement?.({ element, phase: 'drop', x, y });
   }
 
   function cleanup(current: Session): void {
@@ -1502,6 +1591,32 @@ function intersect(a: Box, b: Box): Box {
 
 function contains(box: Box, x: number, y: number): boolean {
   return x >= box.left && x < box.left + box.width && y >= box.top && y < box.top + box.height;
+}
+
+/** A list's flow at lift, when the model draws its members where the page drew them. */
+function flowOf(style: CSSStyleDeclaration, box: Box, scale: number, vertical: boolean, items: FlowItem[], source: FlowItem): ContainerSnapshot['flow'] {
+  const collapse = vertical && /^(block|flow-root|list-item)$/.test(style.display);
+  const gap = collapse ? 0 : parsePixels(vertical ? style.rowGap : style.columnGap) * scale;
+  const origin = (vertical ? box.top : box.left)
+    + (parsePixels(vertical ? style.borderTopWidth : style.borderLeftWidth) + parsePixels(vertical ? style.paddingTop : style.paddingLeft)) * scale;
+  const first = items[0];
+  // A first margin that stands outside the list: it has passed through the list's edge.
+  const through = collapse && !!first && first.marginStart > 0.5 && Math.abs(first.start - origin) <= 1;
+  const flow = { gap, collapse, through };
+  return flowHolds(items, flow, origin) ? { items, source, flow, origin } : null;
+}
+
+/** Where an element would stand without the part of its `translate` still on its way: how its slide ends. */
+function restingBox(element: HTMLElement, scale: number): Box {
+  const box = measure(element);
+  const pair = (value: string) => {
+    if (!value || value === 'none') return { x: 0, y: 0 };
+    const [x = '0', y = '0'] = value.trim().split(/\s+/);
+    return { x: parsePixels(x), y: parsePixels(y) };
+  };
+  const target = pair(element.style.translate);
+  const now = pair((element.ownerDocument.defaultView ?? window).getComputedStyle(element).translate);
+  return { ...box, left: box.left + (target.x - now.x) * scale, top: box.top + (target.y - now.y) * scale };
 }
 
 function parsePixels(value: string): number {

@@ -7,7 +7,7 @@ import { exportMarkdown, hasCommentSource } from './comments-markdown'
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type CalloutColor, type Tab } from './markdown'
+import { IMAGE, EQUATION, blockRuns, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type CalloutColor, type Tab } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
@@ -1681,6 +1681,16 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         const change = replaceRange(blocks, { block: a.block, offset: 0 }, { block: a.block, offset: block.source.length }, source)
         const pos = { block: a.block, offset: cell.to }
         commit(change.blocks, pos, pos, 'edit'); return
+      }
+    }
+    if (plain && a.block === b.block) {
+      // Selecting a link's complete label leaves its hidden Markdown wrappers
+      // outside the native range. Plain paste must replace those wrappers too.
+      const link = blockRuns(block, atoms).find(run => run.kind === 'syntax' && run.group &&
+        block.source.slice(run.from, run.from + 2) === '](' && a.offset === run.group[0] + 1 && b.offset === run.from)
+      if (link?.group) {
+        insert({ anchor: { block: a.block, offset: link.group[0] }, focus: { block: a.block, offset: link.group[1] } }, text.replace(/\r\n?/g, '\n'))
+        return
       }
     }
     if (!plain && a.block === b.block && a.offset !== b.offset && /^https?:\/\/[^\s<>]+$/i.test(text.trim())) {

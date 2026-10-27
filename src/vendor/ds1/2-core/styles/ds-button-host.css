@@ -39,7 +39,8 @@
 }
 
 :host([fit][control="slotted"]) ::slotted(:is(button, a)) {
-  width: max-content !important;
+  /* The host hugs on the grid; its visible face must occupy that same box. */
+  width: 100% !important;
   min-width: var(--ds-button-min-width, 0px) !important;
   justify-content: var(--ds-button-align, flex-start) !important;
 }

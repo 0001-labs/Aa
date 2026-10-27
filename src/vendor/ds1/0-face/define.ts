@@ -13,7 +13,7 @@ export function define(name: string, element: CustomElementConstructor): void {
   const type = element as StyledConstructor;
   const prototype = element.prototype as StyledElement;
   const original = prototype.createRenderRoot;
-  if (original) {
+  if (original && typeof document !== 'undefined') {
     const definingDocument = document;
     prototype.createRenderRoot = function (this: StyledElement) {
       if (this.ownerDocument === definingDocument || !type.elementStyles?.length) return original.call(this);
