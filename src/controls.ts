@@ -520,7 +520,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; linkBar.hidden = true; linkTarget = null } }
   const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); target = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
   const viewport = (event: Event) => {
-    if (!!event.target && menu.contains(event.target as Node)) return
+    const target = event.target as Node | null
+    if (target?.nodeType && menu.contains(target)) return
     positionToolbar()
     if (!linkBar.hidden && 'docked' in linkBar.dataset) dock(linkBar)
     if (!menu.hidden) {

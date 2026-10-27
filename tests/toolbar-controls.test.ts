@@ -2,6 +2,17 @@ import { afterEach, expect, test, vi } from 'vite-plus/test'
 import { createEditor } from '../src/editor'
 import { AaToolbarElement, defineAaToolbar, selectionToolbarPosition } from '../src/controls'
 afterEach(() => { vi.useRealTimers(); document.body.replaceChildren() })
+test('viewport changes never pass Window or VisualViewport to DOM containment', () => {
+ const viewport = Object.assign(new EventTarget(), { width: 390, height: 800, offsetLeft: 0, offsetTop: 0 })
+ vi.stubGlobal('visualViewport', viewport)
+ const host = document.createElement('div'); document.body.append(host)
+ const editor = createEditor(host, { value: 'Words', toolbar: true })
+ const contains = vi.spyOn(Node.prototype, 'contains')
+ try {
+  window.dispatchEvent(new Event('resize')); viewport.dispatchEvent(new Event('resize')); viewport.dispatchEvent(new Event('scroll'))
+  expect(contains.mock.calls.every(([target]) => !target || typeof target.nodeType === 'number')).toBe(true)
+ } finally { contains.mockRestore(); editor.destroy(); vi.unstubAllGlobals() }
+})
 test('centres the bar directly above the selection and falls below when there is no room', () => {
  expect(selectionToolbarPosition({ left: 200, top: 200, width: 80, bottom: 220 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 190, top: 140 })
  expect(selectionToolbarPosition({ left: 0, top: 10, width: 20, bottom: 30 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 0, top: 30 })
