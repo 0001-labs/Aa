@@ -1,4 +1,4 @@
-/* version 0.3.0 */
+/* version 0.3.2 */
 
 @import "./grid.css";
 @import "./component-tokens.css";
@@ -191,7 +191,7 @@ body {
   background: transparent;
   color: var(--button-text-color);
   cursor: pointer;
-  font-family: var(--typeface-regular);
+  font-family: "Inter Arrows", var(--typeface-regular);
   font-size: var(--type-size-default);
   line-height: var(--type-lineheight-default);
   letter-spacing: var(--type-letterspacing-default);
@@ -239,14 +239,15 @@ body {
   padding: 0 calc(2px * var(--sf));
   background: var(--button-background-color-secondary);
   color: var(--button-text-color-secondary);
-  font-family: var(--typeface-regular);
+  font-family: "Inter Arrows", var(--typeface-regular);
   font-size: var(--type-size-default);
   line-height: var(--type-lineheight-default);
   letter-spacing: var(--type-letterspacing-default);
 }
 
 .ds-input::placeholder {
-  color: var(--ds-input-placeholder-color, var(--ds-text-color-muted));
+  /* one.css is copied on its own, without component-tokens.css: the fallback is that file's muted ink. */
+  color: var(--ds-input-placeholder-color, var(--ds-text-color-muted, light-dark(#5f5f5f, #cacaca)));
 }
 
 .ds-card {

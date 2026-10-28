@@ -4,7 +4,7 @@
   width: var(--ds-toc-width, calc(12 * var(--ds-unit)));
   max-width: 100%;
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
   line-height: var(--ds-type-lineheight-default);

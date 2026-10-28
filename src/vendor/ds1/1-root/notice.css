@@ -47,7 +47,7 @@
   align-items: start;
   margin: 0;
   color: var(--ds-notice-ink);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -108,7 +108,7 @@
 }
 
 .ds-notice__title {
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-weight: var(--ds-type-weight-bold);
 }
 

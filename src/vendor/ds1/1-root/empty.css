@@ -34,7 +34,7 @@
   text-align: center;
   padding-block: var(--ds-empty-padding, 0);
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -73,7 +73,7 @@
   min-width: 0;
   padding-top: calc(var(--ds-unit) - var(--ds-control-height));
   line-height: var(--ds-control-height);
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-weight: var(--ds-type-weight-bold);
 }
 

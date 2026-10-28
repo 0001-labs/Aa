@@ -31,7 +31,7 @@
   background: var(--ds-paper);
   color: var(--ds-text-color);
   box-shadow: none;
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   line-height: var(--ds-type-lineheight-default);

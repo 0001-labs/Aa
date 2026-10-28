@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: flex-start;
   height: var(--ds-control-height);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
   line-height: var(--ds-type-lineheight-default);
@@ -26,17 +26,17 @@
 :host([hidden]) { display: none !important; }
 
 :host([data-language="ja"]) {
-  font-family: var(--ds-typeface-regular-jp, var(--typeface-regular-jp));
+  font-family: "Inter Arrows", var(--ds-typeface-regular-jp, var(--typeface-regular-jp));
 }
 
 :host([data-language="zh"]),
 :host([data-language="zh-hant"]) {
-  font-family: var(--ds-typeface-regular-zh-hant, var(--typeface-regular-zh-hant));
+  font-family: "Inter Arrows", var(--ds-typeface-regular-zh-hant, var(--typeface-regular-zh-hant));
   font-weight: var(--ds-type-weight-default, 400);
 }
 
 :host([data-language="zh-hans"]) {
-  font-family: var(--ds-typeface-regular-zh-hans, var(--typeface-regular-zh-hans));
+  font-family: "Inter Arrows", var(--ds-typeface-regular-zh-hans, var(--typeface-regular-zh-hans));
   font-weight: var(--ds-type-weight-default, 400);
 }
 
@@ -54,7 +54,7 @@
   min-width: 0;
   max-width: 100%;
   overflow: var(--ds-text-overflow, hidden);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);

@@ -27,7 +27,7 @@
 
 [data-ds-prose] {
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -59,7 +59,7 @@
 
 [data-ds-prose] :where(h1, h2, h3, h4, h5, h6):not(:where([data-ds-not-prose] *)) {
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-bold);
   line-height: var(--ds-unit);
@@ -92,7 +92,7 @@
 }
 
 [data-ds-prose] :where(dt):not(:where([data-ds-not-prose] *)) {
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-weight: var(--ds-type-weight-bold);
 }
 
@@ -115,7 +115,7 @@
 }
 
 [data-ds-prose] :where(strong, b, th):not(:where([data-ds-not-prose] *)) {
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-weight: var(--ds-type-weight-bold);
 }
 
@@ -133,7 +133,7 @@
 /* Code: thirteen on the same one-square lines, in the code face. */
 
 [data-ds-prose] :where(code, kbd, samp, pre):not(:where([data-ds-not-prose] *)) {
-  font-family: var(--ds-typeface-mono);
+  font-family: "Inter Arrows", var(--ds-typeface-mono);
   font-size: calc(var(--ds-code-text-size, 13px) * var(--ds-sf, 1));
   line-height: var(--ds-unit);
   letter-spacing: 0;

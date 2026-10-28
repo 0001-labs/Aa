@@ -60,7 +60,7 @@
   border-collapse: collapse;
   border-spacing: 0;
   color: var(--ds-text-color, inherit);
-  font-family: var(--ds-typeface-regular, inherit);
+  font-family: "Inter Arrows", var(--ds-typeface-regular, inherit);
   font-feature-settings: var(--ds-font-features, normal);
   font-size: var(--ds-type-size-default, 14px);
   letter-spacing: var(--ds-type-letterspacing-default, normal);

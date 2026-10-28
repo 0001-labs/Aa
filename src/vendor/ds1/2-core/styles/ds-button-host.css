@@ -19,7 +19,7 @@
   corner-shape: var(--ds-corner-shape, round) !important;
   background: var(--ds-button-background, transparent) !important;
   color: var(--ds-button-color, var(--ds-button-text-color)) !important;
-  font-family: var(--ds-typeface-regular) !important;
+  font-family: "Inter Arrows", var(--ds-typeface-regular) !important;
   font-feature-settings: var(--ds-font-features) !important;
   font-size: var(--_button-font-size, var(--ds-type-size-default)) !important;
   font-weight: var(--ds-type-weight-default) !important;

@@ -51,7 +51,7 @@
   padding: calc(2 * var(--ds-unit)) var(--ds-unit) var(--ds-unit);
   box-shadow: inset 0 1px var(--ds-footer-line, var(--ds-border-color));
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -81,7 +81,7 @@
   align-self: flex-start;
   height: var(--ds-unit);
   color: inherit;
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-weight: var(--ds-type-weight-bold);
   text-decoration: none;
 }

@@ -30,7 +30,7 @@
 
 body {
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--ds-type-size-default);
   line-height: var(--ds-unit);
   -webkit-font-smoothing: antialiased;
@@ -41,7 +41,7 @@ body {
 .ds-text {
   margin: 0;
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -61,13 +61,13 @@ body {
 }
 
 .ds-text--heading {
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-size: var(--ds-type-size-heading);
   font-weight: var(--ds-type-weight-bold);
 }
 
 .ds-text--display {
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-size: var(--ds-type-size-display);
   font-weight: var(--ds-type-weight-bold);
   line-height: calc(2 * var(--ds-unit));
@@ -75,7 +75,7 @@ body {
 }
 
 .ds-text--strong {
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-weight: var(--ds-type-weight-bold);
 }
 

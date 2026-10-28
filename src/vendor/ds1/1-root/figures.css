@@ -46,7 +46,7 @@
   min-width: 0;
   margin: 0;
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -90,7 +90,7 @@
 .ds-stat__figure {
   display: block;
   overflow: hidden;
-  font-family: var(--ds-stat-typeface, var(--ds-typeface-medium));
+  font-family: "Inter Arrows", var(--ds-stat-typeface, var(--ds-typeface-medium));
   font-size: calc(var(--ds-stat-size, var(--ds-display-text-size, 20px)) * var(--ds-sf, 1));
   font-weight: var(--ds-type-weight-bold);
   font-variant-numeric: tabular-nums;

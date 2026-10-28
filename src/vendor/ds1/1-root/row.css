@@ -283,7 +283,7 @@ button.ds-row[aria-disabled="true"]:hover::after {
   padding: 0;
   list-style: none;
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);

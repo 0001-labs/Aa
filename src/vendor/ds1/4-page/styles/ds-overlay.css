@@ -17,7 +17,7 @@ ds-overlay > dialog {
   box-shadow: none;
   overflow: var(--ds-overlay-overflow, auto);
   overscroll-behavior: contain;
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);

@@ -29,7 +29,7 @@
   corner-shape: var(--ds-corner-shape, round);
   background: var(--ds-button-background-color-secondary);
   color: var(--ds-text-color-muted);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);

@@ -29,6 +29,7 @@ export function bindContextMenuTrigger(
   let suppressed: HTMLElement | null = null;
   let release: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
+  let mousePress: { event: PointerEvent; path: EventTarget[]; target: EventTarget | null } | undefined;
   if (aria) trigger.setAttribute("aria-haspopup", "menu");
   if (selection) trigger.classList.add("ds-context-trigger");
   const enabled = (control: HTMLElement) => control.isConnected &&
@@ -48,6 +49,7 @@ export function bindContextMenuTrigger(
     release = setTimeout(clearSuppression, 1000);
   };
   const cancel = () => {
+    mousePress = undefined;
     clearTimeout(timer); timer = undefined; point = undefined;
     doc.removeEventListener("pointermove", move);
     doc.removeEventListener("pointerup", cancel);
@@ -56,10 +58,28 @@ export function bindContextMenuTrigger(
   };
   const context = (event: MouseEvent) => {
     if (event.defaultPrevented) return;
-    const control = resolve(event); if (!control || !enabled(control)) return;
+    // Settling a transform on pointerdown can move another row beneath the
+    // pointer before Chromium hit-tests contextmenu. Keep the initiating row.
+    const pressed = mousePress;
+    mousePress = undefined;
+    const followsPress = pressed && event.button === 2 && Math.hypot(event.clientX - pressed.event.clientX, event.clientY - pressed.event.clientY) <= 10;
+    // Native events lose their composed path after dispatch. Delegated and
+    // shadow-root controls still need the original path and unretargeted target.
+    const gesture = followsPress ? new Proxy(pressed.event, {
+      get(target, key) {
+        if (key === "composedPath") return () => pressed.path;
+        if (key === "target") return pressed.target;
+        const value = Reflect.get(target, key, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    }) : event;
+    // Adopted controls retain their creating realm’s prototype; ownerDocument
+    // alone cannot choose an instanceof constructor. Containment stays authoritative.
+    if (gesture !== event && (typeof (gesture.target as Node | null)?.nodeType !== "number" || !trigger.contains(gesture.target as Node))) return;
+    const control = resolve(gesture); if (!control || !enabled(control)) return;
     cancel();
     if (suppressed === control) { event.preventDefault(); return; }
-    if (open({ x: event.clientX, y: event.clientY }, control, event) === false) return;
+    if (open({ x: event.clientX, y: event.clientY }, control, gesture) === false) return;
     event.preventDefault();
     if (selection && event.button === 0) arm(control);
   };
@@ -88,6 +108,11 @@ export function bindContextMenuTrigger(
       if (open(at, control, event) !== false) arm(control);
     }, LONG_PRESS);
   };
+  const rememberMouse = (event: PointerEvent) => {
+    mousePress = !event.defaultPrevented && event.pointerType === "mouse" && event.button === 2 ? { event, path: event.composedPath(), target: event.target } : undefined;
+  };
+  trigger.addEventListener("pointerdown", rememberMouse, true);
+  trigger.addEventListener("pointercancel", cancel, true);
   trigger.addEventListener("contextmenu", context);
   trigger.addEventListener("keydown", key);
   trigger.addEventListener("pointerdown", press);
@@ -98,6 +123,8 @@ export function bindContextMenuTrigger(
       trigger.removeEventListener("contextmenu", context);
       trigger.removeEventListener("keydown", key);
       trigger.removeEventListener("pointerdown", press);
+      trigger.removeEventListener("pointerdown", rememberMouse, true);
+      trigger.removeEventListener("pointercancel", cancel, true);
       if (aria) {
         if (previousAria === null) trigger.removeAttribute("aria-haspopup"); else trigger.setAttribute("aria-haspopup", previousAria);
       }

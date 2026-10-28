@@ -41,7 +41,7 @@
   gap: var(--ds-unit) calc(2 * var(--ds-unit));
   min-width: 0;
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -141,7 +141,7 @@
   margin: 0;
   padding: 0;
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--ds-type-size-default);
   line-height: var(--ds-unit);
   letter-spacing: var(--ds-type-letterspacing-default);

@@ -74,7 +74,7 @@
   cursor: pointer;
   padding: 0;
   color: var(--button-color, var(--button-text-color));
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--_button-font-size, var(--ds-type-size-default));
   line-height: var(--ds-type-lineheight-default);
   letter-spacing: var(--ds-type-letterspacing-default);
@@ -110,7 +110,7 @@
   background-color: var(--ds-button-primary-fill, var(--accent-color));
   color: var(--ds-button-primary-text, var(--button-text-color-on-light, var(--black)));
   text-decoration-line: none;
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   padding: 0 var(--_button-padding, calc(var(--ds-button-inset, 4px) * var(--ds-sf)));
 }
 
@@ -119,7 +119,7 @@
 :is(button, a)[secondary] {
   background-color: var(--ds-button-secondary-fill, var(--button-background-color-secondary));
   color: var(--ds-button-color, var(--ds-button-text-color));
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   padding: 0 var(--_button-padding, calc(var(--ds-button-inset, 4px) * var(--ds-sf)));
 }
 

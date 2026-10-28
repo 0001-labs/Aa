@@ -48,7 +48,7 @@
   border-radius: var(--ds-radius);
   background: var(--ds-button-background, transparent);
   color: var(--ds-button-color, var(--ds-button-text-color));
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   line-height: var(--ds-type-lineheight-default);
@@ -168,7 +168,7 @@ a.ds-button[aria-disabled="true"] {
   border-radius: var(--ds-radius);
   background: var(--ds-fill);
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   line-height: var(--ds-type-lineheight-default);
@@ -498,7 +498,7 @@ dialog.ds-overlay {
   box-shadow: none;
   overflow: auto;
   overscroll-behavior: contain;
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -669,7 +669,7 @@ dialog.ds-overlay:has(> [data-ds-overlay="close"]) [data-ds-overlay="header"] {
   background: var(--ds-paper);
   color: var(--ds-text-color);
   box-shadow: none;
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -825,7 +825,7 @@ dialog.ds-overlay:has(> [data-ds-overlay="close"]) [data-ds-overlay="header"] {
   min-width: 0;
   margin: 0;
   color: var(--ds-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -908,7 +908,7 @@ dialog.ds-overlay:has(> [data-ds-overlay="close"]) [data-ds-overlay="header"] {
   corner-shape: round;
   background: var(--ds-avatar-background, var(--ds-fill));
   color: var(--ds-avatar-color, var(--ds-text-color));
-  font: var(--ds-type-weight-default) var(--ds-type-size-small) / 1 var(--ds-typeface-regular);
+  font: var(--ds-type-weight-default) var(--ds-type-size-small) / 1 "Inter Arrows", var(--ds-typeface-regular);
   letter-spacing: normal;
   text-align: center;
   white-space: nowrap;
@@ -986,7 +986,7 @@ dialog.ds-overlay:has(> [data-ds-overlay="close"]) [data-ds-overlay="header"] {
   overflow: hidden;
   background: var(--ds-badge-background, var(--ds-fill));
   color: var(--ds-badge-color, var(--ds-text-color));
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);
@@ -1163,7 +1163,7 @@ dialog.ds-overlay:has(> [data-ds-overlay="close"]) [data-ds-overlay="header"] {
   corner-shape: var(--ds-corner-shape, round);
   background: var(--ds-button-background-color-secondary);
   color: var(--ds-button-text-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);

@@ -29,7 +29,7 @@
 }
 
 label {
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--ds-type-size-default);
   line-height: var(--ds-row-height);
   color: var(--ds-text-color);
@@ -47,7 +47,7 @@ label {
   border: none;
   padding: 0 calc(2px * var(--ds-sf, 1));
   font-size: var(--ds-type-size-default);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   /* The field's ink, whole, before focus too: a dimmed grey at half opacity read at 2:1 (color.text-contrast). */
   color: var(--ds-input-color, #2a2a2a);
   line-height: calc(16px * var(--ds-sf, 1));
@@ -122,7 +122,7 @@ input {
   margin: 0;
   min-width: 0;
   color: var(--ds-danger-color);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);

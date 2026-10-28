@@ -57,7 +57,7 @@
   border-radius: var(--ds-radius-card);
   background: var(--ds-card-fill);
   color: var(--ds-card-ink);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--ds-type-size-default);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
@@ -127,7 +127,7 @@
 .ds-card__title {
   margin: 0 0 var(--ds-card-title-gap, 0px);
   color: var(--ds-card-ink);
-  font-family: var(--ds-typeface-medium);
+  font-family: "Inter Arrows", var(--ds-typeface-medium);
   font-size: var(--ds-type-size-display);
   font-weight: var(--ds-type-weight-bold);
   /* A title that wraps keeps its lines together: a square and a half each. */

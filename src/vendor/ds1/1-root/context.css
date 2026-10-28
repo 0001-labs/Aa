@@ -56,7 +56,7 @@
   box-shadow: none;
   clip-path: inset(0 round var(--ds-context-radius, var(--ds-radius, 4px)));
   color: var(--ds-context-ink);
-  font-family: var(--ds-typeface-regular);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-feature-settings: var(--ds-font-features);
   font-size: var(--ds-type-size-default);
   font-weight: var(--ds-type-weight-default);

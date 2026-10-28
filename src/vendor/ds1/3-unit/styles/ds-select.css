@@ -40,7 +40,7 @@
   corner-shape: var(--ds-corner-shape, round) !important;
   background: var(--ds-input-background) !important;
   color: var(--ds-input-color) !important;
-  font-family: var(--ds-typeface-regular) !important;
+  font-family: "Inter Arrows", var(--ds-typeface-regular) !important;
   font-size: var(--ds-type-size-default) !important;
   font-weight: var(--ds-type-weight-default) !important;
   letter-spacing: var(--ds-type-letterspacing-default) !important;
