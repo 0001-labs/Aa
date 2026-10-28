@@ -148,7 +148,8 @@ describe('moving blocks without a handle, on the Drag library', () => {
     vi.advanceTimersByTime(1)
     expect(lifted()).toEqual([0])
     expect(host!.hasAttribute('data-dragging')).toBe(true)
-    expect(document.querySelector('[data-drag-preview]')?.hasAttribute('data-lifted')).toBe(true)
+    expect(document.querySelector('[data-drag-preview]')?.hasAttribute('data-lifted')).toBe(false)
+    expect(getComputedStyle(document.querySelector('[data-drag-preview]')!).backgroundColor).toBe(getComputedStyle(block(0)).backgroundColor)
     pointer('pointermove', window, 70)
     // The block it passes steps aside by the lifted block's whole size, rather than a line being drawn.
     expect(block(1).style.translate).toMatch(/^0(px)? -20px$/)

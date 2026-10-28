@@ -749,11 +749,9 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       overlay.style.setProperty(property, sourceStyle.getPropertyValue(property));
     }
 
-    const preview =
-      home.registration.renderPreview?.(registration.element) ??
-      options.renderPreview?.(registration.element) ??
-      cloneForPreview(registration.element);
-    for (const property of inheritedText) {
+    const customPreview = home.registration.renderPreview?.(registration.element) ?? options.renderPreview?.(registration.element);
+    const preview = customPreview ?? cloneForPreview(registration.element);
+    for (const property of customPreview ? inheritedText : []) {
       preview.style.setProperty(property, sourceStyle.getPropertyValue(property));
     }
     preview.setAttribute('data-drag-preview', '');
@@ -763,8 +761,8 @@ export function createSortable(options: SortableOptions = {}): SortableControlle
       left: `${liftBox.left}px`,
       top: `${liftBox.top}px`,
       // Drawn at the item's own size and scaled as it was on the page.
-      width: `${registration.element.offsetWidth ? registration.element.offsetWidth : liftBox.width}px`,
-      height: `${registration.element.offsetHeight ? registration.element.offsetHeight : liftBox.height}px`,
+      width: `${liftBox.width / itemScale}px`,
+      height: `${liftBox.height / itemScale}px`,
       transformOrigin: '0 0',
       margin: '0',
       boxSizing: 'border-box',
@@ -1643,6 +1641,20 @@ function scrollParent(element: HTMLElement): HTMLElement | null {
 
 function cloneForPreview(source: HTMLElement): HTMLElement {
   const clone = source.cloneNode(true) as HTMLElement;
+  // The overlay no longer has the source's ancestors. Snapshot the resolved
+  // appearance at lift, including descendants whose selectors depend on them.
+  const view = source.ownerDocument.defaultView!;
+  const originals = [source, ...source.querySelectorAll<HTMLElement | SVGElement>('*')];
+  const copies = [clone, ...clone.querySelectorAll<HTMLElement | SVGElement>('*')];
+  originals.forEach((element, index) => {
+    const target = copies[index];
+    if (!target.style) return;
+    const style = view.getComputedStyle(element);
+    for (const property of Array.from(style)) {
+      target.style.setProperty(property, style.getPropertyValue(property), 'important');
+    }
+    target.removeAttribute('contenteditable');
+  });
   clone.removeAttribute('id');
   clone.removeAttribute('data-drag-source');
   clone.style.visibility = 'visible';

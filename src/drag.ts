@@ -95,13 +95,6 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   let preparedDrop = false
   const sortable = createSortable({
     inheritProperties: CARRIED,
-    renderPreview: source => {
-      const clone = source.cloneNode(true) as HTMLElement
-      clone.removeAttribute('contenteditable')
-      clone.removeAttribute('data-selected')
-      clone.setAttribute('data-lifted', '')
-      return clone
-    },
     onDragStart: start => {
       // The blocks selected when the press began: the editor lets the selection go as the press lands.
       const block = children()[start.source.index]

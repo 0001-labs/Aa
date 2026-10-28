@@ -131,7 +131,7 @@
     }
   },
   "Drag": {
-    "commit": "7b35cb874dcd575e3dea1fd76942e622a6602467",
+    "commit": "9a3c94a28d0bfd1bab7394519e7844d7e6cdb955",
     "version": "0.2.0-alpha.0",
     "owned": ["src/vendor/drag"],
     "files": {
@@ -140,7 +140,7 @@
       "src/vendor/drag/README.md": "ca08c4cde47cc6045b9b25b0d6b28b3278a8d48283d6bd96812fc754dc651e77",
       "src/vendor/drag/flow.ts": "56053b571ad4de829ac10cb38d39616465a3ddd60d358819ecec47566ad83d75",
       "src/vendor/drag/grid.ts": "6d643a2a389033455f9108a834e151dadda47a672e6290e21f2744fa28d15ce0",
-      "src/vendor/drag/sortable.ts": "4446ac36941d54f62bd51494a9a327807a49f79b063f891ac9f0d62a8a46b705",
+      "src/vendor/drag/sortable.ts": "9b1fc788476ca605aea0bd4375872bfa6548ed9e67ecd2f9b1b00cd8d8728429",
       "src/vendor/drag/types.ts": "7ba2e49e0cd117f292dd6a5c612a82299b3aecd8fbb1043a2d7558d8f7508ccc",
       "src/vendor/drag/util.ts": "20ea31f691c42d2b127fbb4d9ac565f1abd19323e64fc4ab64fb7c7f42640ba9"
     }
