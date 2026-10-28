@@ -740,6 +740,9 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-comment-time { color: var(--aa-muted); white-space: nowrap; }
 .aa-comment-body { margin: 0 0 0 var(--aa-unit); line-height: var(--aa-unit); white-space: pre-wrap; overflow-wrap: anywhere; }
 .aa-comment-mention { color: var(--aa-person, inherit); }
+/* A note only the product's team reads: a darker ground reaching a quarter square past the words, which keep their place on the grid. */
+.aa-comment-entry--internal { border-radius: var(--ds-radius, calc(4px * var(--aa-sf, 1))); background: var(--aa-internal, light-dark(#e4e4e7, #34343a)); box-shadow: 0 0 0 calc(var(--aa-unit) / 4) var(--aa-internal, light-dark(#e4e4e7, #34343a)); }
+.aa-comment-internal { color: var(--aa-muted); white-space: nowrap; }
 /* Reactions under a comment: the emoji and its count as words, no button face around them, a
    square apart; the one the reader gave in Sharp blue; a plus gives one more, from the sixteen
    in the Context face, eight a row. */

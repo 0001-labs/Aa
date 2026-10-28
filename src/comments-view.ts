@@ -496,7 +496,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
 
   const commentRow = (thread: AnchoredThread, comment: Comment): HTMLElement => {
     const row = doc.createElement('div')
-    row.className = 'aa-comment-entry'
+    row.className = comment.internal ? 'aa-comment-entry aa-comment-entry--internal' : 'aa-comment-entry'
     const meta = doc.createElement('div')
     meta.className = 'aa-comment-meta'
     const name = doc.createElement('span'); name.className = 'aa-comment-author'; name.textContent = comment.author.name
@@ -504,6 +504,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     time.textContent = `${relativeTime(comment.createdAt)}${editing === comment.id ? ` · ${word('Editing')}` : comment.editedAt ? ` · ${word('Edited')}` : ''}`
     time.title = new Date(comment.createdAt).toLocaleString(aaLanguage())
     meta.append(avatar(comment.author), name, time)
+    if (comment.internal) { const mark = doc.createElement('span'); mark.className = 'aa-comment-internal'; mark.textContent = word('Internal'); meta.append(mark) }
     const own = !!store.me && comment.author.id === store.me.id
     if (own && store.edit && canWrite() && !thread.resolvedAt && editing !== comment.id) meta.append(textButton('Edit', () => { editing = comment.id; drafts.set(`edit:${comment.id}`, comment.body); render(); popover?.querySelector<HTMLTextAreaElement>(`[data-edit="${comment.id}"]`)?.focus() }, 'aa-comment-edit'))
     row.append(meta)

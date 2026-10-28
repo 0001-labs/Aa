@@ -197,6 +197,14 @@ describe('the popover', () => {
     await tick()
     expect(popover()!.querySelector('.aa-comments-error')?.textContent).toBe('Not allowed here')
   })
+  it('draws an internal note on its own ground, marked Internal', () => {
+    setup({ threads: [{ ...threads()[0], comments: [threads()[0].comments[0], { id: 'c9', author: ann, body: 'For us only', createdAt: 2000, internal: true }] }] })
+    marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    const [theirs, note] = popover()!.querySelectorAll('.aa-comment-entry')
+    expect(theirs.classList.contains('aa-comment-entry--internal')).toBe(false)
+    expect(note.classList.contains('aa-comment-entry--internal')).toBe(true)
+    expect(note.querySelector('.aa-comment-internal')?.textContent).toBe('Internal')
+  })
   it('edits your own comment and deletes your own thread after a second press', async () => {
     setup({ threads: [{ ...threads()[0], comments: [{ id: 'c1', author: ann, body: 'Mine', createdAt: 1 }] }] })
     marks()[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))

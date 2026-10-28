@@ -52,6 +52,7 @@ export const da: Readonly<Record<string, string>> = {
   "Edit comment": "Redigér kommentar",
   "Edit link": "Redigér link",
   "Edited": "Redigeret",
+  "Internal": "Intern",
   "Editing": "Redigerer",
   "Equation": "Ligning",
   "Find": "Find",

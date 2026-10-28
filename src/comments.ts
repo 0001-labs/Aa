@@ -31,6 +31,8 @@ export type Comment = {
   /** The people named in the body, as `@Name`. */
   mentions?: readonly CommentPerson[]
   reactions?: readonly CommentReaction[]
+  /** A note for the product's own team, which the store gives only to them; drawn on a darker ground, marked Internal. */
+  internal?: boolean
 }
 
 /** The reactions on offer, Link's sixteen. */
