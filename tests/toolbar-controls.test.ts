@@ -98,3 +98,16 @@ test('Ask AI expands on focus, accepts line breaks and submits Enter without sub
   expect([...toolbar.querySelectorAll('button')].every(button => !button.inert)).toBe(true)
  } finally { editor.destroy() }
 })
+
+test('Ask reads Ask in every language, with a translated screen-reader name', async () => {
+ vi.useFakeTimers()
+ document.documentElement.lang = 'da'
+ const host = document.createElement('div'); document.body.append(host)
+ const editor = createEditor(host, { value: 'Select these words', toolbar: true, prompt: async () => 'Changed' })
+ try {
+  editor.selectRange(0, 6); host.dispatchEvent(new Event('aa-selectionchange')); await vi.advanceTimersByTimeAsync(150)
+  const field = document.querySelector<HTMLTextAreaElement>('aa-toolbar textarea')!
+  expect(field.placeholder).toBe('Ask')
+  expect(field.getAttribute('aria-label')).toBe('Spørg AI om de markerede ord')
+ } finally { editor.destroy(); document.documentElement.lang = '' }
+})

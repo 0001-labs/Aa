@@ -171,11 +171,12 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   ]
   if (coarse()) toolbar.actions = [...toolbar.actions, ...blocks]
   // Under the cells, where the product answers prompts, a row asks AI about the selected words, as Notion's bar does.
+  // Its placeholder is Ask in every language, never translated; the screen reader's name still is.
   if (options.prompt) {
     const ask = document.createElement('form')
     ask.className = 'aa-toolbar-ask'
     const field = document.createElement('textarea')
-    field.rows = 1; field.placeholder = word('Ask AI'); field.setAttribute('aria-label', word('Ask AI about the selected words')); field.autocomplete = 'off'
+    field.rows = 1; field.placeholder = 'Ask'; field.setAttribute('aria-label', word('Ask AI about the selected words')); field.autocomplete = 'off'
     ask.append(field)
     const expand = (expanded: boolean) => {
       toolbar.toggleAttribute('data-asking', expanded)
@@ -191,7 +192,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       field.disabled = true
       expand(false)
       editor.selectRange(range.start, range.end)
-      void editor.askAbout(said).then(done => { field.value = done ? '' : field.value; if (!done) field.placeholder = word('Not answered') }).catch(() => { field.placeholder = word('Not answered') }).finally(() => { field.disabled = false; setTimeout(() => { field.placeholder = word('Ask AI') }, 2000) })
+      void editor.askAbout(said).then(done => { field.value = done ? '' : field.value; if (!done) field.placeholder = word('Not answered') }).catch(() => { field.placeholder = word('Not answered') }).finally(() => { field.disabled = false; setTimeout(() => { field.placeholder = 'Ask' }, 2000) })
     })
     field.addEventListener('keydown', event => {
       if (event.isComposing) return
