@@ -100,14 +100,20 @@ function scaleOf(host: HTMLElement): number {
  * and clear of the home indicator (aa.css gives a docked bar --aa-safe-bottom)
  * when no keyboard is up. As wide as the view, so it is whole under a pinch.
  */
-function dock(bar: HTMLElement) {
+function dock(bar: HTMLElement, selection?: Pick<DOMRect, 'top' | 'bottom'> | null) {
   const window = bar.ownerDocument.defaultView!
   const view = viewportOf(window)
   bar.dataset.docked = ''
   bar.style.left = `${view.left}px`
   bar.style.width = `${view.width}px`
   const inset = view.height >= window.innerHeight - 1 ? parseFloat(getComputedStyle(bar).getPropertyValue('--aa-safe-bottom')) || 0 : 0
-  bar.style.top = `${view.top + view.height - bar.getBoundingClientRect().height - inset}px`
+  const height = bar.getBoundingClientRect().height
+  let top = view.top + view.height - height - inset
+  // A short keyboard viewport can leave the selected line beneath the dock.
+  // Keep the controls against that line when they fit above it, without moving
+  // the document, changing the selection or stealing the editor's focus.
+  if (selection && selection.bottom > top && selection.top < top + height && selection.top - height >= view.top) top = selection.top - height
+  bar.style.top = `${top}px`
 }
 
 /** Sit directly against the selection, independent of how many rows the bar contains. */
@@ -425,7 +431,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   const positionToolbar = () => {
     if (toolbar.hidden) return
-    if (coarse()) { if (toolbar.below && toolbar.lastElementChild !== toolbar.below) toolbar.append(toolbar.below); dock(toolbar) }
+    if (coarse()) { if (toolbar.below && toolbar.lastElementChild !== toolbar.below) toolbar.append(toolbar.below); dock(toolbar, saved ? editor.rangeOf(saved.start, saved.end)?.getBoundingClientRect() : null) }
     else {
       delete toolbar.dataset.docked; toolbar.style.width = ''
       // Over the selected words, measured from where they are in the Markdown: with the focus in the bar's own
