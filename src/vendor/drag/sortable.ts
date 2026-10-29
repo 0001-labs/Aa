@@ -1655,6 +1655,9 @@ function cloneForPreview(source: HTMLElement): HTMLElement {
     }
     target.removeAttribute('contenteditable');
   });
+  // Logical insets copied as !important override the overlay's physical left/top.
+  // Keep descendant appearance, but let the drag engine own the root's position.
+  for (const property of ['inset', 'inset-block', 'inset-inline', 'inset-block-start', 'inset-block-end', 'inset-inline-start', 'inset-inline-end', 'top', 'right', 'bottom', 'left']) clone.style.removeProperty(property);
   clone.removeAttribute('id');
   clone.removeAttribute('data-drag-source');
   clone.style.visibility = 'visible';
