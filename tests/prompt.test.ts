@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import css from '../src/aa.css?inline'
 import { createEditor, imageAtom, type Editor } from '../src/editor'
 import { diagramAtom, type AaDiagramBoardElement } from '../src/diagram'
 import type { PromptContext, Prompter } from '../src/prompt'
@@ -128,6 +129,24 @@ describe('asking AI', () => {
       expect(e.value).toBe(written)
       editor!.destroy(); host!.remove()
     }
+  })
+
+  it('overlays an empty bullet hint on the caret line without removing the native filler', () => {
+    const e = setup('- One\n- ', async () => 'x')
+    e.selectRange(e.value.length)
+    document.dispatchEvent(new Event('selectionchange'))
+    const block = host!.lastElementChild as HTMLElement
+    expect(block.dataset.hint).toBe('Press space for AI')
+    expect(block.querySelector(':scope > br[data-filler]')).not.toBeNull()
+    const sheet = new CSSStyleSheet()
+    sheet.replaceSync(css)
+    const overlay = [...sheet.cssRules].find(rule => {
+      if (!(rule instanceof CSSStyleRule) || !rule.selectorText.endsWith('::after')) return false
+      return block.matches(rule.selectorText.slice(0, -7)) && rule.style.position === 'absolute'
+    }) as CSSStyleRule | undefined
+    expect(overlay).toBeDefined()
+    expect(overlay!.style.top).toBe('0px')
+    expect(overlay!.style.getPropertyValue('inset-inline-start')).toBe('var(--aa-indent, var(--aa-unit))')
   })
 
   it('goes on from the caret in a paragraph as its own words would: its width, on its lines, the first line at the caret', () => {

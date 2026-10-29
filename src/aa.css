@@ -202,6 +202,14 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab)));
   pointer-events: none;
 }
+/* An empty bullet keeps a native filler line for the caret. Its hint overlays
+   that line, since inline generated text after the filler starts a second one. */
+.aa-block[data-kind="bullet"][data-hint]:has(> br[data-filler])::after {
+  position: absolute;
+  inset-inline-start: var(--aa-indent, var(--aa-unit));
+  inset-inline-end: 0;
+  top: 0;
+}
 .aa-block[data-placeholder]::before,
 .aa-block[data-kind="heading"][data-empty]::before {
   position: absolute;
