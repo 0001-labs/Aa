@@ -67,14 +67,17 @@ describe('a diagram in the editor', () => {
 })
 
 describe('starting a diagram', () => {
-  // Diagram stands on the touch bar; with a pointer it is the slash menu's.
+  // On touch Diagram is in the plus's Insert block sheet; with a pointer it is the slash menu's.
   beforeEach(() => vi.stubGlobal('matchMedia', () => ({ matches: true })))
   afterEach(() => vi.unstubAllGlobals())
-  const press = (label: string) => (document.querySelector(`aa-toolbar button[aria-label="${label}"]`) as HTMLButtonElement).click()
+  const press = (label: string) => {
+    (document.querySelector('aa-toolbar button[aria-label="Insert block"]') as HTMLButtonElement).click()
+    ;(document.querySelector(`dialog.aa-sheet[open] [data-command="${label}"]`) as HTMLButtonElement).click()
+  }
   it('takes an empty block from the toolbar, its board taking the keys at once', () => {
     const e = setup('', { toolbar: true })
     e.selectRange(0)
-    press('Diagram')
+    press('insert-diagram')
     expect(e.value).toBe(DIAGRAM_START)
     expect(blockElements()[0].hasAttribute('data-drawn')).toBe(true)
     const board = host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
@@ -84,7 +87,7 @@ describe('starting a diagram', () => {
   it('comes after the block the caret is in, as one step to undo', () => {
     const e = setup('Words', { toolbar: true })
     e.selectRange(5)
-    press('Diagram')
+    press('insert-diagram')
     expect(e.value).toBe(`Words\n\n${DIAGRAM_START}`)
     e.undo()
     expect(e.value).toBe('Words')
@@ -308,7 +311,8 @@ describe('a diagram just started', () => {
     const e = setup('', { toolbar: true })
     e.selectRange(0)
     vi.unstubAllGlobals()
-    ;(document.querySelector('aa-toolbar button[aria-label="Diagram"]') as HTMLButtonElement).click()
+    ;(document.querySelector('aa-toolbar button[aria-label="Insert block"]') as HTMLButtonElement).click()
+    ;(document.querySelector('dialog.aa-sheet[open] [data-command="insert-diagram"]') as HTMLButtonElement).click()
     const board = host!.querySelector<AaDiagramBoardElement>('aa-diagram-board')!
     expect(board.hasAttribute('data-active')).toBe(true)
     // Box, post-it, line, arrow, the colour and delete; the colours themselves are in the colour's menu.

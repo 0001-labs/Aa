@@ -157,19 +157,13 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     ...(options.comments ? [{ id: 'comment', icon: 'comment', label: 'Comment', shortcut: '⌘⇧M', run: () => { restore(); editor.comments?.start() } }] : []),
     ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
   ]
-  const blocks: ToolbarAction[] = [
-    { id: 'turn', icon: 'text', label: 'Turn into', run: () => {
-      restore(); const active = editor.activeBlock(); if (!active) return
-      if (coarse()) sheet('Turn into', [{ rows: kindRows(kind => editor.turnInto(kind)) }])
-      else open(kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), (toolbar.querySelector('[data-action="turn"]') ?? toolbar).getBoundingClientRect())
-    } },
-    ...inserts.map(command => ({ ...command, run: () => { restore(); command.run(editor) } })),
-    ...(options.onFiles ? [{ id: 'image', label: 'Image or file', icon: 'image', run: () => {
-      const input = document.createElement('input'); input.type = 'file'; input.multiple = true
-      input.addEventListener('change', () => { restore(); options.onFiles?.(Array.from(input.files ?? [])) }, { once: true }); input.click()
-    } }] : []),
-  ]
-  if (coarse()) toolbar.actions = [...toolbar.actions, ...blocks]
+  const turn: ToolbarAction = { id: 'turn', icon: 'text', label: 'Turn into', run: () => {
+    restore(); if (editor.activeBlock()) sheet('Turn into', [{ rows: kindRows(kind => editor.turnInto(kind)) }])
+  } }
+  // On touch the bar is a panel of three rows across the screen: the marks, the blocks, then Ask. Code, Equation,
+  // a diagram and a picture are left to the plus's sheet, so each row is six cells.
+  const phoneMarks = ['color', 'bold', 'italic', 'underline', 'strike', 'link']
+  if (coarse()) toolbar.actions = toolbar.actions.filter(action => phoneMarks.includes(action.id))
   // Under the cells, where the product answers prompts, a row asks AI about the selected words, as Notion's bar does.
   // Its placeholder is Ask in every language, never translated; the screen reader's name still is.
   if (options.prompt) {
@@ -202,16 +196,19 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   // Touch has no ⌘/ and keeps its long press for selecting words: the block
   // commands, moving a block among them, are a button above the keyboard.
-  // A plus first on the bar opens Insert block: the kinds, then what the product inserts (a diagram, a picture, its own commands).
+  // The second row opens with a plus, Insert block: the kinds, then what the product inserts (a diagram, a picture, its own commands).
   if (coarse()) toolbar.actions = [
+    ...toolbar.actions,
     { id: 'insert', label: 'Insert block', icon: 'plus', run: () => { restore(); sheet('Insert block', [
       { label: 'Blocks', rows: kindRows(insertKind) },
       { label: 'More', rows: [...builtin.filter(command => !kinds.some(kind => kind.kind === command.id)), ...(options.commands ?? [])].map(command => ({ id: command.id, label: command.label, icon: command.icon, run: () => { restore(); command.run(editor) } })) },
     ]) } },
-    ...toolbar.actions,
+    turn,
     ...(options.menus === false ? [] : [{ id: 'block', label: 'Block commands', icon: 'slash', run: () => { restore(); target = editor.activeBlock()?.index ?? -1; blockMenu(toolbar.querySelector('[data-action="block"]')?.getBoundingClientRect()) } }]),
+    ...(options.comments ? [{ id: 'comment', icon: 'comment', label: 'Comment', run: () => { restore(); editor.comments?.start() } }] : []),
     { id: 'indent', label: 'Indent', icon: 'indent', run: () => { restore(); editor.indent(1) } },
     { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => { restore(); editor.indent(-1) } },
+    ...(Array.isArray(options.toolbar) ? options.toolbar : []).map(action => ({ ...action, run: () => { restore(); action.run(editor) } })),
   ]
   toolbar.refresh()
   // Floating controls must stay within a native modal's interactive subtree.

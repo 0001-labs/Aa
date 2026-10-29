@@ -185,8 +185,10 @@ describe('controls, decorations and media', () => {
     host!.dispatchEvent(new Event('aa-selectionchange'))
     vi.advanceTimersByTime(140)
     const toolbar = document.querySelector('.aa-toolbar') as HTMLElement
-    expect(toolbar.firstElementChild?.getAttribute('aria-label')).toBe('Insert block')
-    ;(toolbar.firstElementChild as HTMLButtonElement).click()
+    // Three rows: the marks, the blocks, then Ask; Code, Equation and the inserts are the plus's sheet.
+    expect([...toolbar.querySelectorAll('button')].map(button => button.dataset.action))
+      .toEqual(['color', 'bold', 'italic', 'underline', 'strike', 'link', 'insert', 'turn', 'block', 'indent', 'outdent'])
+    ;(toolbar.querySelector('[data-action="insert"]') as HTMLButtonElement).click()
     const sheet = document.querySelector('dialog.aa-sheet') as HTMLDialogElement
     expect(sheet.classList.contains('ds-overlay--sheet')).toBe(true)
     expect(sheet.querySelector('.aa-sheet-title')!.textContent).toBe('Insert block')
@@ -336,17 +338,17 @@ it('peer carets at empty and final offsets do not change the source', () => {
 })
 
 it('preserves options assigned before the custom element is registered', () => {
-  // On touch the bar carries Image or file; with a pointer it is the slash menu's.
+  // On touch the bar carries Comment where the product keeps comments.
   vi.stubGlobal('matchMedia', () => ({ matches: true }))
   const node = document.createElement('aa-editor') as AaEditorElement
-  node.options = { toolbar: true, onFiles: vi.fn() }
+  node.options = { toolbar: true, comments: { subscribe: () => () => {}, me: () => null } as never }
   node.value = 'Before registration'
   document.body.append(node)
-  defineAaEditor()
-  expect(node.value).toBe('Before registration')
-  expect([...document.querySelectorAll('.aa-toolbar button')].some(button => button.getAttribute('aria-label') === 'Image or file')).toBe(true)
-  node.remove()
-  vi.unstubAllGlobals()
+  try {
+    defineAaEditor()
+    expect(node.value).toBe('Before registration')
+    expect([...document.querySelectorAll('.aa-toolbar button')].some(button => button.getAttribute('aria-label') === 'Comment')).toBe(true)
+  } finally { node.remove(); vi.unstubAllGlobals() }
 })
 
 describe('the bar over selected words', () => {
