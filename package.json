@@ -1,6 +1,6 @@
 {
   "name": "@0001-labs/aa",
-  "version": "0.10.2",
+  "version": "0.10.3",
   "description": "Aa, the text editor of 0001's products: Markdown, drawn as you write",
   "type": "module",
   "repository": {
