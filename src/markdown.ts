@@ -414,7 +414,10 @@ function findClose(text: string, from: number, end: number, d: string): number {
     if (text[k] !== d[0]) continue
     const r = runLength(text, k, d[0], end)
     const close = d.length === 1 ? k : k + r - d.length
-    const fits = r >= d.length && !isSpace(text[k - 1]) && close > from && !(d[0] === '_' && isWord(text[k + r]))
+    // A standalone closing mark after a soft break can be produced by selecting
+    // a whole line in the editor. Preserve its source and draw the intended mark.
+    const lineClose = text[k - 1] === '\n' && !isSpace(text[k - 2]) && (k + r === end || text[k + r] === '\n')
+    const fits = r >= d.length && (!isSpace(text[k - 1]) || lineClose) && close > from && !(d[0] === '_' && isWord(text[k + r]))
     if (fits) return close
     k += r - 1
   }
@@ -436,13 +439,19 @@ function pushText(text: string, from: number, to: number, base: number, marks: M
   if (last < slice.length) out.push({ kind: 'text', from: base + from + last, to: base + to, ...marks })
 }
 
-/** The runs of one line of writing between `start` and `end`, offsets made absolute with `base`. */
+/** The runs of inline writing between `start` and `end`, offsets made absolute with `base`. */
 function inline(text: string, start: number, end: number, base: number, marks: Marks, out: Run[], atoms: readonly AtomSyntax[]) {
   let i = start
   let from = start
   const flush = (to: number) => pushText(text, from, to, base, marks, out)
   while (i < end) {
     const char = text[i]
+    if (char === '\n') {
+      flush(i)
+      out.push({ kind: 'break', from: base + i, to: base + i + 1 })
+      from = ++i
+      continue
+    }
     if (char === '`' && !marks.code) {
       let n = 1
       while (text[i + n] === '`') n++
@@ -466,7 +475,9 @@ function inline(text: string, start: number, end: number, base: number, marks: M
     }
     if (!marks.href && !marks.code && atoms.length) {
       let length = 0, name = ''
-      for (const atom of atoms) { length = atom.match(text, i); if (length && i + length <= end) { name = atom.name; break }; length = 0 }
+      const lineStart = text.lastIndexOf('\n', i - 1) + 1, nextBreak = text.indexOf('\n', i)
+      const line = text.slice(lineStart, nextBreak < 0 ? text.length : nextBreak)
+      for (const atom of atoms) { length = atom.match(line, i - lineStart); if (length && i + length <= end) { name = atom.name; break }; length = 0 }
       if (length) {
         flush(i)
         out.push({ kind: 'atom', atom: name, from: base + i, to: base + i + length, ...(name === 'equation' ? { group: [base + i, base + i + length] as [number, number] } : {}) })
@@ -539,6 +550,12 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   if (block.kind === 'tabs') return [{ kind: 'atom', atom: 'tabs', from: 0, to: block.source.length }]
   const fenced = fencedAtom(block, atoms)
   if (fenced) return [{ kind: 'atom', atom: fenced.name, from: 0, to: block.source.length, group: [0, block.source.length] }]
+  // Soft breaks stay within one paragraph's formatting; block prefixes and
+  // fenced code retain their line-specific parsing below.
+  if (block.kind === 'paragraph') {
+    inline(block.source, 0, block.source.length, 0, {}, runs, atoms)
+    return runs
+  }
   let at = 0
   lines.forEach((line, index) => {
     if (index) runs.push({ kind: 'break', from: at - 1, to: at })

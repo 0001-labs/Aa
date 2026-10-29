@@ -171,8 +171,15 @@ export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, deli
     const change = replaceRange(blocks, a, b, inner.slice(d, inner.length - c))
     return { blocks: change.blocks, anchor: a, focus: at(b.offset - d - c) }
   }
-  const change = replaceRange(blocks, a, b, delimiter + inner + closing)
-  return { blocks: change.blocks, anchor: at(a.offset + d), focus: at(a.offset + d + inner.length) }
+  // Keep selected edge whitespace outside marks so a selected soft break never
+  // leaves the closing delimiter alone on the next line.
+  const trimEdges = ['**', '*', '~~', '==', '<u>'].includes(delimiter)
+  const leading = trimEdges ? inner.match(/^\s*/)?.[0] ?? '' : ''
+  const trailing = trimEdges ? inner.slice(leading.length).match(/\s*$/)?.[0] ?? '' : ''
+  const words = inner.slice(leading.length, inner.length - trailing.length)
+  if (inner && !words) return { blocks: [...blocks], anchor: a, focus: b }
+  const change = replaceRange(blocks, a, b, leading + delimiter + words + closing + trailing)
+  return { blocks: change.blocks, anchor: at(a.offset + leading.length + d), focus: at(a.offset + leading.length + d + words.length) }
 }
 
 const COLOR_OPEN = /<span color="[a-z]+">$/

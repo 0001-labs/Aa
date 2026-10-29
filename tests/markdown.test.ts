@@ -83,3 +83,21 @@ describe('blockRuns', () => {
     expect(show('> a\n> b')).toEqual(['syntax:> ', 'text:a', 'break:\n', 'syntax:> ', 'text:b'])
   })
 })
+
+describe('paragraph formatting across soft breaks', () => {
+  it('draws the saved Reach selection without exposing its marks or changing source', () => {
+    const source = '**Link er bygget til at sende briefs og aflevere deliverables til kunder.\n**';
+    const blocks = parseBlocks(source), runs = blockRuns(blocks[0]);
+    expect(serialize(blocks)).toBe(source);
+    expect(runs.filter(r => r.kind === 'syntax').map(r => source.slice(r.from,r.to))).toEqual(['**','**']);
+    expect(runs.find(r => r.kind === 'text')?.bold).toBe(true);
+    expect(runs.filter(r => r.kind === 'break')).toHaveLength(1);
+  });
+  it('preserves ordinary multiline emphasis, code and unmatched literal markers', () => {
+    expect(blockRuns(parseBlocks('**first\nsecond**')[0]).filter(r=>r.kind==='text').every(r=>r.bold)).toBe(true);
+    for(const source of ['`**literal**`', '```\n**literal**\n```', '**unclosed']) {
+      expect(blockRuns(parseBlocks(source)[0]).some(r=>r.bold)).toBe(false);
+      expect(serialize(parseBlocks(source))).toBe(source);
+    }
+  });
+});

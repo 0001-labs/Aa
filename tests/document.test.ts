@@ -192,3 +192,15 @@ describe('Enter at an edge', () => {
     expect(empty.caret).toEqual(at(1, 0))
   })
 })
+
+it('keeps selected trailing line breaks outside formatting', () => {
+  const blocks = fromMarkdown('A sentence.\nNext');
+  const wrapped = wrapSelection(blocks, {block:0,offset:0}, {block:0,offset:12}, '**')!;
+  expect(toMarkdown(wrapped.blocks)).toBe('**A sentence.**\nNext');
+  expect(toMarkdown(wrapSelection(wrapped.blocks, wrapped.anchor, wrapped.focus, '**')!.blocks)).toBe('A sentence.\nNext');
+});
+
+it('keeps selected code whitespace inside literal code', () => {
+  const blocks = fromMarkdown(' a ');
+  expect(toMarkdown(wrapSelection(blocks, {block:0,offset:0}, {block:0,offset:3}, '`')!.blocks)).toBe('` a `');
+});
