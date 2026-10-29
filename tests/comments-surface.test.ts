@@ -39,3 +39,17 @@ test('shadow-root popup keeps focus on refresh and accepts a composed pointer pr
   expect(store.threads.some(thread=>thread.comments.some(comment=>comment.body==='Keep them private'))).toBe(true)
  } finally {view.destroy();host.remove();portal.remove()}
 })
+
+test.each(['article', 'body'] as const)('pressing unmarked content in the %s closes the comment popover', tag => {
+ const host=tag === 'body' ? document.body : document.createElement('article')
+ const content=document.createElement('p'); content.textContent='Cloud models'; host.append(content)
+ if (tag !== 'body') document.body.append(host)
+ const store=memoryCommentStore({me:{id:'owner',name:'Owner'}})
+ const view=createCommentsView(host,{store,value:()=>content.textContent!,selection:()=>({start:0,end:5}),selectRange:()=>{},decorate:()=>{},readOnly:()=>false})
+ try {
+  expect(view.start()).toBe(true)
+  expect(document.querySelector('.aa-comments')).not.toBeNull()
+  content.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true}))
+  expect(document.querySelector('.aa-comments')).toBeNull()
+ } finally {view.destroy();content.remove();if(tag !== 'body') host.remove()}
+})

@@ -751,7 +751,8 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     // identifies presses inside a popup mounted in that host's shadow root.
     const inside = (element: HTMLElement | null) => !!element && event.composedPath().some(node => node instanceof Node && element.contains(node))
     if (picker && !inside(picker)) hidePicker()
-    if (inside(popover) || inside(menu) || inside(picker) || inside(host)) return
+    const onWords = event.composedPath().some(node => node instanceof Element && node.hasAttribute('data-comment') && host.contains(node))
+    if (inside(popover) || inside(menu) || inside(picker) || onWords) return
     close()
   }
   doc.addEventListener('pointerdown', outside, true)
