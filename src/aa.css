@@ -202,6 +202,14 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab)));
   pointer-events: none;
 }
+/* An empty bullet keeps a native filler line for the caret. Its hint overlays
+   that line, since inline generated text after the filler starts a second one. */
+.aa-block[data-kind="bullet"][data-hint]:has(> br[data-filler])::after {
+  position: absolute;
+  inset-inline-start: var(--aa-indent, var(--aa-unit));
+  inset-inline-end: 0;
+  top: 0;
+}
 .aa-block[data-placeholder]::before,
 .aa-block[data-kind="heading"][data-empty]::before {
   position: absolute;
@@ -451,7 +459,7 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 /* An empty plain field says its placeholder in the muted ink; listening, it says so in the prompt's colour, the dot after it. */
 .aa-plain[data-empty] > .aa-block[data-placeholder]::before { content: attr(data-placeholder); color: var(--ds-text-color-muted, #8a8a8a); pointer-events: none; }
 .aa-plain[data-listening] > .aa-block { caret-color: transparent; }
-.aa-plain[data-listening] > .aa-block[data-placeholder]::before { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); margin-inline-end: 0.25em; }
+.aa-plain[data-listening] > .aa-block[data-placeholder]::before { color: var(--aa-prompt, light-dark(#594dff, #b7b0ff)); margin-inline-end: 0.25em; }
 
 /* A correction's words shimmer once: a band of the accent colour passes through their letters (`shimmer.ts`).
    Screen on a light page and multiply on a dark one colour the letters and leave the paper as it is. */
@@ -485,10 +493,10 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 
 /* Asking AI: a prompt stands over the empty block (or the board) in a live
    colour, so it reads as said to the AI, not written into the page; words
-   heard are in italics, the ones still being heard fainter, and nothing more marks that it listens. Sent, it
+   heard are in italics, with a dotted underline while still being heard. Sent, it
    glistens until the answer takes its place, and so does what it is about. */
 .aa-prompt {
-  --aa-prompt-color: var(--aa-prompt, var(--ds-focus-ring, #594dff));
+  --aa-prompt-color: var(--aa-prompt, light-dark(#594dff, #b7b0ff));
   position: fixed;
   z-index: 1000;
   box-sizing: border-box;
@@ -509,7 +517,6 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-prompt:empty::before {
   content: attr(data-placeholder);
   color: var(--aa-prompt-color);
-  opacity: 0.55;
   pointer-events: none;
 }
 /* Listening, the caret is a dot breathing where it stands; it is the caret again once listening stops. */
@@ -520,7 +527,7 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
   width: calc(6px * var(--aa-sf, 1));
   height: calc(6px * var(--aa-sf, 1));
   border-radius: 50%;
-  background: var(--aa-prompt, var(--ds-focus-ring, #594dff));
+  background: var(--aa-prompt, light-dark(#594dff, #b7b0ff));
   vertical-align: middle;
   pointer-events: none;
 }
@@ -534,7 +541,7 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
   padding-inline-end: 0.2em;
   margin-inline-end: -0.2em;
 }
-.aa-prompt .aa-prompt-heard { opacity: 0.6; }
+.aa-prompt .aa-prompt-heard { text-decoration: underline dotted; text-underline-offset: 0.15em; }
 .aa-prompt[data-loading] { cursor: progress; }
 .aa-prompt[data-failed] { text-decoration: underline wavy var(--ds-danger-color, #d33); text-underline-offset: 3px; }
 @keyframes aa-prompt-breathe { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
@@ -542,9 +549,9 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 /* The glisten runs through the letters alone: the accent as a band in a gradient clipped to the
    text, the ink either side of it, moving by its position since a clipped gradient has no child
    to move by transform. Fills within the words (code, a comment's tint) step aside meanwhile, so
-   the letters in them show. With less motion asked for, the words only breathe. */
+   the letters in them show. With less motion asked for, the words keep still. */
 [data-aa-glisten] {
-  background-image: linear-gradient(105deg, currentColor 35%, var(--aa-shimmer-color, var(--ds-accent-color, var(--accent-color, var(--apple-green, Highlight)))) 50%, currentColor 65%);
+  background-image: linear-gradient(105deg, currentColor 35%, var(--aa-prompt, light-dark(#594dff, #b7b0ff)) 50%, currentColor 65%);
   background-size: 300% 100%;
   background-repeat: no-repeat;
   background-position: 100% 0;
@@ -557,7 +564,7 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 [data-aa-glisten] :is(.aa-c, .aa-comment, .aa-highlight) { background: transparent; }
 @keyframes aa-glisten-pass { to { background-position: 0% 0; } }
 @media (prefers-reduced-motion: reduce) {
-  [data-aa-glisten] { background-image: none; -webkit-text-fill-color: currentColor; animation: aa-prompt-breathe 1.8s ease-in-out infinite; }
+  [data-aa-glisten] { background-image: none; -webkit-text-fill-color: currentColor; animation: none; }
 }
 @media (forced-colors: active) {
   [data-aa-glisten] { background-image: none; -webkit-text-fill-color: currentColor; animation: none; }
@@ -776,7 +783,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-comment-editing { display: block; width: calc(100% - var(--aa-unit)); margin-left: var(--aa-unit); background: transparent; padding: 0; }
 .aa-composer textarea::placeholder, .aa-comment-editing::placeholder { color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
 /* Asking AI from the field: what is asked in the prompt's live colour, as in a block. */
-.aa-composer textarea[data-asking] { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); caret-color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); }
+.aa-composer textarea[data-asking] { color: var(--aa-prompt, light-dark(#594dff, #b7b0ff)); caret-color: var(--aa-prompt, light-dark(#594dff, #b7b0ff)); }
 /* However many lines a reply takes, the avatar stands on its first line and the send on its last. */
 .aa-composer > .aa-avatar { align-self: flex-start; margin-top: calc((var(--aa-unit) - 16px * var(--aa-sf, 1)) / 2); }
 .aa-composer > .aa-composer-send { align-self: flex-end; }
@@ -789,7 +796,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-composer textarea[data-mentions]:not([data-asking], [data-listening]) { color: transparent; caret-color: var(--ds-text-color, currentColor); }
 /* Listening, the words heard and the breathing dot are the copy's, in the prompt's colour; the field's own letters and caret are clear. */
 .aa-composer textarea[data-listening] { color: transparent; caret-color: transparent; }
-.aa-composer-field:has(textarea[data-listening]) .aa-composer-backdrop { color: var(--aa-prompt, var(--ds-focus-ring, #594dff)); }
+.aa-composer-field:has(textarea[data-listening]) .aa-composer-backdrop { color: var(--aa-prompt, light-dark(#594dff, #b7b0ff)); }
 .aa-composer-listening { margin-inline-start: 0.25em; color: var(--aa-placeholder, var(--ds-input-placeholder-color, light-dark(#797979, #ababab))); }
 .aa-composer textarea[data-mentions]::selection { color: transparent; }
 .aa-composer-field:has(textarea[data-asking]) .aa-composer-backdrop { visibility: hidden; }

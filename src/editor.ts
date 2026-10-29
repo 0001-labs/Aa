@@ -1476,10 +1476,10 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const start = element.clientLeft + (parseFloat(style.paddingLeft) || 0), end = (parseFloat(style.paddingRight) || 0) + (parseFloat(style.borderRightWidth) || 0)
     const top = element.clientTop + (parseFloat(style.paddingTop) || 0), line = parseFloat(style.lineHeight) || caret?.height || 0
     const dx = caret ? caret.left - box.left - start : 0
-    const dy = caret ? top + (line ? Math.max(0, Math.floor((caret.top + caret.height / 2 - box.top - top) / line)) * line : caret.top - box.top - top) : 0
+    const dy = caret ? top + (line ? Math.max(0, Math.floor((caret.top + caret.height / 2 - box.top - top) / line)) * line : caret.top - box.top - top) : top
     asking?.close()
     asking = openPrompt({
-      place: () => { const now = element.getBoundingClientRect(); return caret ? new DOMRect(now.left + start, now.top + dy, Math.max(now.width - start - end, 80), line || caret.height) : now },
+      place: () => { const now = element.getBoundingClientRect(); return new DOMRect(now.left + start, now.top + dy, Math.max(now.width - start - end, 80), line || caret?.height || now.height) },
       indent: dx,
       type: element,
       placeholder: inline ? word('Ask AI or press space to speak') : undefined,

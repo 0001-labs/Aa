@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import css from '../src/aa.css?inline'
 import { createEditor, imageAtom, type Editor } from '../src/editor'
 import { diagramAtom, type AaDiagramBoardElement } from '../src/diagram'
 import type { PromptContext, Prompter } from '../src/prompt'
@@ -130,6 +131,24 @@ describe('asking AI', () => {
     }
   })
 
+  it('overlays an empty bullet hint on the caret line without removing the native filler', () => {
+    const e = setup('- One\n- ', async () => 'x')
+    e.selectRange(e.value.length)
+    document.dispatchEvent(new Event('selectionchange'))
+    const block = host!.lastElementChild as HTMLElement
+    expect(block.dataset.hint).toBe('Press space for AI')
+    expect(block.querySelector(':scope > br[data-filler]')).not.toBeNull()
+    const sheet = new CSSStyleSheet()
+    sheet.replaceSync(css)
+    const overlay = [...sheet.cssRules].find(rule => {
+      if (!(rule instanceof CSSStyleRule) || !rule.selectorText.endsWith('::after')) return false
+      return block.matches(rule.selectorText.slice(0, -7)) && rule.style.position === 'absolute'
+    }) as CSSStyleRule | undefined
+    expect(overlay).toBeDefined()
+    expect(overlay!.style.top).toBe('0px')
+    expect(overlay!.style.getPropertyValue('inset-inline-start')).toBe('var(--aa-indent, var(--aa-unit))')
+  })
+
   it('goes on from the caret in a paragraph as its own words would: its width, on its lines, the first line at the caret', () => {
     const value = 'Hello. I am here. '
     const e = setup(value, async () => 'x')
@@ -148,6 +167,20 @@ describe('asking AI', () => {
     expect(prompt.style.width).toBe('390px')
     expect(prompt.style.top).toBe(`${200 + 20 + window.scrollY}px`)
     expect(prompt.style.textIndent).toBe('226px')
+  })
+
+  it('keeps an empty bullet prompt inside the writing inset when the browser has no caret rectangle', () => {
+    const e = setup('- One\n- ', async () => 'x')
+    e.selectRange(e.value.length)
+    const block = host!.lastElementChild as HTMLElement
+    Object.assign(block.style, { paddingLeft: '20px', paddingRight: '4px', lineHeight: '20px' })
+    block.getBoundingClientRect = () => new DOMRect(100, 200, 400, 20)
+    const rects = vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue([] as unknown as DOMRectList)
+    try { key(block, ' ') } finally { rects.mockRestore() }
+    expect(field()!.style.left).toBe(`${120 + window.scrollX}px`)
+    expect(field()!.style.width).toBe('376px')
+    expect(field()!.style.top).toBe(`${200 + window.scrollY}px`)
+    expect(e.value).toBe('- One\n- ')
   })
 
   it('offers nothing mid-sentence, after two spaces, or without a product to ask', () => {
