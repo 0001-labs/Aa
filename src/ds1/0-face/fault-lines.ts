@@ -45,6 +45,60 @@ export function faultLineGrids(root: ParentNode): Grid[] {
   });
 }
 
+/** Read the rendered label, not the host box: text tabs intentionally overhang. */
+function leadingTextEdge(element: Element): number | undefined {
+  const rtl = style(element).direction === 'rtl';
+  function visit(node: Node): number | undefined {
+    if (node.nodeType === 3) {
+      const text = node.textContent ?? '';
+      const start = text.search(/\S/);
+      if (start < 0) return;
+      const range = element.ownerDocument.createRange();
+      range.setStart(node, start);
+      range.setEnd(node, text.trimEnd().length);
+      const rect = Array.from(range.getClientRects()).find(rect => rect.width > 0 && rect.height > 0);
+      return rect ? (rtl ? rect.right : rect.left) : undefined;
+    }
+    if (node.nodeType !== 1) return;
+    const el = node as Element;
+    if (el.matches('[hidden], [aria-hidden="true"], script, style') || style(el).display === 'none' || style(el).visibility === 'hidden') return;
+    // Inline code/key/chip faces align by their outside edge; their intentional
+    // inset is not a displaced prose column. Text tabs still measure their words.
+    if (el !== element && !element.matches('ds-tabs') &&
+      (el.matches('code, kbd, button, input, select, textarea, img, svg') || (el.localName.startsWith('ds-') && el.localName !== 'ds-text'))) {
+      const box = el.getBoundingClientRect();
+      if (box.width && box.height) return rtl ? box.right : box.left;
+    }
+    const children = el.localName === 'slot'
+      ? ((el as HTMLSlotElement).assignedNodes({flatten:true}).length ? (el as HTMLSlotElement).assignedNodes({flatten:true}) : el.childNodes)
+      : (el.shadowRoot ?? el).childNodes;
+    for (const child of children) {
+      const edge = visit(child);
+      if (edge !== undefined) return edge;
+    }
+  }
+  return visit(element);
+}
+
+type Column = { element: Element; reference: number; entries: {element: Element; edge: number}[] };
+/** Semantic content siblings share a leading text edge; nested columns remain independent. */
+export function faultLineColumns(root: ParentNode): Column[] {
+  return elements(root).filter(el => el.matches('main, article, section, [data-ds-prose], [data-ds-fault-column]')).flatMap(element => {
+    if (!visible(element) || element.closest('[data-ds-fault-lines="off"]')) return [];
+    const entries = Array.from(element.children).filter(el => {
+      const css = style(el);
+      return el.matches('h1,h2,h3,h4,h5,h6,p,ds-tabs[text]') && visible(el) &&
+        !el.closest('[data-ds-fault-lines="off"]') &&
+        (css.textAlign === 'start' || css.textAlign === (css.direction === 'rtl' ? 'right' : 'left'));
+    }).flatMap(element => {
+      const edge = leadingTextEdge(element);
+      return edge === undefined ? [] : [{element,edge}];
+    });
+    const reference = entries.find(entry => !entry.element.matches('ds-tabs'));
+    return reference && entries.length > 1 ? [{element,reference:reference.edge,entries}] : [];
+  });
+}
+
 function referenceFor(grids: Grid[], i: number) {
   const current = grids[i]!;
   return grids.slice(0,i).find(other => {
@@ -58,6 +112,10 @@ function referenceFor(grids: Grid[], i: number) {
 export function inspectFaultLines(root: ParentNode): Finding[] {
   const grids = faultLineGrids(root);
   const findings: Finding[] = [];
+  for (const column of faultLineColumns(root)) for (const entry of column.entries) {
+    if (near(entry.edge, column.reference)) continue;
+    findings.push({element:entry.element, message:`Fault lines at ${entry.element.ownerDocument.documentElement.clientWidth}px: leading text edge drifts ${Math.round(Math.abs(entry.edge-column.reference))}px from its content column. Align headings, prose and text-tab labels; measure visible words across shadow roots and slots, not their outer boxes. Mark an intentional independent alignment with data-ds-fault-lines="off".`});
+  }
   for (let i = 0; i < grids.length; i++) {
     const current = grids[i]!;
     if (current.internalDrift) findings.push({element:current.element, ...(current.family === null ? {review:true} : {}), message:`Fault lines at ${current.element.ownerDocument.documentElement.clientWidth}px: tracks or repeated gaps drift inside ${current.family || 'this card grid'}. Align its complete rows and repeated spacing.`});
@@ -98,6 +156,17 @@ export function paintFaultLines(root: ParentNode, layer: SVGSVGElement): void {
     if (title) {const tip = doc.createElementNS(node.namespaceURI, 'title');tip.textContent = title;node.appendChild(tip);}
     layer.appendChild(node);
     return node;
+  }
+  for (const column of faultLineColumns(root)) {
+    const bounds = column.element.getBoundingClientRect();
+    mark('line', {'data-fault-reference':'', x1:column.reference, x2:column.reference, y1:bounds.top, y2:bounds.bottom,
+      stroke:referenceInk, 'stroke-width':1, 'stroke-dasharray':'4 4'}, 'Content column text edge');
+    for (const entry of column.entries) {
+      if (near(entry.edge,column.reference)) continue;
+      const box = entry.element.getBoundingClientRect();
+      mark('line', {'data-fault-actual':'', x1:entry.edge, x2:entry.edge, y1:box.top, y2:box.bottom,
+        stroke:faultInk, 'stroke-width':2}, `Text edge drifts ${Math.round(Math.abs(entry.edge-column.reference))}px`);
+    }
   }
   for (let index = 0; index < grids.length; index++) {
     const grid = grids[index]!;

@@ -52,11 +52,11 @@
 :is(ds-overlay > dialog[data-ds-edge="bottom"], dialog.ds-overlay.ds-overlay--sheet) {
   --ds-overlay-held: translateY(var(--ds-overlay-drag, 0px));
   --ds-overlay-away: translateY(100%);
-  inset: auto 0 0;
+  inset: auto 0 var(--ds-overlay-viewport-bottom, 0px);
   width: var(--ds-overlay-width, 100%);
   max-width: min(100%, var(--ds-overlay-sheet-width, calc(32 * var(--ds-unit))));
   height: var(--ds-overlay-height, fit-content);
-  max-height: calc(100dvh - var(--ds-overlay-sheet-gap, calc(2 * var(--ds-unit))) - env(safe-area-inset-top, 0px));
+  max-height: calc(var(--ds-overlay-viewport-height, 100dvh) - var(--ds-overlay-sheet-gap, calc(2 * var(--ds-unit))) - env(safe-area-inset-top, 0px));
   margin: 0 auto;
   padding:
     var(--ds-overlay-within)

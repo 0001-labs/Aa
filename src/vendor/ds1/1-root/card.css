@@ -36,7 +36,7 @@
   --ds-card-fill: var(--ds-fill);
   --ds-card-ink: var(--ds-text-color);
   --ds-card-muted: var(--ds-text-color-muted);
-  --ds-card-padding: var(--ds-unit);
+  --ds-card-padding: var(--ds-card-padding-override, var(--ds-unit));
   --ds-card-text-padding: max(var(--ds-card-padding), var(--ds-card-text-inset-min, 0px));
   position: relative;
   box-sizing: border-box;

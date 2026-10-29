@@ -1,3 +1,4 @@
+import { anchoredPanel, mobilePanel, panelViewport } from "../0-face/anchored-panel";
 import { LitElement, html, unsafeCSS, type CSSResultGroup } from "lit";
 import { define } from "../0-face/define";
 import "../2-core/ds-button";
@@ -415,6 +416,18 @@ export class Menu extends LitElement {
       const useLeft = preferLeft ? toLeft >= box.width || toLeft > toRight : toRight < box.width && toLeft > toRight;
       this.style.left = `${Math.max(left + gap, Math.min(useLeft ? rect.left - box.width : rect.right, left + width - gap - box.width))}px`;
       this.style.top = `${Math.max(top + gap, Math.min(rect.top, top + height - gap - box.height))}px`;
+      return;
+    }
+    if (anchor instanceof HTMLElement && this.triggerMode !== "context" && this.placement === "bottom" && mobilePanel(this)) {
+      const viewport = panelViewport(this);
+      this.style.maxWidth = `${squares(viewport.width - 8, Math.floor)}px`;
+      const frame = this.shadowRoot?.querySelector<HTMLElement>(".frame");
+      const box = this.getBoundingClientRect();
+      const position = anchoredPanel(rect, { width: box.width, height: frame?.scrollHeight ?? box.height }, viewport);
+      this.style.setProperty("--ds-menu-available-height", `${squares(position.availableHeight, Math.floor)}px`);
+      // Height can shrink to whole rows after the collision decision.
+      const placed = anchoredPanel(rect, this.getBoundingClientRect(), viewport);
+      this.style.left = `${placed.left}px`; this.style.top = `${placed.top}px`;
       return;
     }
     const below = top + height - rect.bottom - 2 * gap, above = rect.top - top - 2 * gap;

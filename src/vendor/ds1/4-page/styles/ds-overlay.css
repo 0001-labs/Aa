@@ -93,3 +93,38 @@ ds-overlay > dialog[data-ds-overlay-inline] {
   border: 0;
   background: transparent;
 }
+
+/* Mobile sheets dismiss by swipe, backdrop or Escape. Keep the close control
+   available to assistive technology without drawing a second visible handle. */
+@media (max-width: 768px) {
+  ds-overlay > dialog[data-ds-type="sheet"] [data-ds-overlay="close"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  ds-overlay > dialog[data-ds-type="sheet"] [data-ds-overlay="header"] {
+    padding-inline-end: 0;
+  }
+
+  /* Opt into a stable tabbed frame; short and long panels share the visible
+     viewport's bounds, including the keyboard and safe areas. */
+  ds-overlay > dialog[data-ds-type="sheet"][data-ds-overlay-tabbed] {
+    height: calc(var(--ds-overlay-viewport-height, 100dvh) - var(--ds-overlay-sheet-gap, calc(2 * var(--ds-unit))) - env(safe-area-inset-top, 0px));
+    overflow: hidden;
+  }
+  ds-overlay > dialog[data-ds-type="sheet"][data-ds-overlay-tabbed] > :is([data-ds-overlay="header"], ds-tabs) {
+    flex-shrink: 0;
+  }
+  ds-overlay > dialog[data-ds-type="sheet"][data-ds-overlay-tabbed] > [data-ds-overlay="body"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+}

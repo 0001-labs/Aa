@@ -72,7 +72,7 @@
   border-radius: var(--_button-radius, var(--ds-radius));
   corner-shape: var(--ds-corner-shape, round);
   cursor: pointer;
-  padding: 0;
+  padding: var(--ds-text-tab-padding, 0);
   color: var(--button-color, var(--button-text-color));
   font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-size: var(--_button-font-size, var(--ds-type-size-default));
@@ -188,10 +188,10 @@
 /* Words and an icon hug them, as on every face (controls.css): this face has
    no gap, and on a filled face the icon takes the padding on its side, its
    own room around the glyph standing in for it. */
-:host(:is([primary], [secondary]):not([icon])) ::slotted(ds-icon:last-child:not(:first-child)) {
+:host(:is([primary], [secondary]):not([icon])) ::slotted(ds-icon:nth-last-child(1 of :not(.c9y-native-text)):not(:nth-child(1 of :not(.c9y-native-text)))) {
   margin-inline-end: calc(-4px * var(--ds-sf));
 }
-:host(:is([primary], [secondary]):not([icon])) ::slotted(ds-icon:first-child:not(:last-child)) {
+:host(:is([primary], [secondary]):not([icon])) ::slotted(ds-icon:nth-child(1 of :not(.c9y-native-text)):not(:nth-last-child(1 of :not(.c9y-native-text)))) {
   margin-inline-start: calc(-4px * var(--ds-sf));
 }
 
