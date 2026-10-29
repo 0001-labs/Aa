@@ -1,5 +1,7 @@
 {
-  "name": "aa",
+  "name": "aa-playground",
+  "workers_dev": false,
+  "preview_urls": false,
   "account_id": "ce6189d5ac975158991e207a3c4e1cd5",
   "compatibility_date": "2026-10-19",
   // The documentation (website/), the editor itself on its front page, built by

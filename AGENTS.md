@@ -49,7 +49,7 @@ Toolbar, slash menu, block selection, block dragging with no handle on Drag's so
 
 - `vp run dev` — the playground at http://localhost:5195, the editor beside the Markdown it stores
 - `vp run site:build` — the playground built into `site/` (`dist/` stays the library's)
-- `vp run deploy` — publishes the playground to https://aa.0001.dev, a Cloudflare Worker of static assets (`wrangler.jsonc`)
+- `vp run deploy` — publishes the playground to https://aa.0001.dev, the `aa-playground` Cloudflare Worker of static assets (`wrangler.jsonc`). The former `aa` Worker is retained for rollback after its asset-upload service began returning Cloudflare error 10013; the public domain stays the same
 - `vp run build` — type declarations and `dist/aa.js`
 - `vp run check` — type check
 - `vp test` — the tests
