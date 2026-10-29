@@ -150,6 +150,20 @@ describe('asking AI', () => {
     expect(prompt.style.textIndent).toBe('226px')
   })
 
+  it('keeps an empty bullet prompt inside the writing inset when the browser has no caret rectangle', () => {
+    const e = setup('- One\n- ', async () => 'x')
+    e.selectRange(e.value.length)
+    const block = host!.lastElementChild as HTMLElement
+    Object.assign(block.style, { paddingLeft: '20px', paddingRight: '4px', lineHeight: '20px' })
+    block.getBoundingClientRect = () => new DOMRect(100, 200, 400, 20)
+    const rects = vi.spyOn(Range.prototype, 'getClientRects').mockReturnValue([] as unknown as DOMRectList)
+    try { key(block, ' ') } finally { rects.mockRestore() }
+    expect(field()!.style.left).toBe(`${120 + window.scrollX}px`)
+    expect(field()!.style.width).toBe('376px')
+    expect(field()!.style.top).toBe(`${200 + window.scrollY}px`)
+    expect(e.value).toBe('- One\n- ')
+  })
+
   it('offers nothing mid-sentence, after two spaces, or without a product to ask', () => {
     for (const [value, prompt] of [['Hello. I am', true], ['Hello.  ', true], ['Hello. ', false]] as const) {
       const e = setup(value, prompt ? async () => 'x' : undefined)
