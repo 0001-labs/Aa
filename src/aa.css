@@ -807,8 +807,18 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-composer-field:has(textarea[data-asking]) .aa-composer-backdrop { visibility: hidden; }
 .aa-composer-thinking { flex: 1 1 auto; min-width: 0; line-height: var(--aa-unit); }
 .aa-composer-send:hover { color: inherit; }
-/* The people menu under the composer: the Context face, a person a row. */
-/* The people to mention: four squares wide, as every menu is, a long name fading over its last square. */
+/* The people to mention under the composer: the light face, on the paper with a hairline, and
+   eight squares wide so a whole name shows (Joachim, 2 November 2026); a person a row, a long name
+   fading over its last square. */
+.aa-menu.aa-comments-people {
+  --aa-menu-fill: var(--ds-paper, #ffffff);
+  --aa-menu-ink: var(--ds-text-color, #1e1e1e);
+  --aa-menu-hover: var(--ds-fill, #f2f2f2);
+  width: calc(8 * var(--aa-square));
+  gap: 0;
+  background: var(--aa-menu-fill);
+  box-shadow: inset 0 0 0 1px var(--ds-border-color, rgb(0 0 0 / 0.12));
+}
 .aa-comments-people button { justify-content: flex-start; }
 .aa-comments-people button span:last-child { flex: 1; white-space: nowrap; mask-image: linear-gradient(to right, black calc(100% - var(--aa-square)), transparent 100%); }
 @media (prefers-reduced-motion: reduce) {
