@@ -44,6 +44,9 @@ import deleteIcon from './icons/delete.svg?raw'
 import wrapIcon from './icons/column.svg?raw'
 import { word } from './words'
 
+/** The drawing a board stands over, as far as the board asks anything of it. */
+type DrawingElement = HTMLElement & { source?: string; diagram: Diagram; drawn?: () => void; updateComplete: Promise<boolean> }
+
 /** Choosing and carrying, or drawing lines from box to box. */
 type Mode = 'choose' | 'line' | 'arrow'
 type Rect = { x: number; y: number; w: number; h: number }
@@ -97,7 +100,7 @@ export class AaDiagramBoardElement extends Base {
   #close = '```'
   #source = ''
   #layout: Diagram = layoutDiagram('')
-  #drawing: (HTMLElement & { source?: string }) | null = null
+  #drawing: DrawingElement | null = null
   #paper!: HTMLElement
   #ring!: HTMLElement
   #aim!: HTMLElement
@@ -143,7 +146,7 @@ export class AaDiagramBoardElement extends Base {
     this.#colors.setAttribute('aria-label', word('Colour'))
     if ('popover' in HTMLElement.prototype) this.#colors.setAttribute('popover', 'manual')
     this.#paper = part('div', 'paper')
-    this.#drawing = document.createElement(tag)
+    this.#drawing = document.createElement(tag) as DrawingElement
     const layer = part('div', 'layer')
     this.#ring = part('div', 'ring', true)
     this.#aim = part('div', 'ring aim', true)
@@ -556,67 +559,86 @@ export class AaDiagramBoardElement extends Base {
   }
 
   /**
-   * A group carried as Music carries a clip on Drag: it follows the pointer
-   * exactly, by transform alone, while its ring glides from square to square
-   * to where it will land; let go, it settles onto those squares and is
-   * written `@ x y` there. Taken back, it glides home.
+   * A group carried as Music carries a clip on Drag: it lifts and follows the
+   * pointer exactly, by transform alone, while the drawing is laid out as it
+   * will land, so its lines go with it and the squares it will take are marked;
+   * let go, it settles onto them and is written `@ x y` there. Taken back, it
+   * glides home. The drawing is made anew as it goes, so the pieces are found
+   * again each time rather than kept.
    */
   #moving(target: DiagramTarget & { group: number }): GridGesture {
     const group = this.#layout.groups[target.group]
+    const drawing = this.#drawing!
     let working = this.#source
-    let landing = { x: 0, y: 0 }
-    let pieces: { element: HTMLElement; transform: string }[] = []
+    let landing = { x: 0, y: 0 }, offset = { x: 0, y: 0 }
+    let pieces: HTMLElement[] = []
+    let lifted = true
     const reduced = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    /** Every piece of the group as drawn, carried by the same offset in pixels. */
-    const carry = (x: number, y: number, settle: boolean) => {
-      for (const { element, transform } of pieces) {
+    /** Every piece of the group as drawn, standing the same offset from where it is drawn. */
+    const carry = (settle: boolean) => {
+      const unit = this.#unit()
+      for (const element of pieces) {
         element.style.transition = settle && !reduced() ? `transform ${SETTLE}ms cubic-bezier(.2, 1, .1, 1)` : 'none'
-        element.style.transform = `translate(${x}px, ${y}px) ${transform}`.trim()
+        element.style.transform = `translate(${offset.x - landing.x * unit}px, ${offset.y - landing.y * unit}px)`
       }
     }
-    /** Once it has settled (or at once, with less motion), the pieces are drawn where they stand by the drawing itself. */
+    const find = () => {
+      const landed = drawing.diagram.groups[target.group] ?? group
+      landing = { x: landed.x - group.x, y: landed.y - group.y }
+      pieces = this.#piecesOf(landed)
+      for (const element of pieces) { element.style.zIndex = '3'; element.toggleAttribute('data-carried', lifted) }
+      carry(false)
+    }
+    /** Once it has settled (or at once, with less motion), the pieces stand where the drawing draws them. */
     const after = (then: () => void) => {
       const done = () => {
+        drawing.drawn = undefined
         this.removeAttribute('data-moving')
-        for (const { element } of pieces) { element.style.transition = ''; element.style.transform = ''; element.style.zIndex = '' }
+        for (const element of pieces) { element.style.transition = ''; element.style.transform = ''; element.style.zIndex = ''; element.removeAttribute('data-carried') }
         pieces = []
         then()
       }
       if (reduced()) done(); else setTimeout(done, SETTLE)
     }
+    const land = () => { lifted = false; for (const element of pieces) element.removeAttribute('data-carried') }
     return {
       onStart: () => {
         this.setAttribute('data-moving', '')
-        pieces = this.#piecesOf(group).map(element => {
-          const transform = getComputedStyle(element).transform
-          element.style.zIndex = '3'
-          return { element, transform: transform === 'none' ? '' : transform }
-        })
+        drawing.drawn = find
+        find()
       },
       onMove: ({ point, origin, moved }) => {
         const unit = this.#unit()
         // Never past the paper's first square.
-        carry(Math.max(-group.x, point.x - origin.x) * unit, Math.max(-group.y, point.y - origin.y) * unit, false)
+        offset = { x: Math.max(-group.x, point.x - origin.x) * unit, y: Math.max(-group.y, point.y - origin.y) * unit }
         const next = moved.x || moved.y ? moveGroup(this.#source, this.#layout, target.group, group.x + moved.x, group.y + moved.y) : this.#source
-        if (next === working) return
+        if (next === working) { carry(false); return }
         working = next
         const layout = layoutDiagram(next)
-        const landed = layout.groups[target.group]
-        landing = landed ? { x: landed.x - group.x, y: landed.y - group.y } : { x: 0, y: 0 }
+        drawing.source = next
         this.#size(layout)
         this.#drawChoice(layout)
       },
       onDrop: () => {
         const written = working, unit = this.#unit()
-        carry(landing.x * unit, landing.y * unit, true)
+        land()
+        offset = { x: landing.x * unit, y: landing.y * unit }
+        carry(true)
         after(() => {
           if (written === this.#source) { this.#drawChoice(); return }
           this.#commit(written, { target }, word('Moved {name}', { name: this.#nameOf(target) ?? '' }).trim())
         })
       },
       onCancel: () => {
-        carry(0, 0, true)
-        after(() => { this.#size(this.#layout); this.#drawChoice() })
+        land()
+        drawing.source = this.#source
+        void drawing.updateComplete.then(() => {
+          // Drawn back in its place, it starts from where it was carried to and glides home.
+          void pieces[0]?.getBoundingClientRect()
+          offset = { x: 0, y: 0 }
+          carry(true)
+          after(() => { this.#size(this.#layout); this.#drawChoice() })
+        })
       },
     }
   }
@@ -633,15 +655,53 @@ export class AaDiagramBoardElement extends Base {
     })
   }
 
-  /** A box sized by its grip in whole items, a post-it by its corner in whole columns. */
+  /**
+   * A box sized by its grip in whole items, a post-it by its corner in whole
+   * columns: the edge follows the pointer exactly, the drawing laid out at the
+   * whole size it will take, and let go it settles there.
+   */
   #sizing(index: number): GridGesture {
     const group = this.#layout.groups[index]
-    return this.#redrawing(
-      ({ point }) => resizeGroup(this.#source, this.#layout, index, group.kind === 'post-it' ? Math.max(point.x - group.x, point.y - group.y) : point.x - group.x),
+    const drawing = this.#drawing!
+    const corner = group.kind === 'post-it'
+    const size = (point: GridPoint) => corner ? Math.max(point.x - group.x, point.y - group.y) : point.x - group.x
+    const redrawing = this.#redrawing(
+      ({ point }) => resizeGroup(this.#source, this.#layout, index, size(point)),
       { group: index },
       word('Sized {name}', { name: this.#nameOf({ group: index }) ?? '' }).trim(),
       'data-sizing',
     )
+    let wanted: number | null = null
+    /** The pieces and the grip at the size asked for, in fractions of a square. */
+    const follow = () => {
+      if (wanted === null) return
+      const value = String(Math.max(1, wanted))
+      for (const element of this.#piecesOf(drawing.diagram.groups[index] ?? group)) {
+        if (element.classList.contains('label')) continue
+        element.style.setProperty('--w', value)
+        if (corner) element.style.setProperty('--h', value)
+      }
+      this.#grip.style.setProperty('--w', value)
+      if (corner) this.#grip.style.setProperty('--h', value)
+    }
+    const stop = () => { drawing.drawn = undefined; wanted = null }
+    return {
+      ...redrawing,
+      onStart: drag => { drawing.drawn = follow; redrawing.onStart?.(drag) },
+      onMove: drag => { wanted = size(drag.point); redrawing.onMove?.(drag); follow() },
+      onDrop: drag => {
+        const landed = drawing.diagram.groups[index]
+        const settle = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches && landed
+        if (!settle) { stop(); redrawing.onDrop?.(drag); return }
+        const pieces = this.#piecesOf(landed).filter(element => !element.classList.contains('label'))
+        for (const element of pieces) { element.style.transition = `width ${SETTLE}ms cubic-bezier(.2, 1, .1, 1), height ${SETTLE}ms cubic-bezier(.2, 1, .1, 1)` }
+        wanted = corner ? Math.max(landed.w, landed.h) : landed.w
+        void pieces[0]?.getBoundingClientRect()
+        follow()
+        setTimeout(() => { stop(); redrawing.onDrop?.(drag) }, SETTLE)
+      },
+      onCancel: drag => { stop(); redrawing.onCancel?.(drag) },
+    }
   }
 
   /** A line from a box to the box it is let go over, following the pointer or the keys meanwhile. */

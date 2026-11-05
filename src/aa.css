@@ -231,6 +231,9 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
    squares, never wider than its line. */
 .aa-atom[data-atom="image"]:not([data-width]) { max-width: min(100%, calc(var(--aa-picture-default, 16) * var(--aa-unit))); }
 .aa-atom[data-atom="image"][data-width] { width: calc(var(--aa-picture-width) * var(--aa-unit)); }
+/* Let go, it settles onto its squares; while held it follows the pointer with no easing at all. */
+.aa-atom[data-atom="image"][data-settling] { transition: width 0.14s cubic-bezier(0.2, 1, 0.1, 1); }
+@media (prefers-reduced-motion: reduce) { .aa-atom[data-atom="image"][data-settling] { transition: none; } }
 .aa-atom[data-atom="image"][data-width] img { width: 100%; }
 /* The grip on its end edge, seen while the pointer is over the picture or it is being sized: a short
    bar a square in from the edge, pulled sideways, in whole squares. */

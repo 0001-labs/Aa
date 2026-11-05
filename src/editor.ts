@@ -58,7 +58,7 @@ function squareIn(element: HTMLElement): number {
  * to as many as its line holds, and let go, its width is written into its Markdown as one step to undo
  * (`aa-atom-source`, handed to the editor). A double press gives the picture back its own size.
  */
-function pictureGrip(element: HTMLElement, alt: string, src: string, width: number | null) {
+function pictureGrip(element: HTMLElement, alt: string, src: string) {
   const grip = document.createElement('span')
   grip.className = 'aa-picture-grip'
   grip.setAttribute('data-aa-interactive', '')
@@ -66,6 +66,7 @@ function pictureGrip(element: HTMLElement, alt: string, src: string, width: numb
   grip.setAttribute('aria-orientation', 'vertical')
   grip.setAttribute('aria-label', word('Picture width'))
   grip.contentEditable = 'false'
+  const written = () => Number(element.dataset.width) || null
   const write = (squares: number | null) => element.dispatchEvent(new CustomEvent('aa-atom-source', { bubbles: true, detail: { source: writePicture(alt, src, squares) } }))
   grip.addEventListener('pointerdown', event => {
     if (event.button !== 0 || element.closest('.aa-block')?.getAttribute('data-readonly') === 'true') return
@@ -74,22 +75,29 @@ function pictureGrip(element: HTMLElement, alt: string, src: string, width: numb
     const start = event.clientX, from = element.getBoundingClientRect().width
     const line = (element.closest('.aa-block') as HTMLElement | null)?.clientWidth ?? from
     const most = Math.max(PICTURE_MIN, Math.floor(line / unit))
+    const before = written()
     let squares = Math.round(from / unit)
     grip.setPointerCapture(event.pointerId)
     element.setAttribute('data-sizing', '')
+    const set = (width: number) => { element.style.setProperty('--aa-picture-width', String(width)); element.dataset.width = String(Math.round(width)) }
+    // The edge follows the pointer exactly; the squares are where it lands.
     const move = (moved: PointerEvent) => {
-      squares = Math.min(most, Math.max(PICTURE_MIN, Math.round((from + moved.clientX - start) / unit)))
-      element.style.setProperty('--aa-picture-width', String(squares))
-      element.setAttribute('data-width', String(squares))
+      const width = Math.min(most, Math.max(PICTURE_MIN, (from + moved.clientX - start) / unit))
+      squares = Math.round(width)
+      set(width)
     }
     const up = () => {
       grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up)
       element.removeAttribute('data-sizing')
-      if (squares !== width) write(squares)
+      element.setAttribute('data-settling', '')
+      void element.getBoundingClientRect()
+      set(squares)
+      if (squares !== before) write(squares)
+      setTimeout(() => element.removeAttribute('data-settling'), 160)
     }
     grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up)
   })
-  grip.addEventListener('dblclick', event => { event.preventDefault(); event.stopPropagation(); if (width !== null) write(null) })
+  grip.addEventListener('dblclick', event => { event.preventDefault(); event.stopPropagation(); if (written() !== null) write(null) })
   element.append(grip)
 }
 
@@ -100,7 +108,7 @@ function pictureGrip(element: HTMLElement, alt: string, src: string, width: numb
 export function sizePicture(element: HTMLElement, source: string) {
   const { alt, src, width } = readPicture(source)
   if (width) { element.dataset.width = String(width); element.style.setProperty('--aa-picture-width', String(width)) }
-  pictureGrip(element, alt, src, width)
+  pictureGrip(element, alt, src)
 }
 
 /** A picture drawn as itself, as wide as its Markdown says in squares, or its own size up to sixteen. */
@@ -1527,8 +1535,10 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     atom.dataset.source = source
     const next = [...blocks]
     next[index] = { ...blocks[index], source: readBlock(element) }
-    // Drawn anew with its new width, rather than kept as the block is drawn again.
-    atom.remove()
+    // The same picture at another width: kept, so it never flashes as it loads again.
+    const { width } = readPicture(source)
+    if (width) { atom.dataset.width = String(width); atom.style.setProperty('--aa-picture-width', String(width)) }
+    else { delete atom.dataset.width; atom.style.removeProperty('--aa-picture-width') }
     const { blocks: drawn } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, next[index].source)
     clearBlocks()
     syncDom(renumber(drawn))

@@ -11,5 +11,7 @@ export default defineConfig({
     outDir: 'dist', emptyOutDir: false,
     lib: { entry: resolve(__dirname, 'src/diagram.ts'), formats: ['es'], fileName: () => 'diagram.js' },
     sourcemap: true, target: 'es2022',
+    // As aa.js: lowered, light-dark() needs a color-scheme a shadow root does not have, and a box loses its fill.
+    cssTarget: ['chrome123', 'edge123', 'firefox120', 'safari17.5'],
   },
 })

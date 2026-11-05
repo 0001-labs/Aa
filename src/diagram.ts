@@ -77,6 +77,8 @@ export class AaDiagramElement extends Base {
   #resize: ResizeObserver | undefined
   /** How round a line's turns are, in squares: a cell's corner radius in a rounded shape, none in the square one. */
   #bend = 0
+  /** Called each time the drawing is made anew: every element in it is new, so what a board was carrying is found again. */
+  drawn?: () => void
   /** Settles once the diagram has drawn what it was last given. */
   updateComplete: Promise<boolean> = Promise.resolve(true)
 
@@ -117,7 +119,8 @@ export class AaDiagramElement extends Base {
     watchShape()
     // The holder's width is the room a wrapping diagram fits, and says whether one that does not wrap fits the window.
     if (typeof ResizeObserver !== 'undefined' && this.parentElement) {
-      this.#resize ??= new ResizeObserver(() => this.requestUpdate())
+      // Measured, not drawn again: a holder's size changes nothing drawn unless it changes the room, and drawing again would replace what is being carried.
+      this.#resize ??= new ResizeObserver(() => this.#measure())
       this.#resize.observe(this.parentElement)
     }
     this.requestUpdate()
@@ -160,6 +163,7 @@ export class AaDiagramElement extends Base {
     }
     this.shadowRoot!.replaceChildren(...(this.#style ? [this.#style] : []), ...this.#render())
     this.#measure()
+    this.drawn?.()
   }
 
   #measure() {

@@ -111,12 +111,19 @@
 
 :host([data-moving]) .grip { display: none; }
 
+/* Where it will land: its squares marked in the ring's colour, so the snap is seen while the piece follows the pointer freely. */
+:host([data-moving]) .ring {
+  background: color-mix(in srgb, var(--board-ring) 14%, transparent);
+  box-shadow: inset 0 0 0 1px var(--board-ring);
+  border-radius: var(--aa-diagram-radius, 0px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   :host([data-moving]) .ring,
   .ghost-box { transition: none; }
 }
 
-.ghost-box { box-shadow: inset 0 0 0 1px var(--board-ring); opacity: 0.6; }
+.ghost-box { background: color-mix(in srgb, var(--board-ring) 14%, transparent); box-shadow: inset 0 0 0 1px var(--board-ring); border-radius: var(--aa-diagram-radius, 0px); }
 .ring[hidden], .ghost-box[hidden], .grip[hidden] { display: none; }
 
 /* The grip of what is chosen sizes it: a range's thumb, one control high and

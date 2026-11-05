@@ -117,6 +117,12 @@
   transition: border-radius 160ms ease-out;
 }
 
+/* Carried, it stands off the paper: its cell's fill, a line round it and a shadow under it, whatever it is drawn on. */
+:is(.box, .post-it, .day)[data-carried] {
+  background-color: var(--box-fill, var(--aa-diagram-cell, light-dark(#fff, #000)));
+  box-shadow: 0 0 0 1px var(--aa-diagram-rule, light-dark(rgb(0 0 0 / 0.16), rgb(255 255 255 / 0.24))), 0 calc(4px * var(--sf, 1)) calc(12px * var(--sf, 1)) rgb(0 0 0 / 0.18);
+}
+
 /* A month's day is one square, its number in the square's middle: faint
    while it wears no colour, as a day of the calendar's year is with nothing
    on it, and a chip in its pale accent once it does, with the shape's

@@ -128,12 +128,16 @@ describe('drawing on a diagram\'s board', () => {
     pointer('pointerdown', 1, 0)
     pointer('pointermove', 5.25, 0.25)
     // Carried, the box follows the pointer by transform alone, and its ring stands where it will land.
+    // The drawing is laid out as it will land, lines and all, so the box stands that much nearer the pointer.
+    await drawingIn(blockElements()[1])!.updateComplete
     const box = drawingIn(blockElements()[1])!.shadowRoot!.querySelector<HTMLElement>('.box')!
-    expect(box.style.transform).toBe('translate(85px, 5px)')
+    expect(box.style.transform).toBe('translate(5px, 5px)')
+    expect(box.hasAttribute('data-carried')).toBe(true)
     expect(part<HTMLElement>('.ring').style.getPropertyValue('--x')).toBe('4')
     pointer('pointerup', 5.25, 0.25)
     // It settles onto its squares, then is written there.
-    expect(box.style.transform).toBe('translate(80px, 0px)')
+    expect(box.style.transform).toBe('translate(0px, 0px)')
+    expect(box.hasAttribute('data-carried')).toBe(false)
     expect(e.value).toBe(SOURCE)
     await new Promise(resolve => setTimeout(resolve, 400))
     expect(e.value).toBe(SOURCE.replace('[A]', '[A] @ 4 0'))
