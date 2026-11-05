@@ -1,6 +1,6 @@
 {
   "Design system 1": {
-    "commit": "3274172bc9276990af356a181d098543f3df70c9",
+    "commit": "02bdaf7e082cd7e8ba5efc30a324bedc18550af6",
     "version": "0.3.2",
     "files": {
       "public/ds1/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
@@ -109,9 +109,9 @@
       "src/vendor/ds1/2-core/ds-input.ts": "642b2045d6bd14388b95980ac991328a990b3e5cbcc360b809c11df53c01381f",
       "src/vendor/ds1/2-core/ds-swatch.ts": "67565dbeafe010001337967996ac636308d63de8775eacedb160c1f19fc35ef7",
       "src/vendor/ds1/2-core/ds-text.ts": "452e3e1bc12f098ae7f4b7fc5b0d20f4870b01a9bfa6c59a0383cfc8a4fb2d16",
-      "src/vendor/ds1/2-core/generated/ds-icon-map.ts": "f96799ece210d5c89175021a5c5ef1919c4255b263fd74a06a26198f9950c842",
-      "src/vendor/ds1/2-core/generated/icons-extra.ts": "059e1cea562e71dc5cb4612627cf74602726121ac388d50c351e8c33710ed972",
-      "src/vendor/ds1/2-core/generated/icons-immediate.ts": "481b0c79004d49dc657723b669dedc9a439d3a42dd8575c12eb1fcf83c23fc6e",
+      "src/vendor/ds1/2-core/generated/ds-icon-map.ts": "b10223741b535ba7cef608d572838ab5bc0cbbdfde15cc8b08828f8dcf4abe09",
+      "src/vendor/ds1/2-core/generated/icons-extra.ts": "34fa22797192709821a1595269d4428744e08cdf08b73ec42ed321c5135a7615",
+      "src/vendor/ds1/2-core/generated/icons-immediate.ts": "b7bcf5a8fa7e38b4d0098536f8bdd69560fe67b8bfb2f2776150ccbb3df4d586",
       "src/vendor/ds1/2-core/styles/ds-button-host.css": "d74eb3eb5b71f418d70c3f7db495c1bd067673d698fda8ba27cd40c42941bcbe",
       "src/vendor/ds1/2-core/styles/ds-button-split.css": "f58076cc395a542a21c16ca3e476dea789cfa8fa02b4d23e9220a7daed6ea20e",
       "src/vendor/ds1/2-core/styles/ds-button.css": "21fffca173defe31cf84271fe62f6d9a27a111903d5cdfada670f2583641b818",
@@ -129,7 +129,7 @@
       "src/vendor/ds1/3-unit/styles/ds-table-of-contents.css": "db983373350881b481abce1c0574dba0e796dd7d72e149efd5ea99697023e96e",
       "src/vendor/ds1/4-page/ds-overlay.ts": "f3a6f9bd9b349b4ea64bddab2bb5e3b3c2c3faa6b7424359fd03d6273a395e95",
       "src/vendor/ds1/4-page/styles/ds-overlay.css": "dd881d86180abf22dffb4b1f5d8ba0cce75a3eca9d89285fb284f268dd8abce5",
-      "src/vendor/ds1/components-manifest.json": "36700ab09660486330ae2cc9a01fd0a4f1f36a231649d61490da15109d2ce5e6",
+      "src/vendor/ds1/components-manifest.json": "dac821b96f7e09af23472d05c145662d869b767d1f4b280813007937036c4b26",
       "src/vendor/ds1/components.ts": "01b17e30b4526d934fe56a2d2ba4efa78991e0250b5549746787790c66089db1",
       "src/vendor/ds1/x-icon/check.svg": "f50904e9cf12dd555cf970ea300960dbabb98c4abdcc0e7f50376b54cefa6516",
       "src/vendor/ds1/x-icon/chevron-down.svg": "7afc5673be7ca066cc20363c135067d6d4839e0a26d9ff6e472a45319b0ec3b2",

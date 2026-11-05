@@ -1,6 +1,6 @@
 {
   "source": "Design system 1/DS1",
-  "commit": "3274172bc9276990af356a181d098543f3df70c9",
+  "commit": "02bdaf7e082cd7e8ba5efc30a324bedc18550af6",
   "components": [
     "button",
     "input",
@@ -65,9 +65,9 @@
     "2-core/ds-input.ts": "642b2045d6bd14388b95980ac991328a990b3e5cbcc360b809c11df53c01381f",
     "2-core/ds-swatch.ts": "67565dbeafe010001337967996ac636308d63de8775eacedb160c1f19fc35ef7",
     "2-core/ds-text.ts": "452e3e1bc12f098ae7f4b7fc5b0d20f4870b01a9bfa6c59a0383cfc8a4fb2d16",
-    "2-core/generated/ds-icon-map.ts": "f96799ece210d5c89175021a5c5ef1919c4255b263fd74a06a26198f9950c842",
-    "2-core/generated/icons-extra.ts": "059e1cea562e71dc5cb4612627cf74602726121ac388d50c351e8c33710ed972",
-    "2-core/generated/icons-immediate.ts": "481b0c79004d49dc657723b669dedc9a439d3a42dd8575c12eb1fcf83c23fc6e",
+    "2-core/generated/ds-icon-map.ts": "b10223741b535ba7cef608d572838ab5bc0cbbdfde15cc8b08828f8dcf4abe09",
+    "2-core/generated/icons-extra.ts": "34fa22797192709821a1595269d4428744e08cdf08b73ec42ed321c5135a7615",
+    "2-core/generated/icons-immediate.ts": "b7bcf5a8fa7e38b4d0098536f8bdd69560fe67b8bfb2f2776150ccbb3df4d586",
     "2-core/styles/ds-button-host.css": "d74eb3eb5b71f418d70c3f7db495c1bd067673d698fda8ba27cd40c42941bcbe",
     "2-core/styles/ds-button-split.css": "f58076cc395a542a21c16ca3e476dea789cfa8fa02b4d23e9220a7daed6ea20e",
     "2-core/styles/ds-button.css": "21fffca173defe31cf84271fe62f6d9a27a111903d5cdfada670f2583641b818",
