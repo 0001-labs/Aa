@@ -3,6 +3,7 @@
  * block by block, then run by run within a block, with every character kept,
  * so what is drawn on the screen reads straight back into the text.
  */
+import { tableRows } from './table'
 
 export type BlockKind = 'paragraph' | 'heading' | 'bullet' | 'quote' | 'code' | 'divider' | 'callout' | 'table' | 'equation' | 'columns' | 'tabs' | 'toc'
 
@@ -745,6 +746,17 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
       const next = block.source.indexOf('\n', at)
       return QUOTE.exec(block.source.slice(at, next < 0 ? block.source.length : next))?.[0].length ?? 0
     })
+    return runs
+  }
+  // A table is read as it is drawn, each cell its own writing, so no mark reaches over a pipe.
+  if (block.kind === 'table') {
+    let at = 0
+    for (const cell of tableRows(block.source).flat()) {
+      if (cell.from > at) runs.push({ kind: 'syntax', from: at, to: cell.from, prefix: true })
+      inline(cell.text, 0, cell.text.length, cell.from, runs, atoms)
+      at = cell.to
+    }
+    if (at < block.source.length) runs.push({ kind: 'syntax', from: at, to: block.source.length, prefix: true })
     return runs
   }
   let at = 0

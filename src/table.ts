@@ -30,6 +30,8 @@ export function tableRows(source: string): Cell[][] {
     return [cells]
   })
 }
+/** Whether a range stands inside one cell. */
+export const inOneCell = (source: string, from: number, to: number) => tableRows(source).flat().some(cell => from >= cell.from && to <= cell.to)
 /** A column's alignment, from the delimiter row: `:---` start, `:---:` centre, `---:` end. */
 export type Alignment = 'start' | 'center' | 'end' | null
 export function tableAlignments(source: string): Alignment[] {

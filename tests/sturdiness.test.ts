@@ -205,3 +205,58 @@ describe('coloured links', () => {
     expect(paint('www.using.link', 'using')).toBe('[www.<span color="purple">using</span>.link](https://www.using.link)')
   })
 })
+
+describe('marks across table cells', () => {
+  const TABLE = '| Tjeneste | Formål | Pris |\n| --- | --- | --- |\n| Cloudflare | Hosting | 750 |'
+  const across = (source: string, first: string, last: string, delimiter = '**', closing = delimiter) => {
+    const blocks = fromMarkdown(source)
+    return wrapSelection(blocks, { block: 0, offset: source.indexOf(first) }, { block: 0, offset: source.indexOf(last) + last.length }, delimiter, closing)
+  }
+  it('marks each cell on its own', () => {
+    expect(serialize(across(TABLE, 'Tjeneste', 'Pris')!.blocks)).toBe('| **Tjeneste** | **Formål** | **Pris** |\n| --- | --- | --- |\n| Cloudflare | Hosting | 750 |')
+  })
+  it('takes the mark off every cell again', () => {
+    const bold = serialize(across(TABLE, 'Tjeneste', 'Pris')!.blocks)
+    expect(serialize(across(bold, 'Tjeneste', 'Pris')!.blocks)).toBe(TABLE)
+  })
+  it('passes over the delimiter row between rows, and leaves the table a table', () => {
+    const marked = serialize(across(TABLE, 'Pris', 'Cloudflare')!.blocks)
+    expect(marked).toBe('| Tjeneste | Formål | **Pris** |\n| --- | --- | --- |\n| **Cloudflare** | Hosting | 750 |')
+    expect(parseBlocks(marked).map(block => block.kind)).toEqual(['table'])
+  })
+  it('colours each cell on its own', () => {
+    const blocks = fromMarkdown(TABLE)
+    const coloured = colorSelection(blocks, { block: 0, offset: TABLE.indexOf('Tjeneste') }, { block: 0, offset: TABLE.indexOf('Formål') + 6 }, 'red')!
+    expect(serialize(coloured.blocks).split('\n')[0]).toBe('| <span color="red">Tjeneste</span> | <span color="red">Formål</span> | Pris |')
+  })
+  it('writes no equation over a pipe', () => {
+    expect(across(TABLE, 'Tjeneste', 'Formål', '$')).toBeNull()
+  })
+  const over = (source: string, first: string, last: string, text = '') => {
+    const blocks = fromMarkdown(source)
+    return replaceRange(blocks, { block: 0, offset: source.indexOf(first) }, { block: 0, offset: source.indexOf(last) + last.length }, text)
+  }
+  it('empties the cells a deletion covers and keeps the columns', () => {
+    expect(serialize(over(TABLE, 'Tjeneste', 'Pris').blocks).split('\n')[0]).toBe('|  |  |  |')
+    expect(parseBlocks(serialize(over(TABLE, 'Formål', 'Cloudflare').blocks))[0].source).toBe('| Tjeneste |  |  |\n| --- | --- | --- |\n|  | Hosting | 750 |')
+  })
+  it('puts what is typed over cells in the first, where the caret stays', () => {
+    const typed = over(TABLE, 'Tjeneste', 'Formål', 'x')
+    expect(serialize(typed.blocks).split('\n')[0]).toBe('| x |  | Pris |')
+    expect(typed.caret).toEqual({ block: 0, offset: 3 })
+  })
+  it('keeps what is pasted over cells inside the first', () => {
+    expect(serialize(over(TABLE, 'Tjeneste', 'Formål', 'a|b\nc').blocks).split('\n')[0]).toBe('| a\\|b c |  | Pris |')
+  })
+  it('leaves the words of bold cells bold when part of them goes', () => {
+    const source = '| **Tjeneste** | **Formål** |\n| --- | --- |'
+    expect(serialize(over(source, 'neste', 'For').blocks).split('\n')[0]).toBe('| **Tje** | **mål** |')
+  })
+  it('still replaces a table whole', () => {
+    expect(serialize(replaceRange(fromMarkdown(TABLE), { block: 0, offset: 0 }, { block: 0, offset: TABLE.length }, 'Words').blocks)).toBe('Words')
+  })
+  it('reads a cell as it is drawn: a mark never reaches over a pipe', () => {
+    const block = parseBlocks('| **a | b** |\n| --- | --- |')[0]
+    expect(blockRuns(block).filter(run => run.kind === 'text' && run.bold)).toEqual([])
+  })
+})
