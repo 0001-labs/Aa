@@ -123,6 +123,27 @@ for (const name of engines) {
   check('a background and a text colour stand together', await page.evaluate(() => { const el = document.querySelector('.aa-bg'); return !!el?.closest('[data-color="blue"]') || !!el?.querySelector?.('[data-color="blue"]') || el?.dataset.color === 'blue' }), await page.evaluate(() => window.editor.value))
   await pick('color-bg-default')
   check('Default takes it off and leaves the colour', await page.evaluate(() => window.editor.value) === 'Colour <span color="blue">these</span> words', await page.evaluate(() => window.editor.value))
+  // A drag over cells: marks stay in each cell, and deleting or typing leaves the columns.
+  const ROW = '| Tjeneste | Formål | Pris |\n| --- | --- | --- |\n| Cloudflare | Hosting | 750 |'
+  const wordBox = word => page.evaluate(word => { const walker = document.createTreeWalker(document.querySelector('#host'), 4); for (let node = walker.nextNode(); node; node = walker.nextNode()) { if (node.parentElement.closest('.aa-syntax')) continue; const at = node.data.indexOf(word); if (at < 0) continue; const range = document.createRange(); range.setStart(node, at); range.setEnd(node, at + word.length); const box = range.getBoundingClientRect(); return { left: box.left, right: box.right, y: box.top + box.height / 2 } } }, word)
+  const sweep = async () => {
+    await open(ROW)
+    const first = await wordBox('Tjeneste'), last = await wordBox('Pris')
+    await page.mouse.click(4, 490)
+    await page.mouse.move(first.left + 1, first.y); await page.mouse.down(); await page.mouse.move(last.right - 1, last.y, { steps: 6 }); await page.mouse.up(); await page.waitForTimeout(80)
+  }
+  const written = () => page.evaluate(() => window.editor.value)
+  await sweep(); await page.keyboard.press(`${mod}+b`); await page.waitForTimeout(80)
+  check('bold over cells marks each cell', (await written()).startsWith('| **Tjeneste** | **Formål** | **Pris** |'), (await written()).split('\n')[0])
+  check('and no star shows', await page.evaluate(() => !window.visible().includes('*')))
+  await page.keyboard.press(`${mod}+b`); await page.waitForTimeout(80)
+  check('bold again takes it off every cell', await written() === ROW, (await written()).split('\n')[0])
+  await sweep(); await page.keyboard.press('Backspace'); await page.waitForTimeout(80)
+  check('deleting over cells keeps the columns', (await written()).startsWith('|  |  |  |\n'), (await written()).split('\n')[0])
+  await sweep(); await page.keyboard.type('ab'); await page.waitForTimeout(80)
+  check('typing over cells writes in the first', (await written()).startsWith('| ab |  |  |\n'), (await written()).split('\n')[0])
+  await sweep(); await page.keyboard.press(`${mod}+x`); await page.waitForTimeout(80)
+  check('cutting over cells keeps the columns', (await written()).startsWith('|  |  |  |\n'), (await written()).split('\n')[0])
   await browser.close()
 }
 server.close()

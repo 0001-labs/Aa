@@ -13,7 +13,7 @@ import { History, type ChangeKind, type Snapshot } from './history'
 import { isWritten, markOf, wordEdges, wornAt, editBlock, type Carry } from './rich'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, stillShows, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout, setCallout } from './document'
-import { editTable, fromTSV, setTableWidths, tableAlignments, tableRows, tableWidths, writeTable, type TableAction } from './table'
+import { editTable, fromTSV, inOneCell, setTableWidths, tableAlignments, tableRows, tableWidths, writeTable, type TableAction } from './table'
 import { resizeColumns } from './table-resize'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
@@ -1025,6 +1025,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (block.kind === 'table') {
       const cell = tableRows(block.source).flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
       if (cell && collapsed && ((type === 'deleteContentBackward' && a.offset === cell.from) || (type === 'deleteContentForward' && a.offset === cell.to))) { event.preventDefault(); return }
+      // Typed over several cells, the browser would take the cells it crosses with it.
+      if (!collapsed && !spanning && type === 'insertText' && !inOneCell(block.source, a.offset, b.offset)) { event.preventDefault(); insert(selection, event.data ?? ''); return }
     }
     switch (type) {
       // Enter is handled on keydown, where Shift can be read. A line break
@@ -1134,7 +1136,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
 
   const insertLink = (selection: Selection2) => {
     const [a, b] = order(selection.anchor, selection.focus)
-    if (a.block !== b.block) return
+    if (a.block !== b.block || blocks[a.block].kind === 'table' && !inOneCell(blocks[a.block].source, a.offset, b.offset)) return
     let start = a.offset, end = b.offset, text = blocks[a.block].source.slice(start, end), url = ''
     for (const match of blocks[a.block].source.matchAll(/\[([^\]]*)\]\(([^)]*)\)/g)) {
       if (a.offset >= match.index! && b.offset <= match.index! + match[0].length) {

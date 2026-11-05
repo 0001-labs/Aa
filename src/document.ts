@@ -6,6 +6,7 @@
  */
 
 import { parseBlocks, serialize, codeClosed, QUOTE, readCallout, writeCallout, DEFAULT_ATOMS, type AtomSyntax, type Block, type CalloutColor } from './markdown'
+import { inOneCell, tableRows } from './table'
 import { backgroundMark, colorMark, editBlock, HIGHLIGHT, isWritten, joinBlocks, markOf, markRange, partBlock, rangeWears, sliceBlock, type Carry } from './rich'
 
 /** A place in the document: a block, and a character offset into its source. */
@@ -57,6 +58,8 @@ function rewrite(blocks: readonly Block[], first: number, last: number, joined: 
  */
 export function replaceRange(blocks: readonly Block[], from: Pos, to: Pos, text: string, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Change {
   const [a, b] = order(from, to)
+  const cells = a.block === b.block && overCells(blocks[a.block], a.offset, b.offset)
+  if (cells) { const { source, caret } = clearCells(blocks[a.block], a.offset, b.offset, text, atoms); return rewrite(blocks, a.block, a.block, source, caret) }
   const edit = a.block === b.block
     ? editBlock(blocks[a.block], a.offset, b.offset, text, atoms)
     : joinBlocks(blocks[a.block], a.offset, blocks[b.block], b.offset, text, atoms)
@@ -64,6 +67,23 @@ export function replaceRange(blocks: readonly Block[], from: Pos, to: Pos, text:
   const head = blocks[a.block].source.slice(0, a.offset)
   const tail = blocks[b.block].source.slice(b.offset)
   return rewrite(blocks, a.block, b.block, head + text + tail, head.length + text.length)
+}
+
+/** Whether a range is a selection over a table's cells: not one cell's words, and not the whole table, which is how the table itself is replaced. */
+const overCells = (block: Block, from: number, to: number) => block.kind === 'table' && !(from === 0 && to === block.source.length) && !inOneCell(block.source, from, to)
+
+/** A selection over cells emptied of what it covers, the cells staying, and what is typed put in the first. */
+function clearCells(block: Block, from: number, to: number, text: string, atoms: readonly AtomSyntax[]) {
+  const cells = tableRows(block.source).flat().filter(cell => cell.to > from && cell.from < to)
+  const words = text.replace(/\s*\n\s*/g, ' ').replace(/(?<!\\)\|/g, '\\|')
+  let source = block.source, caret = from
+  for (let index = cells.length - 1; index >= 0; index--) {
+    const start = Math.max(from, cells[index].from), end = Math.min(to, cells[index].to), put = index ? '' : words
+    const edit = editBlock({ ...block, source }, start, end, put, atoms)
+    source = edit?.source ?? source.slice(0, start) + put + source.slice(end)
+    caret = edit?.caret ?? start + put.length
+  }
+  return { source, caret }
 }
 
 /** A block's source written anew and read again, exactly as given. */
@@ -208,7 +228,7 @@ function wrapText(blocks: readonly Block[], from: Pos, to: Pos, delimiter: strin
       const source = blocks[index].source
       if (index === a.block && source.slice(start - delimiter.length, start) === delimiter && source.endsWith(closing)) end -= closing.length
       if (index === b.block && source.slice(end, end + closing.length) === closing && source.slice(start, start + delimiter.length) === delimiter) start += delimiter.length
-      if (end <= start || blocks[index].kind === 'code' || blocks[index].kind === 'divider') continue
+      if (end <= start || blocks[index].kind === 'code' || blocks[index].kind === 'divider' || blocks[index].kind === 'table') continue
       const wrapped = wrapText(next, { block: index, offset: start }, { block: index, offset: end }, delimiter, closing)!
       next = wrapped.blocks
       if (index === a.block) anchor = wrapped.anchor
@@ -217,6 +237,8 @@ function wrapText(blocks: readonly Block[], from: Pos, to: Pos, delimiter: strin
     return { blocks: next, anchor, focus }
   }
   const source = blocks[a.block].source
+  // Delimiters written over a pipe would take the cells apart.
+  if (blocks[a.block].kind === 'table' && !inOneCell(source, a.offset, b.offset)) return null
   const inner = source.slice(a.offset, b.offset)
   const d = delimiter.length, c = closing.length
   const at = (offset: number): Pos => ({ block: a.block, offset })
