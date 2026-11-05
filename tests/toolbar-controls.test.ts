@@ -111,3 +111,19 @@ test('Ask reads Ask in every language, with a translated screen-reader name', as
   expect(field.getAttribute('aria-label')).toBe('Spørg AI om de markerede ord')
  } finally { editor.destroy(); document.documentElement.lang = '' }
 })
+
+test('a right press in the writing opens the block menu instead of the browser\'s, and leaves its fields alone', () => {
+  const press = (target: Element, init: MouseEventInit = {}) => { const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 40, ...init }); target.dispatchEvent(event); return event }
+  const host = document.createElement('div'); document.body.append(host)
+  const made = createEditor(host, { value: 'Some words\n\n- [ ] A box' })
+  const block = host.querySelector('.aa-block')!
+  expect(press(block).defaultPrevented).toBe(true)
+  expect(document.querySelector<HTMLElement>('.aa-menu:not([hidden])')).not.toBeNull()
+  expect(press(block, { shiftKey: true }).defaultPrevented).toBe(false)
+  const field = block.appendChild(document.createElement('textarea'))
+  expect(press(field).defaultPrevented).toBe(false)
+  field.remove()
+  made.readOnly = true
+  expect(press(block).defaultPrevented).toBe(false)
+  made.destroy(); host.remove()
+})

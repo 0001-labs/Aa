@@ -158,14 +158,15 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
   pointer-events: none;
 }
 .aa-block[data-kind="bullet"]:not([data-checked])::before { content: "•"; }
-/* A box is Design system 1's checkbox: one control (16px) square on the lower
-   sixteen of its line's square, a hairline on the field's ground, filled with
-   the accent and checked in its ink. It stays while its words are edited. */
+/* A box is Design system 1's checkbox: one control (16px) square, centred on its
+   line so it stands level with the letters beside it rather than on the lower
+   sixteen, a hairline on the field's ground, filled with the accent and checked
+   in its ink. It stays while its words are edited. */
 .aa-block[data-kind="bullet"][data-checked]::before {
   content: "";
   width: calc(16px * var(--aa-sf));
   height: calc(16px * var(--aa-sf));
-  margin-top: calc(var(--aa-unit) - 16px * var(--aa-sf));
+  margin-top: calc((var(--aa-unit) - 16px * var(--aa-sf)) / 2);
   box-sizing: border-box;
   border: 1px solid var(--aa-rule-color);
   border-radius: var(--ds-radius, calc(4px * var(--aa-sf)));
@@ -771,8 +772,9 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-reaction-add { color: var(--aa-muted); }
 .aa-reaction-add:hover { color: inherit; }
 .aa-reaction:focus-visible { outline: 2px solid var(--ds-focus-ring, #594dff); outline-offset: 1px; }
-.aa-reaction-picker { display: grid; grid-template-columns: repeat(8, var(--aa-square)); width: calc(8 * var(--aa-square)); gap: 1px; }
-.aa-reaction-picker button { width: calc(var(--aa-square) - 1px); min-width: 0; justify-content: center; padding: 0; }
+/* Eight cells a pixel apart, as long as they are: a colour emoji stands taller than its letters, so it is set a size down to clear its cell. */
+.aa-reaction-picker { display: grid; grid-template-columns: repeat(8, calc(var(--aa-square) - 1px)); grid-auto-rows: calc(var(--aa-square) - 1px); width: calc(8 * var(--aa-square) - 1px); gap: 1px; }
+.aa-reaction-picker button { width: calc(var(--aa-square) - 1px); height: calc(var(--aa-square) - 1px); min-width: 0; align-items: center; justify-content: center; padding: 0; overflow: visible; font-size: calc(12px * var(--aa-sf, 1)); line-height: 1; }
 /* A callout's icons on offer: the same sixteen under the icon's square, and No icon on a row of its own. */
 .aa-callout-icons { position: fixed; }
 .aa-callout-icons .aa-callout-icons-none { grid-column: 1 / -1; width: auto; justify-content: flex-start; padding: 0 calc(4px * var(--aa-sf)); }

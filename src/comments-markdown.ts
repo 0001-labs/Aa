@@ -1,5 +1,5 @@
 /** Portable comment source. No DOM, filesystem, or authenticated identity. */
-import { parseDocument, stringify } from 'yaml'
+import { readYaml, writeYaml } from './comment-yaml'
 import { codeCandidate, isCodeOf } from './vendor/idv1/shapes'
 import { mapRange, textChange } from './comments'
 
@@ -92,10 +92,8 @@ export function readCommentSource(source: string): CommentDocument {
     if (!f.closed || source.slice(f.to).trim()) { diagnostics.push('The aa-comments block must be closed and last.'); continue }
     try {
       if (f.body.length > 2_000_000) throw Error('Comment metadata exceeds 2 MB.')
-      const doc = parseDocument(f.body, { schema: 'core', uniqueKeys: true })
       // YAML's core schema excludes implicit timestamp conversion. No custom tags or aliases.
-      if (doc.errors.length || doc.warnings.length) throw Error('Invalid comment YAML.')
-      threads = validate(doc.toJS({ maxAliasCount: 0 }))
+      threads = validate(readYaml(f.body))
       const before = source.slice(0, f.from)
       const separator = before.endsWith('\r\n\r\n') ? 4 : before.endsWith('\n\n') ? 2 : 0
       spans.push({ from: f.from - separator, to: f.to, metadata: true })
@@ -145,7 +143,7 @@ export function writeCommentSource(doc: Pick<CommentDocument, 'markdown' | 'thre
   insertions.sort((a, b) => b.at - a.at || b.order - a.order || b.text.localeCompare(a.text))
   let text = doc.markdown
   for (const i of insertions) text = text.slice(0, i.at) + i.text + text.slice(i.at)
-  const body = stringify({ threads: doc.threads }, { lineWidth: 0, aliasDuplicateObjects: false })
+  const body = writeYaml({ threads: doc.threads })
   const fence = '`'.repeat(Math.max(3, ...[...body.matchAll(/`+/g)].map(m => m[0].length + 1)))
   return `${text}\n\n${fence}aa-comments v1\n${body}${fence}`
 }

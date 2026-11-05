@@ -525,7 +525,21 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     }
   }
   const changed = () => { updateCommands(); refreshFind(); if (editor.readOnly) { toolbar.hidden = true; linkBar.hidden = true; linkTarget = null } }
-  const contextMenu = (event: MouseEvent) => { const block = (event.target as HTMLElement).closest('.aa-block'); if (block?.getAttribute('data-kind') !== 'table' || editor.readOnly || options.menus === false) return; event.preventDefault(); target = Array.from(host.children).indexOf(block); blockMenu(); menu.style.left = `${event.clientX}px`; menu.style.top = `${event.clientY}px` }
+  /**
+   * A right press in the writing opens Aa's own block menu, never the browser's.
+   * Fields inside the editor, a read-only page, touch (where a long press selects)
+   * and Shift keep the browser's: Shift is the way to its spelling suggestions.
+   */
+  const contextMenu = (event: MouseEvent) => {
+    const element = event.target as HTMLElement
+    const block = element.closest('.aa-block')
+    if (!block || block.parentElement !== host || editor.readOnly || options.menus === false || event.shiftKey || coarse() || element.closest('input, textarea, .aa-caption, [data-aa-interactive]')) return
+    event.preventDefault()
+    target = Array.from(host.children).indexOf(block)
+    // A Mac's right press selects the word under it: the bar over selected words stays away from the menu.
+    blockMenu(new DOMRect(event.clientX, event.clientY, 0, 0))
+    clearTimeout(timer); toolbar.hidden = true; dismissedSelection = editor.selection()
+  }
   const viewport = (event: Event) => {
     const target = event.target as Node | null
     if (target?.nodeType && menu.contains(target)) return
