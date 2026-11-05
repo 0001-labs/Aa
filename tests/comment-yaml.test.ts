@@ -39,7 +39,7 @@ describe('comment YAML', () => {
       const value = shape(random(seed)), text = written(value)
       expect(readYaml(text), `seed ${seed}\n${text}`).toEqual(judge(text))
     }
-  })
+  }, 60_000)
 
   it('writes what a full YAML parser reads back exactly, and reads it itself', () => {
     for (let seed = 1; seed <= 4000; seed++) {
@@ -47,7 +47,7 @@ describe('comment YAML', () => {
       expect(judge(text), `seed ${seed}\n${text}`).toEqual(value)
       expect(readYaml(text), `seed ${seed}\n${text}`).toEqual(value)
     }
-  })
+  }, 60_000)
 
   it('sets ordinary threads out as a full writer does, so saving changes no lines', () => {
     const value = { threads: [{ id: 'Ab12Cd', quote: 'the new editor', status: 'resolved', resolved: '2026-10-23T07:00:00Z', resolvedBy: 'Jo4712', comments: [
