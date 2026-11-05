@@ -118,12 +118,12 @@
 /* Text colours, by Notion's names (`<span color="red">`): Design system 1's palette, a dark ink of each
    on light paper and a light one on dark, so words stay readable. A product changes one with --aa-color-<name>. A colour's
    row in the menu wears it on its mark (controls.ts). */
-[data-color="gray"] { color: var(--aa-color-gray, var(--ds-darker-grey, #797979)); }
+[data-color="gray"] { color: var(--aa-color-gray, light-dark(#737373, #a3a3a3)); }
 [data-color="red"] { color: var(--aa-color-red, var(--ds-danger-color, light-dark(#de0331, #ff5f5f))); }
 [data-color="orange"] { color: var(--aa-color-orange, var(--ds-warning-color, light-dark(#4c3f1a, #fec20d))); }
 [data-color="green"] { color: var(--aa-color-green, light-dark(#026d5b, #99ff73)); }
-[data-color="blue"] { color: var(--aa-color-blue, light-dark(#0275fa, #69d8fb)); }
-[data-color="purple"] { color: var(--aa-color-purple, light-dark(#e63aaf, #f5aad1)); }
+[data-color="blue"] { color: var(--aa-color-blue, light-dark(#006de8, #69d8fb)); }
+[data-color="purple"] { color: var(--aa-color-purple, light-dark(#b92f8d, #f5aad1)); }
 .aa-c, .aa-block[data-kind="code"] { font-family: "Inter Arrows", var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--aa-code-size, calc(var(--ds-code-text-size, 13px) * var(--aa-sf))); font-variant-ligatures: none; letter-spacing: 0; }
 .aa-c { padding: 0 calc(4px * var(--aa-sf)); border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: var(--aa-code-fill, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c))); }
 a.aa-link:not([data-color]) { color: var(--aa-link, currentColor); }
@@ -759,7 +759,7 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-thread-head { display: flex; align-items: flex-end; gap: calc(4px * var(--aa-sf, 1)); box-sizing: border-box; width: 100%; min-height: var(--aa-unit); margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf, 1)); text-align: start; }
 button.aa-thread-head { cursor: pointer; }
 button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #594dff); outline-offset: 1px; border-radius: calc(2px * var(--aa-sf, 1)); }
-.aa-thread-quote { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--aa-muted); white-space: nowrap; mask-image: linear-gradient(to right, black calc(100% - var(--aa-unit)), transparent 100%); }
+.aa-thread-quote { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--aa-muted); white-space: normal; overflow-wrap: break-word; }
 .aa-thread[data-orphaned] .aa-thread-quote { font-style: italic; }
 .aa-thread[data-unread] .aa-thread-quote::before { content: ""; display: inline-block; width: calc(6px * var(--aa-sf, 1)); height: calc(6px * var(--aa-sf, 1)); margin-right: calc(4px * var(--aa-sf, 1)); border-radius: 50%; background: var(--ds-orange, var(--orange, #fec20d)); vertical-align: calc(2px * var(--aa-sf, 1)); }
 .aa-thread-count { flex: none; color: var(--aa-muted); font-variant-numeric: tabular-nums; }
@@ -882,12 +882,10 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 /* Tabs: a row of Design system 1's text tabs, the words alone, each tab padded
    4px so the words stand twelve apart and the run drawn 4px back so the first
    starts on the column's edge, the open tab in the ink and the others muted,
-   all on the sixteen of one square; a row too wide scrolls sideways rather
-   than cutting its names. The open tab's page stands a square under it, an
+   all on the sixteen of one square; a row too wide wraps onto another line so every name stays visible. The open tab's page stands a square under it, an
    editor of its own; the plus at the row's end adds a tab. */
 .aa-atom.aa-tabs { display: block; width: 100%; vertical-align: top; }
-.aa-tabs-row { display: flex; align-items: flex-end; gap: calc(4px * var(--aa-sf)); min-height: var(--aa-unit); margin-inline-start: calc(-4px * var(--aa-sf)); line-height: calc(16px * var(--aa-sf)); white-space: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
-.aa-tabs-row::-webkit-scrollbar { display: none; }
+.aa-tabs-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: calc(4px * var(--aa-sf)); min-height: var(--aa-unit); margin-inline-start: calc(-4px * var(--aa-sf)); line-height: calc(16px * var(--aa-sf)); white-space: nowrap; }
 .aa-tab { flex: none; display: inline-flex; align-items: flex-end; gap: calc(4px * var(--aa-sf)); box-sizing: border-box; height: calc(16px * var(--aa-sf)); margin: 0; padding: 0 calc(4px * var(--aa-sf)); border: 0; border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: none; color: var(--ds-text-color-muted, GrayText); font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf)); white-space: nowrap; cursor: pointer; -webkit-user-select: none; user-select: none; }
 .aa-tab[aria-selected="true"] { color: var(--ds-text-color, inherit); }
 .aa-tab:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: -2px; }

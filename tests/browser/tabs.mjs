@@ -32,6 +32,16 @@ for (const name of engines) {
   check('the name shows', await page.evaluate(() => [...document.querySelectorAll('.aa-tab-name')].some(n => n.textContent === 'Stages')))
   await page.evaluate(() => window.make('<tabs>\n<tab name="Stage" icon="🎤">\nTwo\n</tab>\n</tabs>'))
   check('the emoji clears the row', await page.evaluate(() => { const i = document.querySelector('.aa-tab-icon').getBoundingClientRect(), r = document.querySelector('.aa-tabs-row').getBoundingClientRect(); return i.top >= r.top && i.bottom <= r.bottom && parseFloat(getComputedStyle(document.querySelector('.aa-tab-icon')).fontSize) <= 12 }))
+  await page.setViewportSize({ width: 240, height: 400 })
+  await page.evaluate(() => window.make('<tabs>\n<tab name="Entrance">\nOne\n</tab>\n<tab name="Stairs">\nTwo\n</tab>\n<tab name="Stage">\nThree\n</tab>\n</tabs>'))
+  check('narrow tab rows wrap without hiding any tab', await page.evaluate(() => {
+    const row = document.querySelector('.aa-tabs-row')
+    const box = row.getBoundingClientRect()
+    return row.scrollWidth <= row.clientWidth + 1 && [...row.querySelectorAll('.aa-tab')].every(tab => {
+      const face = tab.getBoundingClientRect()
+      return face.left >= box.left - 1 && face.right <= box.right + 1 && face.bottom <= box.bottom + 1
+    })
+  }))
   await browser.close()
 }
 server.close()
