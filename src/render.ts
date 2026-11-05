@@ -337,16 +337,15 @@ function isHidden(node: Node): boolean {
 
 /** A DOM point in a block as an offset into its source. */
 export function offsetIn(element: HTMLElement, node: Node, nodeOffset: number): number {
-  const document = element.ownerDocument
   let count = 0
   let found = -1
+  // Siblings walked in place: a paragraph of thousands of runs has no need of an array of them, and the caret is read on every key.
   const walk = (parent: Node): boolean => {
-    const children = Array.from(parent.childNodes)
-    for (let index = 0; index < children.length; index++) {
-      const child = children[index]
+    let index = 0
+    for (let child = parent.firstChild; child; child = child.nextSibling, index++) {
       if (parent === node && index === nodeOffset) { found = count; return true }
       if (child === node && child.nodeType === Node.TEXT_NODE) { found = count + nodeOffset; return true }
-      if (child.nodeType === Node.TEXT_NODE) { count += (child.textContent ?? '').length; continue }
+      if (child.nodeType === Node.TEXT_NODE) { count += (child as Text).length; continue }
       if (!(isElement(child))) continue
       if (isAtom(child)) {
         // A point inside an atom is before it at its very start, after it anywhere else.
@@ -358,7 +357,7 @@ export function offsetIn(element: HTMLElement, node: Node, nodeOffset: number): 
       if (child.tagName === 'BR') { count += 'filler' in child.dataset ? 0 : 1; continue }
       if (walk(child)) return true
     }
-    if (parent === node && nodeOffset >= children.length) { found = count; return true }
+    if (parent === node && nodeOffset >= index) { found = count; return true }
     return false
   }
   if (node === element || element.contains(node)) walk(element)

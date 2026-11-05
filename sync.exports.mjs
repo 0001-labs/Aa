@@ -24,6 +24,7 @@ export default {
         if (!exists('dist/aa.js')) throw new Error('Aa is not built: run vp run build in Aa')
         const files = new Map([
           ['aa.js', script(read('dist/aa.js'))],
+          ['aa-icons-extra.js', script(read('dist/aa-icons-extra.js'))],
           ['aa.css', read('src/aa.css')],
           ['fonts/aa-mono.woff2', read('src/fonts/aa-mono.woff2')],
           ['fonts/inter-arrows.woff2', read('src/fonts/inter-arrows.woff2')],

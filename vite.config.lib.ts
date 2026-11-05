@@ -1,7 +1,15 @@
 import { defineConfig } from "vite-plus";
 import { resolve } from "path";
 
+// Design system 1's rarely-needed icons load on the first ask for one: a file beside aa.js, not part of it.
+const lazyIcons = {
+  name: "aa-lazy-icons",
+  enforce: "pre" as const,
+  resolveId(id: string) { return id.endsWith("generated/icons-extra") ? { id: "./aa-icons-extra.js", external: true } : null },
+};
+
 export default defineConfig({
+  plugins: [lazyIcons],
   build: {
     copyPublicDir: false,
     outDir: "dist",

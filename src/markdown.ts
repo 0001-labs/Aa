@@ -531,12 +531,12 @@ function scan(text: string, start: number, end: number, atoms: readonly AtomSynt
       while (i + r < limit && text[i + r] === char) r++
       const double = r >= 2
       if (double || EMPHASIS[char].one) {
-        const atLineStart = i === lineStart || text[i - 1] === '\n' || tokens.at(-1)?.type === 'break' && (tokens.at(-1) as { at: number; prefix: number }).at + 1 + (tokens.at(-1) as { prefix: number }).prefix === i
+        const previous = tokens[tokens.length - 1]
+        const atLineStart = i === lineStart || text[i - 1] === '\n' || previous?.type === 'break' && previous.at + 1 + previous.prefix === i
         const before = i === start ? undefined : atLineStart ? '\n' : text[i - 1]
         const after = i + r < limit ? text[i + r] : undefined
         // A closing mark left alone on the next line, by selecting a whole line in an earlier version: the mark is still meant.
-        const written = text.slice(0, i).replace(/\n[^\n]*$/, '')
-        const lineClose = atLineStart && i > start && !isSpace(written[written.length - 1]) && (!after || after === '\n')
+        const lineClose = atLineStart && i > start && !isSpace(text[text.lastIndexOf('\n', i - 1) - 1]) && (!after || after === '\n')
         const opens = !isSpace(after) && !(char === '_' && isWord(before))
         const closes = (!isSpace(before) || lineClose) && !(char === '_' && isWord(after))
         tokens.push({ type: 'delimiters', run: { at: i, length: r, char, left: 0, right: 0, opens, closes, looseOpen: double && !opens && !!after && isSpace(before), looseClose: double && !closes && !!before && isSpace(after), used: [] } })

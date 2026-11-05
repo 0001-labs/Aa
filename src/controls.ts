@@ -131,6 +131,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   const visible = () => viewportOf(window), coarse = () => isCoarse(window)
   const toolbar = document.adoptNode(globalThis.document.createElement('aa-toolbar')) as AaToolbarElement
   toolbar.className = 'aa-controls aa-toolbar'; toolbar.hidden = true; toolbar.editor = editor
+  // A lower row's tooltip stands over the whole bar, never over the row above it.
+  toolbar.dataset.tooltipOver = ''
   let saved: { start: number; end: number } | null = null
   let dismissedSelection: { start: number; end: number } | null = null
   const restore = () => { if (saved) editor.selectRange(saved.start, saved.end) }
@@ -447,7 +449,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
         if (belowSelection && toolbar.firstElementChild !== toolbar.below) toolbar.prepend(toolbar.below)
         else if (!belowSelection && toolbar.lastElementChild !== toolbar.below) toolbar.append(toolbar.below)
       }
-      toolbar.style.left = `${position.left}px`; toolbar.style.top = `${position.top}px`
+      // On whole pixels, so the icons' fine lines stay sharp and every cell measures alike.
+      toolbar.style.left = `${Math.round(position.left)}px`; toolbar.style.top = `${Math.round(position.top)}px`
     }
   }
   const selectionChanged = () => {

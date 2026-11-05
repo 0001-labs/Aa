@@ -567,7 +567,16 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   }
   describe()
 
-  const elements = () => Array.from(host.children) as HTMLElement[]
+  /**
+   * The blocks' elements. Reading them out of the live collection takes
+   * longer than everything else a key does in a long document, and a key asks
+   * several times, so they are kept until a block comes or goes. Anything else
+   * that changes them is seen by the observer.
+   */
+  let children: HTMLElement[] | null = null
+  const elements = () => children ??= Array.from(host.children) as HTMLElement[]
+  const blockChanges = new window.MutationObserver(() => { children = null })
+  blockChanges.observe(host, { childList: true })
 
   /**
    * A block's element, drawn. Given the element it replaces, its atoms come
@@ -629,6 +638,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
 
   const renderAll = () => {
     host.replaceChildren(...blocks.map(block => makeElement(block)))
+    children = null
     updateContents()
     showPlaceholder()
     sweep()
@@ -664,13 +674,14 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         untouched = false
         const staying = block.kind !== 'table' && was.kind !== 'table'
         if (staying) draw(element, block, null)
-        else element.replaceWith(makeElement(block, element))
+        else { element.replaceWith(makeElement(block, element)); children = null }
       }
     } else {
       const fresh = next.slice(start, endNew).map(block => makeElement(block))
       const anchor = els[endOld] ?? null
       for (let i = start; i < endOld; i++) els[i].remove()
       for (const element of fresh) host.insertBefore(element, anchor)
+      children = null
     }
     if (saved && host.contains(saved.focused) && document.activeElement !== saved.focused) {
       saved.focused.focus({ preventScroll: true })
@@ -734,18 +745,28 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     return { from: index === a.block ? a.offset : 0, to: index === b.block ? b.offset : blocks[index].source.length }
   }
 
-  /** Draw again every block whose shown syntax changed with the selection. */
+  /** Draw again every block whose drawing changed with the selection. Only the selected blocks and those that last were can have. */
+  const revealed = new Set<HTMLElement>()
   const applyReveal = (selection?: Selection2 | null) => {
     if (selection === undefined) selection = readSelection()
     if (composing) return
     const els = elements()
     let changed = false
-    blocks.forEach((block, index) => {
-      const reveal = revealFor(index, selection)
-      if (els[index].dataset.reveal === revealKey(block, reveal, atoms)) { if (reveal || els[index].hasAttribute('data-active')) els[index].toggleAttribute('data-active', !!reveal); return }
-      draw(els[index], block, reveal)
+    const refresh = (index: number) => {
+      const element = els[index], block = blocks[index], reveal = revealFor(index, selection)
+      if (reveal) revealed.add(element); else revealed.delete(element)
+      if (element.dataset.reveal === revealKey(block, reveal, atoms)) { if (element.hasAttribute('data-active') !== !!reveal) element.toggleAttribute('data-active', !!reveal); return }
+      draw(element, block, reveal)
       changed = true
-    })
+    }
+    const [from, to] = selection ? order(selection.anchor, selection.focus) : []
+    const first = from?.block ?? 0, last = to?.block ?? -1
+    for (const element of [...revealed]) {
+      const index = els.indexOf(element)
+      if (index < 0) revealed.delete(element)
+      else if (index < first || index > last) refresh(index)
+    }
+    for (let index = first; index <= last; index++) refresh(index)
     if (changed) {
       sweep()
       if (selection) setSelection(selection.anchor, selection.focus)
@@ -1184,6 +1205,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   }
 
   const clearBlocks = () => {
+    if (!selected) return
     selected = null
     for (const element of elements()) element.removeAttribute('data-selected')
   }
@@ -1991,6 +2013,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     set correcting(value: boolean) { if (!correction || correction.enabled === value) return; correction.enabled = value; markSpelling(value) },
     destroy() {
       destroyed = true
+      blockChanges.disconnect()
       releaseAcross(host)
       correction?.stop()
       for (const stop of shimmers) stop()
