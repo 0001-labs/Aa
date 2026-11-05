@@ -178,10 +178,10 @@ export class Page extends LitElement {
   private splitMetrics(area: "nav" | "aside" = "nav") {
     const page = this.renderRoot.querySelector<HTMLElement>('.page')!;
     const style = getComputedStyle(page);
-    const handle = this.renderRoot.querySelector<HTMLElement>('.resize');
+    const handle = this.renderRoot.querySelector<HTMLElement>(`.resize-${area}`);
     const unit = handle?.getBoundingClientRect().width || 20;
     const otherArea = area === "nav" ? "aside" : "nav";
-    const other = this.layout === "inspector" && this.clientWidth >= 960 && !this.renderRoot.querySelector(`[part="${otherArea}"]`)?.hasAttribute("data-empty") ? this.columnWidth(otherArea, unit) + (parseFloat(style.columnGap) || 0) : 0;
+    const other = this.layout === "inspector" && this.clientWidth >= 600 && !this.renderRoot.querySelector(`[part="${otherArea}"]`)?.hasAttribute("data-empty") ? this.columnWidth(otherArea, unit) + (parseFloat(style.columnGap) || 0) : 0;
     const available = page.clientWidth - other - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0) - (parseFloat(style.columnGap) || 0);
     return { unit, available: Math.max(unit, available) };
   }

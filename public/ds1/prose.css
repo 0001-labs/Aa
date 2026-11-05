@@ -221,3 +221,8 @@
 [data-ds-prose] :where(th, td) :where(code, kbd, samp):not(:where([data-ds-not-prose] *)) {
   font-size: inherit;
 }
+
+/* Header code names stay whole; a wide table keeps its own scrolling frame. */
+[data-ds-prose] :where(th) :where(code, kbd, samp):not(:where([data-ds-not-prose] *)) {
+  white-space: nowrap;
+}

@@ -271,20 +271,35 @@
 
 /* Saved wide panes must still leave readable work after the window narrows. */
 @container (min-width: 600px) {
-  :host([resizable][layout="sidebar"]) .page,
-  :host([resizable][layout="inspector"]) .page {
+  :host([resizable][layout="sidebar"]) .page {
     --_nav-max: max(calc(4 * var(--ds-unit)), round(down, calc(100% - var(--ds-page-gap) - 10 * var(--ds-unit)), var(--ds-unit)));
     grid-template-columns: minmax(0, min(var(--ds-page-nav), var(--_nav-max))) minmax(0, 1fr);
   }
 }
-@container (min-width: 960px) {
+
+
+/* Adjustable inspector panes stay beside the work while the readable minimums fit.
+   The phone layout remains one flowing document below six hundred pixels. */
+@container (min-width: 600px) {
   :host([resizable][layout="inspector"]) .page {
     --_aside-fit: min(var(--ds-page-aside), max(calc(4 * var(--ds-unit)), round(down, calc(100% - 2 * var(--ds-page-gap) - 14 * var(--ds-unit)), var(--ds-unit))));
     --_nav-fit: min(var(--ds-page-nav), max(calc(4 * var(--ds-unit)), round(down, calc(100% - 2 * var(--ds-page-gap) - var(--_aside-fit) - 10 * var(--ds-unit)), var(--ds-unit))));
     grid-template-columns: minmax(0, var(--_nav-fit)) minmax(0, 1fr) minmax(0, var(--_aside-fit));
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "nav header aside" "nav main aside" "nav footer aside";
   }
+  :host([resizable][layout="inspector"]) .aside { margin-block-start: 0; }
+  :host([resizable][layout="inspector"]) .page:not(:has(.aside[data-empty])) .resize-aside { display: block; }
   :host([resizable][layout="inspector"]) .page:has(.nav[data-empty]) {
     grid-template-columns: minmax(0, 1fr) minmax(0, min(var(--ds-page-aside), max(calc(4 * var(--ds-unit)), round(down, calc(100% - var(--ds-page-gap) - 10 * var(--ds-unit)), var(--ds-unit)))));
+    grid-template-areas: "header aside" "main aside" "footer aside";
   }
-  :host([resizable][layout="inspector"]) .page:has(.nav[data-empty]):has(.aside[data-empty]) { grid-template-columns: minmax(0, 1fr); }
+  :host([resizable][layout="inspector"]) .page:has(.aside[data-empty]) {
+    grid-template-columns: minmax(0, min(var(--ds-page-nav), max(calc(4 * var(--ds-unit)), round(down, calc(100% - var(--ds-page-gap) - 10 * var(--ds-unit)), var(--ds-unit))))) minmax(0, 1fr);
+    grid-template-areas: "nav header" "nav main" "nav footer";
+  }
+  :host([resizable][layout="inspector"]) .page:has(.nav[data-empty]):has(.aside[data-empty]) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "header" "main" "footer";
+  }
 }
