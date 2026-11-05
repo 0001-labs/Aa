@@ -268,3 +268,23 @@
   grid-template-areas: "header" "main" "footer";
 }
 .resize.resize-aside { inset-inline-end: auto; }
+
+/* Saved wide panes must still leave readable work after the window narrows. */
+@container (min-width: 600px) {
+  :host([resizable][layout="sidebar"]) .page,
+  :host([resizable][layout="inspector"]) .page {
+    --_nav-max: max(calc(4 * var(--ds-unit)), round(down, calc(100% - var(--ds-page-gap) - 10 * var(--ds-unit)), var(--ds-unit)));
+    grid-template-columns: minmax(0, min(var(--ds-page-nav), var(--_nav-max))) minmax(0, 1fr);
+  }
+}
+@container (min-width: 960px) {
+  :host([resizable][layout="inspector"]) .page {
+    --_aside-fit: min(var(--ds-page-aside), max(calc(4 * var(--ds-unit)), round(down, calc(100% - 2 * var(--ds-page-gap) - 14 * var(--ds-unit)), var(--ds-unit))));
+    --_nav-fit: min(var(--ds-page-nav), max(calc(4 * var(--ds-unit)), round(down, calc(100% - 2 * var(--ds-page-gap) - var(--_aside-fit) - 10 * var(--ds-unit)), var(--ds-unit))));
+    grid-template-columns: minmax(0, var(--_nav-fit)) minmax(0, 1fr) minmax(0, var(--_aside-fit));
+  }
+  :host([resizable][layout="inspector"]) .page:has(.nav[data-empty]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, min(var(--ds-page-aside), max(calc(4 * var(--ds-unit)), round(down, calc(100% - var(--ds-page-gap) - 10 * var(--ds-unit)), var(--ds-unit)))));
+  }
+  :host([resizable][layout="inspector"]) .page:has(.nav[data-empty]):has(.aside[data-empty]) { grid-template-columns: minmax(0, 1fr); }
+}

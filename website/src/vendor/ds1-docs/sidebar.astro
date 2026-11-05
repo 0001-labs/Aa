@@ -1,0 +1,36 @@
+---
+const { sidebar } = Astro.locals.starlightRoute;
+const { sourceHref } = Astro.props;
+---
+<ds-sidebar label="Documentation" narrow expand-icon="chevron-down" collapse-icon="chevron-up" data-entries={JSON.stringify(sidebar)}>
+  {sourceHref && <a {...{ slot: 'footer' }} href={sourceHref}>GitHub</a>}
+</ds-sidebar>
+<script>
+  import '../../../../src/vendor/ds1/3-unit/ds-sidebar';
+  import type { SidebarItem } from '../../../../src/vendor/ds1/3-unit/ds-sidebar';
+  type Entry = { label: string; href?: string; isCurrent?: boolean; entries?: Entry[] };
+  const sidebar = document.querySelector('ds-sidebar[data-entries]')!;
+  const entries: Entry[] = JSON.parse(sidebar.dataset.entries ?? '[]');
+  const collapsed = new Set<string>();
+  function rows(entries: Entry[], depth = 0, parent = ''): SidebarItem[] {
+    return entries.flatMap((entry, index) => {
+      const id = entry.href ?? `${parent}/${index}`;
+      const item: SidebarItem = { id, label: entry.label, href: entry.href, current: entry.isCurrent, depth };
+      if (!entry.entries) return [item];
+      item.expanded = !collapsed.has(id);
+      return [item, ...(item.expanded ? rows(entry.entries, depth + 1, id) : [])];
+    });
+  }
+  sidebar.items = rows(entries);
+  sidebar.addEventListener('sidebar-toggle', event => {
+    const { id, expanded } = (event as CustomEvent).detail;
+    if (expanded) collapsed.delete(id); else collapsed.add(id);
+    sidebar.items = rows(entries);
+    void sidebar.updateComplete.then(() => sidebar.focusItem(id));
+  });
+</script>
+<style>
+  ds-sidebar { display: block; height: 100%; width: 100%; }
+  a { display: block; color: inherit; text-decoration: none; line-height: var(--ds-unit); }
+  a:hover { text-decoration: underline; }
+</style>

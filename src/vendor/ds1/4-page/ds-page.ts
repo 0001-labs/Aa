@@ -180,9 +180,15 @@ export class Page extends LitElement {
     const style = getComputedStyle(page);
     const handle = this.renderRoot.querySelector<HTMLElement>('.resize');
     const unit = handle?.getBoundingClientRect().width || 20;
-    const other = this.layout === "inspector" && this.clientWidth >= 960 ? (!this.renderRoot.querySelector(`[part="${area === "nav" ? "aside" : "nav"}"]`)?.hasAttribute("data-empty") ? (area === "nav" ? this.asideWidth : this.navWidth) * unit + (parseFloat(style.columnGap) || 0) : 0) : 0;
+    const otherArea = area === "nav" ? "aside" : "nav";
+    const other = this.layout === "inspector" && this.clientWidth >= 960 && !this.renderRoot.querySelector(`[part="${otherArea}"]`)?.hasAttribute("data-empty") ? this.columnWidth(otherArea, unit) + (parseFloat(style.columnGap) || 0) : 0;
     const available = page.clientWidth - other - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0) - (parseFloat(style.columnGap) || 0);
     return { unit, available: Math.max(unit, available) };
+  }
+  private columnWidth(area: "nav" | "aside", unit: number) {
+    const tracks = getComputedStyle(this.renderRoot.querySelector<HTMLElement>('.page')!).gridTemplateColumns.split(/\s+/).map(Number.parseFloat);
+    const width = area === "aside" ? tracks.at(-1) : tracks[0];
+    return width && Number.isFinite(width) ? width : (area === "aside" ? this.asideWidth : this.navWidth) * unit;
   }
   private splitWidth(value: number, available: number, unit: number) {
     const minimum = Math.min(10 * unit, Math.floor(available / 2 / unit) * unit);
@@ -233,7 +239,7 @@ export class Page extends LitElement {
     handle.setPointerCapture(event.pointerId);
     const area = handle.dataset.resize === "aside" ? "aside" : "nav";
     const { available, unit } = this.splitMetrics(area);
-    const width = this.layout !== 'split' ? (area === "aside" ? this.asideWidth : this.navWidth) * unit : this.renderRoot.querySelector<HTMLElement>('[part="nav"]')!.getBoundingClientRect().width;
+    const width = this.layout !== 'split' ? this.columnWidth(area, unit) : this.renderRoot.querySelector<HTMLElement>('[part="nav"]')!.getBoundingClientRect().width;
     this.drag = { area, id: event.pointerId, handle, startX: event.clientX, startWidth: width, width, available, unit, rtl: getComputedStyle(this).direction === 'rtl' };
     handle.setAttribute('data-dragging', '');
   }
@@ -249,7 +255,7 @@ export class Page extends LitElement {
     const area = (event.currentTarget as HTMLElement).dataset.resize === "aside" ? "aside" : "nav";
     const rtl = (getComputedStyle(this).direction === 'rtl') !== (area === "aside");
     const { available, unit } = this.splitMetrics(area);
-    const width = this.layout !== 'split' ? (area === "aside" ? this.asideWidth : this.navWidth) * unit : this.renderRoot.querySelector<HTMLElement>('[part="nav"]')!.getBoundingClientRect().width;
+    const width = this.layout !== 'split' ? this.columnWidth(area, unit) : this.renderRoot.querySelector<HTMLElement>('[part="nav"]')!.getBoundingClientRect().width;
     const step = unit * (event.shiftKey ? 5 : 1) / available;
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault(); this.resizeTo(width / available + (event.key === 'ArrowRight' !== rtl ? step : -step), area);

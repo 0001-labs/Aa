@@ -1,26 +1,8 @@
 ---
-const { hasSidebar } = Astro.locals.starlightRoute;
+import Frame from '../vendor/ds1-docs/frame.astro';
 ---
-<div class="app-frame">
-  <slot name="header" />
-  <ds-page class="app-page" layout={hasSidebar ? 'sidebar' : 'column'} nav-width="8" resizable={hasSidebar} resize-key="aa-sidebar-width" divided={hasSidebar} fill drawer={hasSidebar}>
-    {hasSidebar && <div {...{ slot: 'nav' }} class="app-navigation"><slot name="sidebar" /></div>}
-    <div class="app-content"><slot /></div>
-  </ds-page>
-</div>
-<script>
-  import '../../../src/vendor/ds1/4-page/ds-page';
-</script>
-<style>
-  .app-frame { height: 100dvh; display: flex; flex-direction: column; }
-  .app-page { flex: 1; min-height: 0; }
-  .app-page::part(page) { padding: 0 var(--grid); padding-inline-end: 0; }
-  .app-page::part(nav) { padding-block: var(--grid); }
-  .app-page::part(main) { margin-inline-start: calc(-1 * var(--grid)); }
-  .app-navigation { height: 100%; min-width: 0; }
-  .app-content { min-width: 0; }
-  @media (max-width: 599px) {
-    .app-page::part(page) { padding: var(--grid); }
-    .app-page::part(main) { margin: 0; }
-  }
-</style>
+<Frame resizeKey="aa-sidebar-width">
+  <Fragment slot="header"><slot name="header" /></Fragment>
+  <Fragment slot="sidebar"><slot name="sidebar" /></Fragment>
+  <slot />
+</Frame>

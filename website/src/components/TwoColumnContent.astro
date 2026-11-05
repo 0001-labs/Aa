@@ -1,20 +1,4 @@
 ---
-const { toc } = Astro.locals.starlightRoute;
+import Columns from '../vendor/ds1-docs/columns.astro';
 ---
-<ds-page class="document-columns" layout="inspector" resizable={Boolean(toc)} aside-width="12" resize-key="documentation-toc-width" divided={Boolean(toc)}>
-  <div class="main-pane"><slot /></div>
-  {toc && <aside {...{ slot: 'aside' }} class="document-toc"><slot name="right-sidebar" /></aside>}
-</ds-page>
-<script>
-  import '../../../src/vendor/ds1/4-page/ds-page';
-</script>
-<style>
-  .document-columns { --ds-page-gap: calc(2 * var(--ds-unit)); }
-  .document-columns::part(page) { padding: 0; }
-  .document-columns::part(aside) { margin-inline-start: 0; padding-inline-start: 0; }
-  .document-columns::part(main) { min-width: 0; }
-  .document-toc { min-width: 0; }
-  .document-toc :global(.right-sidebar-panel) { padding: var(--ds-unit); }
-  .document-toc :global(.sl-container) { width: auto; max-width: none; }
-  .main-pane { min-width: 0; width: 100%; }
-</style>
+<Columns resizeKey="aa-contents-width"><slot /><Fragment slot="right-sidebar"><slot name="right-sidebar" /></Fragment></Columns>

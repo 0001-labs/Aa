@@ -51,6 +51,10 @@
           "header"
         ],
         "react": false
+      },
+      "documentation": {
+        "to": "website/src/vendor/ds1-docs",
+        "componentPath": "../../../../src/vendor/ds1"
       }
     },
     "Drag": {

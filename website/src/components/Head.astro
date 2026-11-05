@@ -9,6 +9,8 @@ import Default from '@astrojs/starlight/components/Head.astro';
 <link rel="stylesheet" href="/ds1/prose.css" />
 <script>import '../../../src/vendor/ds1/1-root/controls.css';</script>
 <script>
+  import { configureI18n } from '../../../src/vendor/ds1/0-face/i18n';
+  configureI18n({ languages: ['en'], autoLoad: false, sharedWords: true });
   import '../../../src/aa.css';
   import { startScaling } from '../../../src/ds1/0-face/scaling';
   // Design system 1's page inspection: five g show the grid, five l the layout, for everyone.

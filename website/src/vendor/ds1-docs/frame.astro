@@ -1,0 +1,27 @@
+---
+const { hasSidebar = Astro.locals.starlightRoute.hasSidebar, resizeKey = 'docs-sidebar-width' } = Astro.props;
+---
+<div class="docs-frame">
+  <slot name="header" />
+  <ds-page class="docs-page" layout={hasSidebar ? 'sidebar' : 'column'} nav-width="8" resizable={hasSidebar} resize-key={resizeKey} divided={hasSidebar} fill drawer={hasSidebar}>
+    {hasSidebar && <div {...{ slot: 'nav' }} class="docs-navigation"><slot name="sidebar" /></div>}
+    <div class="docs-content"><slot /></div>
+  </ds-page>
+</div>
+<script>
+  import '../../../../src/vendor/ds1/4-page/ds-page';
+</script>
+<style>
+  .docs-frame { height: 100dvh; display: flex; flex-direction: column; }
+  .docs-page { flex: 1; min-height: 0; }
+  .docs-page::part(page) { padding: 0 var(--ds-unit); padding-inline-end: 0; }
+  .docs-page::part(nav) { padding-block: var(--ds-unit); }
+  .docs-page::part(main) { margin-inline-start: calc(-1 * var(--ds-unit)); }
+  .docs-navigation { height: 100%; min-width: 0; }
+  .docs-content { min-width: 0; }
+  @media (max-width: 599px) {
+    .docs-page::part(page) { padding: var(--ds-unit); }
+    .docs-page::part(main) { margin: 0; }
+  }
+  :global(mobile-starlight-toc > nav) { position: relative; inset: auto; top: auto; }
+</style>
