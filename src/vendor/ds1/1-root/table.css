@@ -77,7 +77,12 @@
   text-align: start;
   vertical-align: bottom;
   font-weight: inherit;
+  font-size: inherit;
   white-space: nowrap;
+}
+
+.ds-table :is(th, td) :is(code, kbd, samp) {
+  font-size: inherit;
 }
 
 .ds-table :is(th, td):last-child {
@@ -338,3 +343,40 @@
     transition: none;
   }
 }
+
+/* Numbers, dates and secondary words keep the table’s common text size. */
+.ds-table :is(small, .ds-table__words) { font-size: inherit; }
+
+/* A sideways table fades only at edges with more columns beyond them. */
+[data-ds-table-edge="right"] { mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent); }
+[data-ds-table-edge="left"] { mask-image: linear-gradient(to right, transparent, #000 var(--ds-unit)); }
+[data-ds-table-edge="both"] { mask-image: linear-gradient(to right, transparent, #000 var(--ds-unit), #000 calc(100% - var(--ds-unit)), transparent); }
+.ds-table-heading { box-sizing: border-box; padding-inline: calc(4px * var(--ds-sf, 1)); }
+.ds-table th:has(> .ds-table-column-resize) { position: relative; }
+.ds-table-column-resize { position: absolute; z-index: 3; inset-block-start: 0; inset-inline-end: calc(var(--ds-unit) / -2); width: var(--ds-unit); height: var(--ds-table-resize-height, var(--ds-unit)); cursor: col-resize; touch-action: none; user-select: none; }
+.ds-table-column-resize::after { content: ''; position: absolute; inset-block-start: 0; inset-inline-start: calc(50% - 0.5px); width: 1px; height: var(--ds-table-resize-height, var(--ds-unit)); background: var(--ds-border-color); opacity: 0; pointer-events: none; }
+.ds-table-column-resize:is(:focus, [data-resizing])::after { opacity: 1; }
+@media (hover: hover) { .ds-table-column-resize:hover::after { opacity: 1; } }
+.ds-table-column-resize:focus-visible { outline: none; box-shadow: none; }
+
+.ds-table[data-column-widths] :is(th, td):not(.ds-table__number) { width: auto; max-width: none; }
+.ds-table[data-column-widths] th:has(> .ds-table-column-resize) { overflow: visible; }
+.ds-table[data-column-widths] .ds-table__words { display: block; overflow: hidden; white-space: nowrap; text-overflow: clip; }
+.ds-table[data-column-widths] .ds-table__words[data-cut="end"] { mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent); }
+.ds-table[data-column-widths] .ds-table__words[data-cut="start"] { mask-image: linear-gradient(to right, transparent, #000 var(--ds-unit)); }
+.ds-table[data-column-widths]:dir(rtl) .ds-table__words[data-cut="end"] { mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent); }
+
+:is(.ds-table th, .ds-table-heading):last-child > .ds-table-column-resize { inset-inline-end: 0; }
+:is(.ds-table th, .ds-table-heading):last-child > .ds-table-column-resize::after { inset-inline-start: auto; inset-inline-end: 0; }
+
+.ds-table[data-column-widths] { min-width: 0; }
+
+/* Existing semantic tables can take the same interaction without changing their cell content. */
+[data-ds-table-viewport] { min-width: 0; max-width: 100%; }
+table[data-ds-column-resize] { min-width: 0; }
+table[data-ds-column-resize] :is(th, td) { min-width: 0; max-width: none; width: auto; }
+table[data-ds-column-resize] :is(th, td):has(> .ds-table-column-resize) { position: relative; overflow: visible; }
+/* Keep the last target inside the table without covering its neighbour in a one-square column. */
+table[data-ds-column-resize] :is(th, td):last-child > .ds-table-column-resize { inset-inline-end: 0; clip-path: inset(0 0 0 50%); }
+table[data-ds-column-resize]:dir(rtl) :is(th, td):last-child > .ds-table-column-resize { clip-path: inset(0 50% 0 0); }
+table[data-ds-column-resize] :is(th, td):last-child > .ds-table-column-resize::after { inset-inline-start: auto; inset-inline-end: 0; }

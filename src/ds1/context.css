@@ -179,6 +179,7 @@
 }
 
 .ds-context.ds-context--bar :is(.ds-context__item, :is(.ds-context, .ds-context > [role="group"]) > :is(button, a, li, [role^="menuitem"])):is(.ds-context__item--icon, [data-ds-context-icon]) {
+  align-items: center !important;
   justify-content: center !important;
   width: var(--ds-context-row);
   padding: 0 !important;

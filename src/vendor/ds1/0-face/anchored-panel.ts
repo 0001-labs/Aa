@@ -30,7 +30,7 @@ export function panelViewport(element: HTMLElement): PanelViewport {
     probe = doc.createElement("span");
     probe.setAttribute("aria-hidden", "true");
     probe.style.cssText = "position:fixed;visibility:hidden;pointer-events:none;inset:0;width:0;height:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)";
-    doc.body.append(probe); probes.set(doc, probe);
+    doc.body.appendChild(probe); probes.set(doc, probe);
   }
   const safe = view.getComputedStyle(probe);
   const l = parseFloat(safe.paddingLeft) || 0, r = parseFloat(safe.paddingRight) || 0;

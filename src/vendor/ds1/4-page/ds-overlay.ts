@@ -81,7 +81,9 @@ function styleRoot(root: Node) {
  * from the foot of the screen, a `drawer` at the `side` `"end"` (the default)
  * or `"start"`, a responsive `detail` (drawer on desktop, sheet on phones), a `popover` at the `anchor` point, or the whole `screen`. A
  * sheet and a drawer slide in and out and a finger swipes them away (reason
- * `"swipe"`); a popover is modeless.
+ * `"swipe"`); a popover is modeless. A modeless sheet has no backdrop, so with
+ * `closeOnBackdrop` a press on the page above it closes it (reason
+ * `"outside"`), as `closeOnOutside` does for the others.
  */
 export class Overlay extends LitElement {
   static properties = {
@@ -311,9 +313,11 @@ export class Overlay extends LitElement {
     document.defaultView?.addEventListener("resize", this.place);
     document.defaultView?.visualViewport?.addEventListener("resize", this.place);
     document.defaultView?.visualViewport?.addEventListener("scroll", this.place);
+    (document.defaultView ?? document).addEventListener("keydown", this.onSheetEscape as EventListener, true);
     document.addEventListener("keydown", this.onDocumentKey);
     document.addEventListener("pointerdown", this.onOutsidePress, true);
     document.addEventListener("click", this.onOutsideClick, true);
+    document.addEventListener("pointerup", this.onOutsideRelease, true);
     document.addEventListener("wheel", this.onScrollGesture, { passive: false });
     document.addEventListener("touchmove", this.onScrollGesture, { passive: false });
   }
@@ -330,9 +334,11 @@ export class Overlay extends LitElement {
     const wasTop = entries[entries.length - 1] === this;
     if (!stack?.delete(this)) return;
     syncScroll(document);
+    (document.defaultView ?? document).removeEventListener("keydown", this.onSheetEscape as EventListener, true);
     document.removeEventListener("keydown", this.onDocumentKey);
     document.removeEventListener("pointerdown", this.onOutsidePress, true);
     document.removeEventListener("click", this.onOutsideClick, true);
+    document.removeEventListener("pointerup", this.onOutsideRelease, true);
     document.removeEventListener("wheel", this.onScrollGesture);
     document.removeEventListener("touchmove", this.onScrollGesture);
     this.outsidePress = null;
@@ -358,13 +364,22 @@ export class Overlay extends LitElement {
   requestClose(reason: OverlayCloseReason = "button") {
     if (!this.open) return;
     const event = new CustomEvent("ds-close-request", { detail: { reason }, bubbles: true, composed: true, cancelable: true });
-    if (this.dispatchEvent(event)) this.close();
+    const allowed = this.dispatchEvent(event);
+    if (allowed || (reason === "escape" && this.kind === "sheet")) this.close();
   }
 
   private isTop() {
     const stack = [...(openDialogs.get(this.ownerDocument) ?? [])];
     return stack[stack.length - 1] === this;
   }
+
+  /** A sheet always gives Escape back to closing, before an editor can consume it. */
+  private onSheetEscape = (event: KeyboardEvent) => {
+    if (event.key !== "Escape" || this.kind !== "sheet" || !this.isTop()) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    this.requestClose("escape");
+  };
 
   private onDocumentKey = (event: KeyboardEvent) => {
     if (!this.modeless || !this.isTop() || event.defaultPrevented) return;
@@ -383,13 +398,27 @@ export class Overlay extends LitElement {
   private onOutsideClick = (event: Event) => {
     if (!this.modeless || !this.isTop() || event.composedPath().includes(this)) return;
     if (this.blockOutside) { event.preventDefault(); event.stopImmediatePropagation(); }
-    if (this.closeOnOutside && this.outsidePress !== false) this.requestClose("outside");
+    if (this.closesOutside && this.outsidePress !== false) this.requestClose("outside");
     this.outsidePress = null;
   };
+  /**
+   * A finger lifted outside closes it at once: Safari sends no click for a tap on something that is
+   * not itself clickable (a header's fill, a page's margin), so waiting for one leaves the overlay
+   * open on an iPhone. A finger that scrolled was cancelled and lifts nothing; a mouse keeps its click.
+   */
+  private onOutsideRelease = (event: PointerEvent) => {
+    if (event.pointerType === "mouse" || !this.modeless || !this.isTop() || this.blockOutside || event.composedPath().includes(this)) return;
+    if (this.closesOutside && this.outsidePress === true) this.requestClose("outside");
+  };
+  /** Whether a press outside closes it: `closeOnOutside`, or a modeless sheet's `closeOnBackdrop`.
+   * A modeless sheet has no backdrop, and on a phone its close button is hidden: the page above it
+   * stands for the backdrop, or the sheet could not be left at all (Link's people sheet, 3 November
+   * 2026). The press still reaches the page, as every modeless outside press does. */
+  private get closesOutside() { return this.closeOnOutside || (this.kind === "sheet" && this.closeOnBackdrop); }
 
   private onCancel = (event: Event) => {
     event.preventDefault();
-    if (this.closeOnEscape) this.requestClose("escape");
+    if (this.kind === "sheet" || this.closeOnEscape) this.requestClose("escape");
   };
 
   private onNativeClose = () => {

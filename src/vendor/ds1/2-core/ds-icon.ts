@@ -98,7 +98,7 @@ export class Icon extends LitElement {
   private _iconsReady: Promise<void> | undefined;
   private _failedType: string | undefined;
   declare variant: IconVariant;
-  declare size: "small" | "large" | undefined;
+  declare size: "small" | "large" | "app" | "app-large" | undefined;
 
   constructor() {
     super();
@@ -131,7 +131,7 @@ export class Icon extends LitElement {
 
     const svg = iconNameToSvgMap[this._type.toLowerCase() as IconName];
     if (svg) {
-      return html`${unsafeHTML(themeIconSvg(svg))}`;
+      return html`${unsafeHTML(this._type.startsWith("app-") ? svg : themeIconSvg(svg))}`;
     }
 
     if (

@@ -237,3 +237,6 @@
   mask-image: none;
   text-overflow: clip;
 }
+
+/* Split tabs share the selected segment's contrast guard. */
+:host([segment][active]) :is(button, a) { color: var(--_ds-choice-ink, var(--ds-button-color, var(--button-text-color))); }

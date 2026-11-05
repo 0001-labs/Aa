@@ -14,6 +14,10 @@
  * an element marked `data-tooltip-press`; it goes at the next touch or after
  * a moment. `showTooltip(element)` and `hideTooltip()` show and hide it from
  * code.
+ *
+ * Inside an element marked `data-tooltip-over`, such as a toolbar two rows high,
+ * it stands over that element rather than over its own cell, so a lower row's
+ * tooltip never covers the row above.
  */
 
 /** How long a tooltip raised by touch stays, in milliseconds. */
@@ -87,7 +91,8 @@ export function initTooltips(): void {
     const height = bubble.offsetHeight;
     const left = Math.min(Math.max(4, box.left + box.width / 2 - width / 2), window.innerWidth - width - 4);
     // Above the element, two pixels clear; below it when there is no room above.
-    const top = box.top - height - 2 >= 4 ? box.top - height - 2 : box.bottom + 2;
+    const over = target.closest<HTMLElement>("[data-tooltip-over]")?.getBoundingClientRect() ?? box;
+    const top = over.top - height - 2 >= 4 ? over.top - height - 2 : over.bottom + 2;
     bubble.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
   };
   /** Draws the target's text and colour; false when it has no text. */

@@ -9,7 +9,9 @@
  * It follows the finger as touch does on Apple's platforms:
  *
  * - Touch alone; a mouse or a trackpad closes with Escape or the close button.
- * - Ten pixels of movement before it decides, then it tracks the finger one
+ * - Ten pixels of movement before it decides, holding a move towards the
+ *   edge from the page meanwhile (Safari would scroll the page behind a
+ *   modeless sheet instead), then it tracks the finger one
  *   to one from where it was grabbed, a moving dialog included (it starts
  *   from the dialog's place on screen, not from where it was going).
  * - A drag along the content's own scroll is the content's: a sheet scrolled
@@ -190,7 +192,13 @@ export function bindOverlaySwipe(dialog: HTMLDialogElement, options: OverlaySwip
     const along = axis === "y" ? dy * sign : dx * sign;
     const across = axis === "y" ? dx : dy;
     if (gesture.mode === "pending") {
-      if (Math.hypot(dx, dy) < SLOP) return;
+      if (Math.hypot(dx, dy) < SLOP) {
+        // Safari gives a drag to the page on the first move nobody holds, and a modeless sheet
+        // leaves the page scrolling: hold a move towards the edge that the content would not take,
+        // or the page scrolls and the sheet never moves (3 November 2026).
+        if (event.cancelable && along > 0 && along >= Math.abs(across) && !contentScrolls(gesture.path, dialog, axis, along)) event.preventDefault();
+        return;
+      }
       if (Math.abs(along) <= Math.abs(across) || contentScrolls(gesture.path, dialog, axis, along)) {
         gesture.mode = "ignore";
         return;

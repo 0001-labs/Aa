@@ -4,6 +4,7 @@ import { initConstraintShortcut } from './constraint-panel';
 
 /** The presses of one key, each within 800ms of the last, that toggle an overlay. */
 export const GRID_PRESSES = 5;
+let canTouchToggle: (() => boolean) | undefined;
 
 /**
  * Five presses of G toggle the grid and five of L inspect the layout, on every
@@ -14,7 +15,8 @@ export const GRID_PRESSES = 5;
  * A nested scrolling viewport opts in with data-ds-grid-scroll: its grid follows
  * its content while the page grid remains aligned outside the viewport.
  */
-export function initGridShortcut(): void {
+export function initGridShortcut(options: { canTouchToggle?: () => boolean } = {}): void {
+  if (options.canTouchToggle) canTouchToggle = options.canTouchToggle;
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   if (root.hasAttribute("data-ds-grid-ready")) return;
@@ -125,14 +127,15 @@ export function initGridShortcut(): void {
   if (preview.get('layout') === '1') layout.toggle();
 
   // A bundler's development flag (Vite's import.meta.env.DEV); absent elsewhere.
-  if ((import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV) {
+  {
+    const development = Boolean((import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV);
     const mobile = window.matchMedia('(max-width: 768px)');
     let taps = 0;
     let lastTap = 0;
     let touch: { id: number; x: number; y: number; time: number } | null = null;
     const resetTaps = () => { taps = 0; touch = null; };
     window.addEventListener('pointerdown', (event: PointerEvent) => {
-      if (!mobile.matches || event.pointerType !== 'touch' || !event.isPrimary) {
+      if ((!canTouchToggle && !development) || (!mobile.matches && !root.hasAttribute('data-mobile')) || (canTouchToggle && !canTouchToggle()) || event.pointerType !== 'touch' || !event.isPrimary) {
         resetTaps();
         return;
       }
@@ -140,6 +143,7 @@ export function initGridShortcut(): void {
     }, { passive: true, capture: true });
     window.addEventListener('pointerup', (event: PointerEvent) => {
       if (!touch || event.pointerId !== touch.id) return;
+      if (canTouchToggle && !canTouchToggle()) { resetTaps(); return; }
       const now = performance.now();
       const moved = Math.hypot(event.clientX - touch.x, event.clientY - touch.y);
       if (moved > 12 || now - touch.time > 350) {
@@ -149,10 +153,10 @@ export function initGridShortcut(): void {
       touch = null;
       taps = now - lastTap <= 500 ? taps + 1 : 1;
       lastTap = now;
-      if (taps === 3) {
+      if (taps === (canTouchToggle ? GRID_PRESSES : 3)) {
         resetTaps();
-        setVisible(false);
-        layout.hide();
+        if (canTouchToggle) setVisible(overlay.hidden !== false);
+        else { setVisible(false); layout.hide(); }
       }
     }, { passive: true, capture: true });
     window.addEventListener('pointercancel', resetTaps, { passive: true });
@@ -195,7 +199,7 @@ export function initGridShortcut(): void {
 
 if (typeof document !== "undefined") {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initGridShortcut, { once: true });
+    document.addEventListener("DOMContentLoaded", () => initGridShortcut(), { once: true });
   } else {
     initGridShortcut();
   }

@@ -1,7 +1,9 @@
+import { inspectTagLabels } from './tag-label';
 import { faultLineGrids, faultLineColumns, inspectFaultLines } from './fault-lines';
 import { labelledButtons, inspectButtonLabels } from './button-label';
 import { inspectTextContrast, measureTextContrast } from "./text-contrast";
 import { inspectWordWrap, wordHeaders } from './word-wrap';
+import { windowRatioFloor } from './window-shape';
 
 // Design system 1's small rules: one list, each rule a sentence a component keeps and a check that
 // measures it on a page as it is drawn. Five presses of C show what a page breaks, in a panel at
@@ -49,6 +51,15 @@ const near = (a: number, b: number) => Math.abs(a - b) <= 1;
 const px = (n: number) => `${Math.round(n)}px`;
 /** An element's style, from its own window: a page checked in a frame is measured by the frame's. */
 const styleOf = (element: Element) => (element.ownerDocument.defaultView ?? window).getComputedStyle(element);
+
+/** Every window with a computer's chrome as drawn: a `ds-window`, or the frame a `ds-app-chrome` heads. */
+function windows(root: ParentNode) {
+  return Array.from(root.querySelectorAll<HTMLElement>('ds-window:not([frameless]), ds-app-chrome:is([kind=macos], [kind=macos-compact], [kind=safari], [kind=chrome], [kind=edge])')).flatMap(element => {
+    const frame = element.localName === 'ds-window' ? element : element.parentElement;
+    const box = frame?.getBoundingClientRect();
+    return frame && box?.width && box.height ? [{ frame, box }] : [];
+  });
+}
 
 /** Every drawn card with its picture: `ds-card` and its slotted picture, or `.ds-card` and its media's. */
 function cards(root: ParentNode) {
@@ -111,7 +122,46 @@ function rows(found: ReturnType<typeof cards>) {
   return groups.filter(row => row.length > 1);
 }
 
+/** Text inside native, component and composed tables, including open component shadows. */
+function tableType(root: ParentNode) {
+  return Array.from(root.querySelectorAll<HTMLElement>('table, [role="table"], [data-ds-table]')).flatMap(table => {
+    const expected = parseFloat(styleOf(table).fontSize);
+    const findings: Finding[] = [];
+    const visit = (parent: Element | ShadowRoot) => {
+      for (const element of Array.from(parent.children) as HTMLElement[]) {
+        if (element.matches('svg, ds-icon, [aria-hidden="true"]')) continue;
+        if (element.getBoundingClientRect().width && Array.from(element.childNodes).some(node => node.nodeType === 3 && node.textContent?.trim())) {
+          const size = parseFloat(styleOf(element).fontSize);
+          if (Math.abs(size - expected) > 0.1) findings.push({element, message: `Table text must use the same ${expected}px size; found ${size}px.`});
+        }
+        visit(element);
+        if (element.shadowRoot) visit(element.shadowRoot);
+      }
+    };
+    visit(table);
+    return findings;
+  });
+}
+
 export const constraints: Constraint[] = [
+  {
+    code: 'overlay.escape-close',
+    rule: 'Escape always closes the top sheet, including while typing or with focus outside it; editors, disabled Escape options and close vetoes cannot block it, and unsent drafts are preserved.',
+    components: ['ds-overlay'],
+    check: { file: 'tests/overlay-measure.test.ts', test: 'Escape closes the top sheet even when its editor consumes keys and dismissal is vetoed' },
+    measures: ['sheet', 'sheets'],
+    count: root => root.querySelectorAll('ds-overlay[type="sheet"], dialog.ds-overlay--sheet').length,
+    inspect: root => Array.from(root.querySelectorAll('ds-overlay[type="sheet"], dialog.ds-overlay--sheet')).map(element => ({ element, review: true, message: 'Open the sheet, focus its editor and press Escape: only the top sheet must close, preserving its draft. Keyboard dismissal cannot be measured without interacting.' })),
+  },
+  {
+    code: 'table.uniform-text',
+    rule: 'All table text uses the same default text size, including headers, names, tags, numbers, dates and times.',
+    components: ['ds-table'],
+    check: {file: 'tests/table.test.ts', test: 'table text keeps one size across headers and values'},
+    measures: ['table', 'tables'],
+    count: root => root.querySelectorAll('table, [role="table"], [data-ds-table]').length,
+    inspect: tableType,
+  },
   {
     code: 'page.fault-lines',
     rule: 'Fault lines keep related card and control grids aligned across the whole page, with matching track edges and gaps. Headings, prose and text tabs in a content column share the leading visible text edge, including labels inside shadow roots and slots, at every checked viewport width.',
@@ -144,6 +194,15 @@ export const constraints: Constraint[] = [
     measures: ['button', 'buttons'], count: root => labelledButtons(root).length, inspect: inspectButtonLabels,
   },
   {
+    code: 'tag.visible-label',
+    rule: 'Tags always show their complete label, never clipping, truncating or fading it; the surrounding layout gives the tag room or reflows.',
+    components: ['ds-tag'],
+    check: { file: 'tests/tag-label.test.ts', test: 'tags keep complete labels in narrow containers and report clipping or fading overrides' },
+    measures: ['tag', 'tags'],
+    count: root => root.querySelectorAll('ds-tag').length,
+    inspect: inspectTagLabels,
+  },
+  {
     code: 'text.whole-words',
     rule: 'Headings and table headers keep each word intact across lines; only a long word that cannot fit may split at a valid language-specific hyphenation point, with a visible hyphen.',
     why: 'Wrap between words or give the heading more room; never leave a final letter on its own, use break-all or anywhere, or insert an arbitrary line break inside a word. Use the correct lang with automatic hyphenation, or a soft hyphen at an editorially verified break; scripts with other line-breaking conventions keep their own typesetting rules.',
@@ -156,7 +215,7 @@ export const constraints: Constraint[] = [
   {
     code: 'color.text-contrast',
     rule: 'Visible text, including muted labels, placeholders and avatar initials, has at least 4.5:1 contrast against the background it is drawn on.',
-    why: 'Measure resolved colours through slots and open shadow roots, including transparency and opacity; image backgrounds and effects that cannot be measured need a visual review.',
+    why: 'Measure resolved colours through slots and open shadow roots, including transparency and opacity; image backgrounds and effects that cannot be measured need a visual review. In products, contrast-watch.ts measures the theme in use after load and reports each failure as `contrast.<theme>.<component>`.',
     components: ['ds-color', 'ds-text', 'ds-avatar'],
     check: { file: 'tests/text-contrast.test.ts', test: 'rendered text contrast catches component overrides, slots, alpha and opacity' },
     measures: ['text sample', 'text samples'],
@@ -176,7 +235,7 @@ export const constraints: Constraint[] = [
   {
     code: 'card.media-level',
     rule: "A card's picture stands on the card's foot, a square below the words at least, so the pictures of cards side by side stand on one level whatever the words above them.",
-    why: 'The room a taller card leaves goes above its picture, never below it, so pictures of one height side by side start on one line too; a taller picture starts higher.',
+    why: 'The room a taller card leaves goes above its picture, never below it, so pictures of one height side by side start on one line too. Pictures of different heights side by side take one room (`media-height`, `--ds-card-media-height`) and start on one line, the foot cutting the taller.',
     components: ['ds-card'],
     check: { file: 'tests/card.test.ts', test: "a picture stands on the card's foot, so pictures side by side stand on one level" },
     measures: ['card with a media picture', 'cards with a media picture'],
@@ -248,6 +307,24 @@ export const constraints: Constraint[] = [
         findings.push({ element, message: `It reaches ${px(reach)} past the window's ${side} edge, in a window ${px(width)} wide.` });
       }
       return findings;
+    },
+  },
+  {
+    code: 'window.shape',
+    rule: "A window with a computer's chrome keeps a computer window's shape whatever it holds, 16:10 and never taller than it is wide, and stands no taller than 4:5 on a phone's width.",
+    why: 'What a window holds comes to the window: its page is cut by the foot or zoomed out as one picture, and the window never grows to fit it or to fill a column beside it.',
+    components: ['ds-window'],
+    check: { file: 'tests/window.test.ts', test: "a window keeps a window's shape: it draws itself 16:10, 4:5 on a phone, and a taller frame around chrome breaks the rule" },
+    measures: ['window', 'windows'],
+    count: root => windows(root).length,
+    inspect(root) {
+      const page = (root as Node).ownerDocument ?? (root as Document);
+      const width = page.documentElement.clientWidth || page.defaultView?.innerWidth || 0;
+      if (!width) return [];
+      return windows(root).filter(({ box }) => box.height > box.width / windowRatioFloor(width) + 1).map(({ frame, box }) => ({
+        element: frame,
+        message: `The window is ${px(box.width)} by ${px(box.height)}, too tall for a window in a page ${px(width)} wide.`,
+      }));
     },
   },
   {

@@ -63,7 +63,7 @@
 :host([split]) button:hover:not(:disabled, [aria-pressed="true"]) { color: var(--ds-text-color); }
 :host([split]) button[aria-pressed="true"] {
   background: var(--ds-accent-color);
-  color: var(--ds-button-text-color-on-accent);
+  color: var(--_ds-choice-ink, var(--ds-button-text-color-on-accent));
   cursor: default;
 }
 :host([split]) button:disabled { cursor: default; opacity: 0.5; }

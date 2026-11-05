@@ -43,3 +43,7 @@ svg,
   object-fit: contain;
   border-radius: var(--ds-icon-radius, 0px);
 }
+
+/* Brand artwork for app cards: whole-square sizes, without cropping or tinting. */
+:host([size="app"]) { --ds-icon-size: 40px; }
+:host([size="app-large"]) { --ds-icon-size: 60px; }

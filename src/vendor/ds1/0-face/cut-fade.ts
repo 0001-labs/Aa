@@ -1,6 +1,6 @@
 /**
  * Cut words fade, never an ellipsis. Wherever Design system 1 cuts words that do
- * not fit (a row's name, a tag, a menu entry, a calendar's title), they fade out
+ * not fit (a row's name, a menu entry, a calendar's title), they fade out
  * over their last square (`var(--ds-unit)`), a mask on the words, so they fade
  * into whatever is behind them. Words that fit stay crisp: the fade is drawn
  * only while an element is marked `data-cut="end"`, and this module is what
@@ -95,7 +95,11 @@ type Watched = {
 /** Reads every element's widths first, then writes every mark, so the page is laid out once for all of them. */
 function markAll(elements: Iterable<Element>) {
   const cuts: [Element, boolean][] = [];
-  for (const element of elements) if (element.isConnected) cuts.push([element, isCut(element)]);
+  for (const element of elements) {
+    // Measuring a locked subtree would force its offscreen contents to render.
+    // Its ResizeObserver will measure it when scrolling makes it visible again.
+    if (element.isConnected && element.checkVisibility?.({contentVisibilityAuto: true}) !== false) cuts.push([element, isCut(element)]);
+  }
   hookFonts();
   for (const [element, cut] of cuts) {
     const mark = element.getAttribute(CUT_ATTRIBUTE);

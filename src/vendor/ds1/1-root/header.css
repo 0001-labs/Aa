@@ -173,6 +173,7 @@
 
 /* App title bar: two squares high, one square inset, regular title and a hairline. */
 .ds-header--app {
+  align-items: end;
   height: calc(2 * var(--ds-unit));
   min-height: calc(2 * var(--ds-unit));
   padding: 0 var(--ds-unit);
@@ -181,6 +182,7 @@
   box-shadow: inset 0 -1px var(--ds-header-line, var(--ds-border-color));
 }
 .ds-header--app .ds-header__brand {
+  padding: var(--ds-button-padding, 0);
   min-width: 0;
   font-family: "Inter Arrows", var(--ds-typeface-regular);
   font-weight: var(--ds-type-weight-default);

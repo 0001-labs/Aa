@@ -4,6 +4,7 @@
 import { html, unsafeCSS } from "lit";
 import { ifDefined } from "lit/directives/if-defined.js";
 import "./ds-text";
+import { ChoiceContrast } from "../0-face/choice-contrast";
 import { Control } from "../0-face/control";
 import { define } from "../0-face/define";
 import hostStyles from "./styles/ds-button-host.css?inline";
@@ -17,6 +18,7 @@ export class Button extends Control {
   static formAssociated = true;
   static properties = {
     split: { type: Boolean, reflect: true },
+    segment: { type: String },
     options: { type: String },
     segments: { attribute: false },
     value: { type: String, reflect: true },
@@ -48,6 +50,7 @@ export class Button extends Control {
   };
 
   declare split: boolean;
+  declare segment?: string;
   declare options: string;
   declare segments: ReadonlyArray<SplitSegment> | undefined;
   declare value: string;
@@ -160,7 +163,17 @@ export class Button extends Control {
     else if (!this.split && this.splitRole) { this.removeAttribute("role"); this.splitRole = false; this.syncControl(); }
   }
 
+  private choiceContrast?: ChoiceContrast;
   updated() {
+    const joinedChoice = this.split && !this.plain && !this.actions || this.hasAttribute("segment") && this.active;
+    if (joinedChoice) {
+      this.choiceContrast ??= new ChoiceContrast(this, () => [...this.renderRoot.querySelectorAll<HTMLElement>(this.split ? 'button[aria-pressed="true"]' : '[part="control"]')]);
+      this.choiceContrast.connect();
+      this.choiceContrast.resolve();
+    } else {
+      this.choiceContrast?.disconnect();
+      this.renderRoot.querySelectorAll<HTMLElement>('[style]').forEach(control => control.style.removeProperty("--_ds-choice-ink"));
+    }
     this.syncSplitRole();
     this.syncSlottedControl();
   }
@@ -175,6 +188,10 @@ export class Button extends Control {
   connectedCallback() {
     super.connectedCallback();
     this.syncSplitRole();
+    if (this.split && !this.plain && !this.actions || this.hasAttribute("segment") && this.active) {
+      this.choiceContrast?.connect();
+      void this.updateComplete.then(() => this.choiceContrast?.resolve());
+    }
     this._reflectIcon();
     this.syncSlottedControl();
     window.addEventListener("language-changed", this.splitLanguageChanged);
@@ -182,6 +199,7 @@ export class Button extends Control {
   }
 
   disconnectedCallback() {
+    this.choiceContrast?.disconnect();
     window.removeEventListener("language-changed", this.splitLanguageChanged);
     window.removeEventListener("translations-loaded", this.splitLanguageChanged);
     super.disconnectedCallback();

@@ -26,18 +26,25 @@
  *                                least, so pictures side by side line up; square where it meets the card
  *   ds-card__media--center       standing in the card's middle
  *   ds-card__media--bleed        running on past the padding to the end edge
+ *   ds-card__media--fixed        a room of `--ds-card-media-height` from the foot up, the picture
+ *                                at its top and cut by the foot, so pictures side by side start on
+ *                                one line whatever their own height
  *
  * Tokens: `--ds-card-width` and `--ds-card-height` (whole squares; the
- * content's size by default), `--ds-card-padding` (one square), and
- * `--ds-card-fill`, `--ds-card-ink` and `--ds-card-muted`.
+ * content's size by default), `--ds-card-media-height` (a fixed picture's room), `--ds-card-padding` (one square), and
+ * `--ds-card-fill`, `--ds-card-ink` and `--ds-card-muted`; a product's own colour for an untoned
+ * card is `--ds-card-fill-override` with `--ds-card-ink-override` and `--ds-card-muted-override`.
  */
 
 .ds-card {
-  --ds-card-fill: var(--ds-fill);
-  --ds-card-ink: var(--ds-text-color);
-  --ds-card-muted: var(--ds-text-color-muted);
+  --ds-card-fill: var(--ds-card-fill-override, var(--ds-fill));
+  --ds-card-ink: var(--ds-card-ink-override, var(--ds-text-color));
+  --ds-card-muted: var(--ds-card-muted-override, var(--ds-text-color-muted));
   --ds-card-padding: var(--ds-card-padding-override, var(--ds-unit));
+  /* The sides are their own measure, equal to the top and bottom unless `--ds-card-side-padding-override` says otherwise. */
+  --ds-card-side-padding: var(--ds-card-side-padding-override, var(--ds-card-padding));
   --ds-card-text-padding: max(var(--ds-card-padding), var(--ds-card-text-inset-min, 0px));
+  --ds-card-text-side-padding: max(var(--ds-card-side-padding), var(--ds-card-text-inset-min, 0px));
   position: relative;
   box-sizing: border-box;
   display: flex;
@@ -50,9 +57,9 @@
   /* In a squares bento the surface reaches a quarter square towards its neighbours (`--ds-bento-inset-*`, 0 elsewhere), and the padding grows by as much so what it holds stays on the squares. */
   padding:
     calc(var(--ds-card-text-padding) + var(--ds-bento-inset-top, 0px))
-    calc(var(--ds-card-text-padding) + var(--ds-bento-inset-end, 0px))
+    calc(var(--ds-card-text-side-padding) + var(--ds-bento-inset-end, 0px))
     var(--ds-bento-inset-bottom, 0px)
-    calc(var(--ds-card-text-padding) + var(--ds-bento-inset-start, 0px));
+    calc(var(--ds-card-text-side-padding) + var(--ds-bento-inset-start, 0px));
   overflow: hidden;
   border-radius: var(--ds-radius-card);
   background: var(--ds-card-fill);
@@ -63,9 +70,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Opt-in safe text inset; media still stands on the card's foot. */
+/* Without a picture the words end a padding above the card's foot, as they start a padding below
+   its top; a picture still stands on the foot. */
 .ds-card:not(:has(> .ds-card__media:not([hidden]))) {
-  padding-block-end: max(var(--ds-card-text-inset-min, 0px), var(--ds-bento-inset-bottom, 0px));
+  padding-block-end: calc(var(--ds-card-text-padding) + var(--ds-bento-inset-bottom, 0px));
 }
 
 .ds-card[hidden] {
@@ -163,7 +171,7 @@
 
 .ds-card__media--center {
   justify-content: center;
-  margin-inline: calc(-1 * var(--ds-card-text-padding));
+  margin-inline: calc(-1 * var(--ds-card-text-side-padding));
 }
 
 /* A picture that bleeds runs on to the end edge and stands on the foot, the space a taller card
@@ -175,7 +183,7 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: safe flex-end;
-  margin-inline-end: calc(-1 * (var(--ds-card-text-padding) + var(--ds-bento-inset-end, 0px)));
+  margin-inline-end: calc(-1 * (var(--ds-card-text-side-padding) + var(--ds-bento-inset-end, 0px)));
   margin-block-end: calc(-1 * var(--ds-bento-inset-bottom, 0px));
   --ds-radius: 0px;
   --ds-image-end-radius: 0px;
@@ -184,6 +192,18 @@
 
 .ds-card__media > * {
   flex: none;
+}
+
+/* Pictures side by side start on one line (Joachim, 2 November 2026): each takes one room from the
+   foot up, whatever the words above it or its own height, stands at the room's top and is cut by
+   the foot. The room's padding stays the square below the words. */
+.ds-card__media--fixed {
+  flex: none;
+  box-sizing: border-box;
+  height: calc(var(--ds-card-media-height) + var(--ds-unit));
+  overflow: clip;
+  overflow-clip-margin: var(--ds-unit);
+  justify-content: flex-start;
 }
 
 /* A card that opens something. */

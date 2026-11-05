@@ -262,8 +262,8 @@
 }
 
 :host([control="host"]:not([icon]):not([split]):not([menu-item])) {
-  min-width: max-content !important;
-  min-width: calc-size(max-content, round(up, size, var(--ds-unit))) !important;
+  min-width: var(--ds-button-min-width, max-content) !important;
+  min-width: var(--ds-button-min-width, calc-size(max-content, round(up, size, var(--ds-unit)))) !important;
 }
 :host([control="slotted"]) ::slotted(:is(button, a)) {
   min-width: max-content !important;
