@@ -102,7 +102,7 @@
      Orange itself. Both read above 4.5:1 as 14px text. */
   --ds-warning-color: light-dark(#4c3f1a, var(--ds-orange));
   /* What went well or is done. Apple green is too light for text and marks on
-     light paper, so light paper takes it deepened with the ink (Money's green
+     light paper, so light paper takes it deepened with the ink (an amount's green
      for money in); dark paper takes Apple green itself. */
   --ds-success-color: light-dark(color-mix(in oklab, var(--ds-apple-green) 30%, var(--ds-black)), var(--ds-apple-green));
   --ds-border-color: light-dark(#d8d8d8, #3d3d3d);

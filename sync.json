@@ -46,7 +46,9 @@
           "select",
           "menu",
           "overlay",
-          "page"
+          "page",
+          "sidebar",
+          "header"
         ],
         "react": false
       }

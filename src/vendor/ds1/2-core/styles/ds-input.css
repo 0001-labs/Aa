@@ -16,6 +16,10 @@
   --_input-corner-size: var(--ds-input-corner-size);
   --_input-radius: calc(var(--_input-corner-size) * var(--ds-sf));
 }
+:host([hidden]) {
+  display: none !important;
+}
+
 /* Its width: unset fills the row as before, a length fixes it. */
 :host([variant="field"]) {
   width: var(--ds-input-inline-size, 100%);

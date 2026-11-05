@@ -2,7 +2,7 @@
  * A table: words straight on the paper, one square a row. No box and no
  * column lines: each row stands on a hairline at its foot, its words set on
  * that line like a caption: the sixteen of words against the 1px line, three
- * spare above, a 20px pitch, as Ezo sets every row.
+ * spare above, a 20px pitch, as every row is set.
  * Column headers keep the text's weight in the title grey; the first column
  * of a body row is a row header in the text colour. Nothing is filled with
  * the accent except a cell someone has selected.
@@ -18,7 +18,7 @@
  *   <td aria-selected="true">              a selected cell
  *
  * `data-plain` takes every line away: the same rows with no rule at their
- * foot, standing on the paper as a list's rows do (Money's tables), the
+ * foot, standing on the paper as a list's rows do (a table of payments), the
  * words still on the lower sixteen of each square.
  *
  * `data-frame` draws the same rows in a rounded 1px frame with a 1px line

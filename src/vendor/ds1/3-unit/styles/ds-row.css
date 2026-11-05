@@ -1,0 +1,182 @@
+@import "../../1-root/component-metrics.css";
+
+/* ds-row.css: the same rows as the native .ds-row in 1-root/row.css. What a row holds
+   stands on the lower sixteen of its square with the spare four above, as a list sets every
+   row: words on a 16px line box, a 16px icon and a 16px control all end on the bottom line. */
+
+:host {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: var(--ds-row-align, flex-end);
+  gap: var(--ds-row-gap, calc(4px * var(--ds-sf)));
+  min-width: 0;
+  height: var(--ds-row-default-height, var(--ds-row-height));
+  line-height: var(--ds-type-lineheight-default);
+}
+:host([hidden]) { display: none !important; }
+
+:host([auto]) {
+  height: auto;
+}
+
+:host([fill]) {
+  justify-content: space-between;
+  width: 100%;
+}
+
+:host([centered]) {
+  justify-content: center;
+}
+
+:host([end]) {
+  justify-content: flex-end;
+}
+
+:host([fill]), :host([centered]), :host([end]) {
+  height: var(--ds-row-height);
+}
+:host([centered]), :host([end]) {
+  gap: var(--ds-row-packed-gap, var(--ds-row-gap, calc(4px * var(--ds-sf))));
+}
+
+/* A tile or a card: the children stacked, each line one square, sized to them; its lines
+   wrap, so they stay on whole squares rather than the sixteen. */
+:host([stacked]) {
+  flex-direction: column;
+  line-height: var(--ds-row-height);
+  align-items: var(--ds-row-align, flex-start);
+  justify-content: flex-start;
+  gap: 0;
+  height: auto;
+}
+
+/*
+ * A row a person presses. The target is the row's whole box: a layer above
+ * the content takes the press anywhere on the row, a layer under it shows
+ * the pointer, the press, the current destination and the focus ring.
+ * Controls in the end slot stand above both and keep their own presses.
+ */
+:host([href]), :host([interactive]) {
+  position: relative;
+  isolation: isolate;
+  padding-inline: var(--ds-row-padding, calc(4px * var(--ds-sf)));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.target {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: inherit;
+  align-items: inherit;
+  align-self: stretch;
+  justify-content: inherit;
+  gap: inherit;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+}
+.target::before,
+.target::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--ds-row-radius, 0);
+}
+/* The state layer two pixels around what a one-square row holds (1-root/row.css says why). */
+.target::after {
+  --ds-row-overhang: var(--ds-row-fill-overhang, calc(2px * var(--ds-sf)));
+  inset:
+    calc(var(--ds-row-height) - var(--ds-control-height) - var(--ds-row-overhang))
+    calc(var(--ds-row-padding, calc(4px * var(--ds-sf))) - var(--ds-row-overhang))
+    calc(0px - var(--ds-row-overhang));
+  border-radius: var(--ds-row-radius, var(--ds-row-fill-radius, calc(6px * var(--ds-sf))));
+}
+:host([stacked]) .target::after,
+:host([auto]) .target::after {
+  inset: 0;
+}
+.target::before { z-index: 1; }
+.target::after { z-index: -1; }
+::slotted([slot="end"]) { position: relative; z-index: 2; }
+
+.target:hover::after { background: var(--ds-row-fill-hover, var(--ds-fill)); }
+.target:active::after { background: var(--ds-row-fill-press, var(--ds-fill-hover)); }
+.target[aria-current] {
+  --ds-type-weight-default: var(--ds-row-current-weight, 500);
+  font-weight: var(--ds-row-current-weight, 500);
+}
+.target[aria-current]::after { background: var(--ds-row-fill-current, var(--ds-fill-hover)); }
+:host([open]) .target::after { background: var(--ds-row-fill-current, var(--ds-fill-hover)); }
+.target:focus-visible::after { outline: 2px solid var(--ds-focus-ring); outline-offset: -2px; }
+
+:host([disabled]) .target { cursor: default; opacity: 0.5; }
+:host([disabled]) .target::after { background: none; }
+
+/*
+ * The parts of a record's row (payments, events, people): a 16px picture before the
+ * name (an avatar tile, a large icon) takes the first sixteen of its square, and the row's 4px
+ * gap puts the words on the next square. The name hugs its words and gives way first; once
+ * the element has measured it cut (`data-cut="end"`), it fades out over its last square,
+ * never an ellipsis. A tag stands after the name, and the value (a figure, a date) at the
+ * row's end in tabular figures.
+ */
+::slotted(.ds-row__picture) {
+  flex: none;
+  box-sizing: border-box;
+  width: var(--ds-control-height);
+  height: var(--ds-control-height);
+  margin: 0;
+  padding: 0;
+}
+::slotted(.ds-row__name) {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+::slotted(.ds-row__name[data-cut="end"]) {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent);
+}
+:host(:dir(rtl)) ::slotted(.ds-row__name[data-cut="end"]) {
+  mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent);
+}
+::slotted(.ds-row__value) {
+  flex: none;
+  /* Important: a page's `* { margin: 0 }` reset (Tailwind's preflight, say)
+     reaches the slotted value from outside and would leave it after the name. */
+  margin-inline-start: auto !important;
+  white-space: nowrap;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A navigation row: the sidebar's two-pixel corners. */
+:host([nav]) { --ds-row-radius: calc(2px * var(--ds-sf)); }
+
+@media (forced-colors: active) {
+  :host([open]) .target::after,
+  .target[aria-current]::after { outline: 1px solid Highlight; outline-offset: -1px; }
+  .target:focus-visible::after { outline-color: Highlight; }
+}
+
+/* Share one column layout instead of cascading a changing variable through every control. */
+:host([subgrid]) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; column-gap: 0; }
+:host([subgrid]) .target { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; column-gap: 0; }
+/* An opt-in for fixed-height lists; the DOM, keyboard navigation and row identity stay intact. */
+:host([defer-offscreen]:not([auto]):not([stacked])) {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto var(--ds-row-default-height, var(--ds-row-height));
+}

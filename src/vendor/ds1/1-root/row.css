@@ -5,7 +5,7 @@
  * elements' look without the elements.
  *
  * A row is one square high, and what it holds stands on the lower sixteen of
- * the square with the spare four above, as Ezo sets every row: a line of
+ * the square with the spare four above, as every row is set: a line of
  * words on a 16px line box, a 16px icon and a 16px control all end on the
  * row's bottom line, so the capitals (7px below the top line, baseline 3px
  * above the next) are centred on an icon beside them. On an `<a href>` or a

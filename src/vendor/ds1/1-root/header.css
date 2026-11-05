@@ -173,7 +173,7 @@
 
 /* App title bar: two squares high, one square inset, regular title and a hairline. */
 .ds-header--app {
-  align-items: end;
+  align-items: center;
   height: calc(2 * var(--ds-unit));
   min-height: calc(2 * var(--ds-unit));
   padding: 0 var(--ds-unit);

@@ -412,7 +412,7 @@ export class Overlay extends LitElement {
   };
   /** Whether a press outside closes it: `closeOnOutside`, or a modeless sheet's `closeOnBackdrop`.
    * A modeless sheet has no backdrop, and on a phone its close button is hidden: the page above it
-   * stands for the backdrop, or the sheet could not be left at all (Link's people sheet, 3 November
+   * stands for the backdrop, or the sheet could not be left at all (a sheet of people, 3 November
    * 2026). The press still reaches the page, as every modeless outside press does. */
   private get closesOutside() { return this.closeOnOutside || (this.kind === "sheet" && this.closeOnBackdrop); }
 

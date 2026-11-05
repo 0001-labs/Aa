@@ -2,10 +2,10 @@
 
 /*
  * `.ds-context` is the `ds-context` element's look on a native menu, for a page
- * without Lit or a menu a library draws: Ezo's gap face. The rows carry the
+ * without Lit or a menu a library draws: the gap face. The rows carry the
  * colour and the menu only cuts the outer silhouette, so the page shows
  * through a pixel between rows and two between groups. The rows are black
- * with white words in both themes, as Ezo's menus always were (the slate in
+ * with white words in both themes, as a menu always is (the slate in
  * dark, darker than the page). Every row is 19px with the pixel under it, a square's pitch, its words
  * on the sixteen and an icon at its end. A Select's menu is the light face,
  * `.ds-menu`; a Context's is this dark one.
@@ -35,7 +35,7 @@
 
 .ds-context {
   --ds-context-row: calc(var(--ds-row-height) - 1px);
-  /* Black in both themes, as Ezo's menus always were: in dark the slate, darker than the page. */
+  /* Black in both themes, as a menu always is: in dark the slate, darker than the page. */
   --ds-context-fill: light-dark(var(--ds-black, #2a2a2a), var(--ds-slate, #1e1e1e));
   --ds-context-ink: var(--ds-white, #ffffff);
   --ds-context-hover: color-mix(in srgb, var(--ds-context-fill) 78%, var(--ds-context-ink));

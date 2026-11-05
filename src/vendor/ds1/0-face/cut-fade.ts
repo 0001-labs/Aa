@@ -19,7 +19,7 @@
  * - Every watcher measures in the next frame, together with every other one:
  *   all widths are read, then all marks written, so a page building a few
  *   hundred words lays itself out once for them rather than once each. Read
- *   one by one, after each element connected or updated, the words of Ezo's
+ *   one by one, after each element connected or updated, the words of a
  *   landing page laid it out again two hundred times, over half a second.
  *   Elements that resize are measured the same way, in one pass for all.
  * - `CutFades` is the same watcher as a Lit reactive controller: it starts when

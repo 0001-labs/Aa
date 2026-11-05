@@ -1,0 +1,152 @@
+@import "../../1-root/component-metrics.css";
+
+:host {
+  display: flex;
+  flex-direction: column;
+  width: calc(12 * var(--ds-unit));
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  color: var(--ds-text-color);
+  font-family: "Inter Arrows", var(--ds-typeface-regular);
+  font-feature-settings: var(--ds-font-features);
+  font-size: var(--ds-type-size-default);
+  font-weight: var(--ds-type-weight-default);
+  line-height: var(--ds-type-lineheight-default);
+  letter-spacing: var(--ds-type-letterspacing-default);
+}
+:host([hidden]) {
+  display: none !important;
+}
+
+nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: calc(var(--ds-unit) / 2) 0;
+}
+::slotted([slot="header"]), ::slotted([slot="footer"]) { flex: none; }
+.row {
+  --ds-row-gap: 0px;
+  border-radius: calc(2px * var(--ds-sf));
+  padding-inline: calc(4px * var(--ds-sf));
+  padding-inline-start: calc(4px * var(--ds-sf) + var(--depth) * var(--ds-unit) / 2);
+}
+/* The look of every pressable row (ds-row, .ds-row, the tree's rows): the same tokens, the same fallbacks. */
+.row:hover { background: var(--ds-row-fill-hover, var(--ds-fill)); }
+.row[data-current] { background: var(--ds-row-fill-current, var(--ds-fill-hover)); }
+.row[data-current] .choice { --ds-type-weight-default: var(--ds-row-current-weight, 500); }
+ds-button { --ds-corner-size: 0px; --ds-button-padding: 0; }
+.disclosure { flex: 0 0 var(--ds-unit); width: var(--ds-unit); }
+.spacer { flex: 1; }
+.disclosure { --ds-button-color: var(--ds-text-color-muted); --ds-button-height: var(--ds-control-height); }
+ds-icon { transform: rotate(0deg); }
+ds-icon[data-open] { transform: rotate(90deg); }
+.choice { flex: 0 1 auto; min-width: 0; }
+.name:has(ds-icon) { display: flex; align-items: center; gap: calc(4px * var(--ds-sf)); }
+.name { overflow: hidden; white-space: nowrap; text-overflow: clip; }
+/* Cut words fade over their last square, never an ellipsis (0-face/cut-fade.ts marks them). */
+:is(.name, .tree .label)[data-cut="end"] { mask-image: linear-gradient(to right, #000 calc(100% - var(--ds-unit)), transparent); }
+:host(:dir(rtl)) :is(.name, .tree .label)[data-cut="end"] { mask-image: linear-gradient(to left, #000 calc(100% - var(--ds-unit)), transparent); }
+/* A detail (a version) follows the label in the small muted type, 4px after its words and on their line, cut with them. */
+.detail { margin-inline-start: calc(4px * var(--ds-sf)); font-size: var(--ds-type-size-small); line-height: 1; color: var(--ds-text-color-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.name:has(ds-icon) .detail { margin-inline-start: 0; }
+.meta { flex: none; padding-inline-start: calc(4px * var(--ds-sf)); font-size: var(--ds-type-size-small); color: var(--ds-text-color-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.action { margin-inline-start: calc(4px * var(--ds-sf)); --ds-text-size: 10px; --ds-button-color: var(--ds-text-color-muted); }
+.empty { margin: 0; padding: calc(var(--ds-unit) / 2); color: var(--ds-text-color-muted); }
+@media (forced-colors: active) { .row[data-current] { outline: 1px solid Highlight; outline-offset: -1px; } }
+
+/* ---- Tree: the same rows as the native .ds-sidebar tree in 1-root/row.css. ---- */
+.tree {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+/* One square high, its contents on the lower sixteen as every row's; each level one square
+   further in, so a row's arrow stands under its parent's label. */
+.tree .item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  height: var(--ds-row-height);
+  min-width: 0;
+  padding-inline: calc(var(--depth, 0) * var(--ds-unit)) var(--ds-row-padding, calc(4px * var(--ds-sf)));
+  border-radius: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.tree .item:hover:not([aria-disabled="true"]) { background: var(--ds-row-fill-hover, var(--ds-fill)); }
+.tree .item:active:not([aria-disabled="true"]) { background: var(--ds-row-fill-press, var(--ds-fill-hover)); }
+.tree .item[aria-selected="true"] {
+  --ds-type-weight-default: var(--ds-row-current-weight, 500);
+  background: var(--ds-row-fill-current, var(--ds-fill-hover));
+  font-weight: var(--ds-row-current-weight, 500);
+}
+.tree .item:focus-visible { outline: 2px solid var(--ds-focus-ring); outline-offset: -2px; }
+.tree .item[aria-disabled="true"] { cursor: default; opacity: 0.5; }
+
+/* The arrow and the icon each take a whole square, drawn on the row's sixteen (the square's
+   spare four above); a leaf keeps an empty one so labels line up. */
+.tree .disclosure, .tree .icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 0 var(--ds-unit);
+  justify-content: center;
+  align-items: center;
+  width: var(--ds-unit);
+  height: var(--ds-unit);
+  padding-top: calc(var(--ds-unit) - var(--ds-control-height));
+}
+.tree .disclosure { color: var(--ds-text-color-muted); }
+.tree .disclosure ds-icon { transition: transform 120ms ease-out; }
+.tree .label {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-inline-start: calc(4px * var(--ds-sf));
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree .disclosure ds-icon { transition: none; }
+}
+@media (forced-colors: active) {
+  .tree .item[aria-selected="true"] { outline: 1px solid Highlight; outline-offset: -1px; }
+  .tree .item:focus-visible { outline-color: Highlight; }
+}
+
+/* Extend the native destination over the row without moving its words or chevron.
+   Independent disclosure and action controls stand above this hit area. */
+.row { position: relative; isolation: isolate; }
+.choice, .choice > :is(a, button) { position: static; }
+.choice > :is(a, button)::after { content: ""; position: absolute; inset: 0; cursor: pointer; }
+.row[data-disabled] .choice > button::after { cursor: default; }
+.row > .disclosure, .row > .action { position: relative; z-index: 1; }
+.row:has(.choice > :focus-visible) { outline: 2px solid var(--ds-focus-ring); outline-offset: -2px; }
+.row[data-drop="before"] { box-shadow: inset 0 1px var(--ds-text-color); }
+.row[data-drop="after"] { box-shadow: inset 0 -1px var(--ds-text-color); }
+
+/* Keep the disclosure press target one square while its icon sits on the sixteen. */
+.row > .disclosure > button::after { content: ""; position: absolute; inset: 0; }
+
+:host([disclosure-position="start"]) .row { padding-inline-start: calc(4px * var(--ds-sf) + var(--depth) * var(--ds-unit)); }
+:host([disclosure-position="start"]) .row:not(:has(.disclosure)) .choice { margin-inline-start: var(--ds-unit); }
+
+/* Narrow: eight squares wide, each row hugging its words, so the pointer's and the current
+   row's fill wrap the label (and its meta and disclosure) 4px either side instead of running
+   across the column. Rows still stand one square apart, half a square further in per level. */
+:host([narrow]) { width: calc(8 * var(--ds-unit)); }
+:host([narrow]) nav { display: flex; flex-direction: column; align-items: flex-start; padding-block: 0; margin-inline: calc(-4px * var(--ds-sf)); }
+:host([narrow]) .row { width: fit-content; max-width: 100%; }
+:host([narrow]) .spacer { display: none; }

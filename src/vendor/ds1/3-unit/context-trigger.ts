@@ -1,6 +1,6 @@
 import "./styles/context-trigger.css";
 
-/** A touch held this long opens a context menu: half a second, as tooltips, Ezo's board and iOS wait. */
+/** A touch held this long opens a context menu: half a second, as tooltips and iOS wait. */
 export const LONG_PRESS = 500;
 
 export type ContextGesture = MouseEvent | PointerEvent | KeyboardEvent;

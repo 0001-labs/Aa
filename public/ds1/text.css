@@ -24,8 +24,8 @@
  *
  * It is drawn with grayscale antialiasing, as one.css has always drawn it: the
  * browser's own smoothing on a Mac thickens every stem, so the same 400 weight
- * reads heavier in a product that loads controls.css without one.css (Link
- * beside Money). Inherited, so components' shadow roots draw the same.
+ * reads heavier in a product that loads controls.css without one.css than in
+ * one beside it that loads both. Inherited, so components' shadow roots draw the same.
  */
 
 body {

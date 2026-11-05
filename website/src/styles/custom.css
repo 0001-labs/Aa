@@ -17,7 +17,7 @@
 
   --sl-content-width: calc(36 * var(--grid));
   --sl-sidebar-width: calc(8 * var(--grid));
-  --sl-nav-height: calc(3 * var(--grid));
+  --sl-nav-height: calc(2 * var(--grid));
   --sl-text-code: calc(13px * var(--sf, 1));
   --sl-line-height: 1.4286;
   --sl-font: var(--ds-typeface-regular);

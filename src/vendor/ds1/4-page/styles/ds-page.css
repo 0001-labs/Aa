@@ -15,7 +15,7 @@
   --ds-page-line: var(--ds-border-color, var(--ds-slate-light));
   /* How far the content stands outside its column on each side, the column's place and the
      grid's lines kept: a phone's lists take a little more width, their words a longer line
-     (Money sets 4px). Zero by default. */
+     (4px, for one). Zero by default. */
   --ds-page-bleed: 0px;
   box-sizing: border-box;
   display: block;
@@ -29,7 +29,7 @@
   letter-spacing: var(--ds-type-letterspacing-default);
 }
 
-:host([hidden]) { display: none; }
+:host([hidden]) { display: none !important; }
 :host([fill]) { height: 100%; }
 
 .page {
@@ -231,8 +231,9 @@
   grid-template-columns: minmax(0, var(--ds-page-resize-width, clamp(var(--_split-min), round(nearest, calc(var(--_split-room) * var(--ds-page-split, 0.5)), var(--ds-unit)), var(--_split-max)))) minmax(0, 1fr);
 }
 /* A split's divider is the page's own child, on the column's grid area: a column that scrolls cannot cut it off. */
-:host([layout="split"][resizable]) .page { position: relative; }
-:host([layout="split"][resizable]) .resize { grid-area: nav; }
+:host([resizable]) .page { position: relative; }
+.resize-nav { grid-area: nav; }
+.resize-aside { grid-area: aside; inset-inline-end: auto; inset-inline-start: calc(-0.5 * var(--ds-page-gap) - 0.5 * var(--ds-unit)); }
 .resize { position: absolute; inset-block: 0; inset-inline-end: calc(-0.5 * var(--ds-page-gap) - 0.5 * var(--ds-unit)); width: var(--ds-unit); cursor: col-resize; touch-action: none; user-select: none; z-index: 2; }
 .resize::before { content: ""; position: absolute; inset-block: 0; inset-inline-start: 50%; width: 1px; background: var(--ds-line-color, var(--ds-page-line)); }
 .resize:hover::before, .resize:focus-visible::before, .resize[data-dragging]::before { background: var(--ds-text-color); width: 1px; }
@@ -242,9 +243,28 @@
   .resize { display: none; }
 }
 
-/* Sidebar resize targets sit over the existing divided hairline. */
-:host([layout="sidebar"][resizable]) .nav .resize { inset-inline-end: calc(-0.5 * var(--ds-unit) - 1px); }
-:host([layout="sidebar"][resizable][fill]) .nav { overflow: visible; }
-
 /* The resize hairline owns the boundary; a divided sidebar must not draw a second line beside it. */
 :host([divided][resizable]:not([layout="column"]):not([layout="centered"]):not([layout="tiles"])) .nav { border-inline-end-color: transparent; }
+
+:host([divided][resizable][layout="inspector"]) .aside { border-inline-start-color: transparent; }
+@container (max-width: 959px) { .resize-aside { display: none; } }
+
+.page:has(.nav[data-empty]) .resize-nav, .page:has(.aside[data-empty]) .resize-aside { display: none; }
+
+/* An inspector without navigation is a document with properties, without an empty leading track. */
+:host([layout="inspector"]) .page:has(.nav[data-empty]) {
+  grid-template-columns: minmax(0, 1fr) var(--ds-page-aside);
+  grid-template-areas: "header aside" "main aside" "footer aside";
+}
+@container (max-width: 959px) {
+  :host([layout="inspector"]) .page:has(.nav[data-empty]) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "header" "main" "aside" "footer";
+  }
+}
+
+:host([layout="inspector"]) .page:has(.nav[data-empty]):has(.aside[data-empty]) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "header" "main" "footer";
+}
+.resize.resize-aside { inset-inline-end: auto; }
