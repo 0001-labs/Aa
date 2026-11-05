@@ -22,7 +22,7 @@ function random(seed: number) {
   }
 }
 
-const OPEN: Record<string, [string, string]> = { bold: ['**', '**'], italic: ['*', '*'], strike: ['~~', '~~'], highlight: ['==', '=='], underline: ['<u>', '</u>'], 'color:red': ['<span color="red">', '</span>'], 'color:blue': ['<span color="blue">', '</span>'] }
+const OPEN: Record<string, [string, string]> = { bold: ['**', '**'], italic: ['*', '*'], strike: ['~~', '~~'], highlight: ['==', '=='], underline: ['<u>', '</u>'], 'color:red': ['<span color="red">', '</span>'], 'color:blue': ['<span color="blue">', '</span>'], 'background:green': ['<span color="green_background">', '</span>'] }
 const NAMES = Object.keys(OPEN)
 
 const runMarks = (run: ReturnType<typeof blockRuns>[number]) => {
@@ -33,6 +33,7 @@ const runMarks = (run: ReturnType<typeof blockRuns>[number]) => {
   if (run.highlight) marks.add('highlight')
   if (run.underline) marks.add('underline')
   if (run.color) marks.add(`color:${run.color}`)
+  if (run.background) marks.add(`background:${run.background}`)
   return marks
 }
 

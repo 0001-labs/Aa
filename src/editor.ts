@@ -7,13 +7,14 @@ import { exportMarkdown, hasCommentSource } from './comments-markdown'
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, blockRuns, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type CalloutColor, type Tab } from './markdown'
-import { fromMarkdown, toMarkdown, replaceRange, setSource, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
+import { IMAGE, EQUATION, blockRuns, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type BackgroundColor, type CalloutColor, type Tab } from './markdown'
+import { fromMarkdown, toMarkdown, replaceRange, setSource, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, backgroundSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { isWritten, markOf, wordEdges, wornAt, editBlock, type Carry } from './rich'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, stillShows, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout, setCallout } from './document'
-import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableAction } from './table'
+import { editTable, fromTSV, setTableWidths, tableAlignments, tableRows, tableWidths, writeTable, type TableAction } from './table'
+import { resizeColumns } from './table-resize'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
 import { holdingAcross, releaseAcross, selectAcrossBlocks, selectFromTo } from './span'
@@ -218,6 +219,8 @@ export type Editor = {
   format(mark: 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'link' | 'equation' | 'highlight'): void
   /** Write the selected words in one of `TEXT_COLORS` (`<span color="red">`), or in the text's own colour with `null`. */
   color(color: TextColor | null): void
+  /** Put one of `BACKGROUND_COLORS` behind the selected words (yellow is the highlight, `==words==`), or none with `null`. */
+  background(color: BackgroundColor | null): void
   turnInto(kind: TurnKind): void
   blockAction(action: 'delete' | 'duplicate' | 'up' | 'down'): void
   /** Move `count` blocks from `from` so the first stands at `to` once they have left; they stay selected, the editor focused. */
@@ -1802,7 +1805,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         const rows = cells.map(row => row.map(cell => cell.text))
         const pasted = text.replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n').map(line => line.split('\t'))
         pasted.forEach((values, i) => { const target = rows[row + i] ?? (rows[row + i] = []); values.forEach((value, j) => { target[column + j] = value }) })
-        const source = writeTable(rows, tableAlignments(block.source))
+        const source = writeTable(rows, tableAlignments(block.source), tableWidths(block.source))
         const cell = tableRows(source)[row][column]
         const change = replaceRange(blocks, { block: a.block, offset: 0 }, { block: a.block, offset: block.source.length }, source)
         const pos = { block: a.block, offset: cell.to }
@@ -1859,6 +1862,25 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   renderAll()
   const stopSelection = paintSelection(host)
   const stopSpanning = selectAcrossBlocks(host, () => readOnly || destroyed)
+  const stopColumns = resizeColumns(host, {
+    readOnly: () => readOnly || destroyed,
+    square: squareIn,
+    // One step to undo, the caret left where it was.
+    write(element, widths) {
+      const index = elements().indexOf(element)
+      if (index < 0) return null
+      const source = setTableWidths(blocks[index].source, widths)
+      if (source === blocks[index].source) return element
+      const { blocks: next } = setSource(blocks, index, source)
+      clearBlocks()
+      syncDom(renumber(next))
+      const at = { block: index, offset: 0 }
+      history.record(snapshot(at, at), 'edit')
+      options.onChange?.(toMarkdown(blocks))
+      host.dispatchEvent(new Event('aa-change'))
+      return elements()[index] ?? null
+    },
+  })
 
   const setReadOnly = (value: boolean) => {
     for (const editor of columnEditors) editor.readOnly = value
@@ -1945,6 +1967,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     activeBlock() { const selection = readSelection(); if (!selection) return null; const index = selection.focus.block; return { index, block: blocks[index], start: offsetOf({ block: index, offset: 0 }), end: offsetOf({ block: index, offset: blocks[index].source.length }) } },
     selectBlocks,
     format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; if (mark === 'link') { insertLink(selection); return }; if (mark === 'underline') { wrap(selection, '<u>', '</u>'); return }; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark]) },
+    background(color) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const painted = backgroundSelection(blocks, selection.anchor, selection.focus, color, atoms); if (painted) commit(painted.blocks, painted.anchor, painted.focus, 'edit') },
     color(color) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const colored = colorSelection(blocks, selection.anchor, selection.focus, color, atoms); if (colored) commit(colored.blocks, colored.anchor, colored.focus, 'edit') },
     turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
     blockAction(action) { if (readOnly) return; const selection = readSelection(); if (selection) changeBlocks(action, selected ?? select(blocks, selection.anchor.block, selection.focus.block)) },
@@ -2036,6 +2059,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       shimmers.clear()
       stopSelection()
       stopSpanning()
+      stopColumns()
       stopControls()
       stopPartials()
       host.removeEventListener('beforeinput', onBeforeInput)

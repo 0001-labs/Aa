@@ -385,6 +385,9 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 .aa-find { display: flex; flex-wrap: wrap; width: calc(16 * var(--aa-square)); max-width: calc(100vw - 2 * var(--aa-square) - 2px); border: 1px solid var(--aa-rule, var(--ds-border-color, currentColor)); color: var(--ds-text-color, var(--text-color, CanvasText)); background: var(--ds-paper, var(--background, Canvas)); }
 .aa-find input { box-sizing: border-box; font: inherit; color: inherit; background: transparent; width: 50%; min-width: 0; height: var(--aa-square); padding: 0 calc(4px * var(--aa-sf)); border: 0; border-right: 1px solid var(--ds-border-color, currentColor); border-radius: 0; }
 .aa-find span[aria-live] { padding-inline: calc(4px * var(--aa-sf)); white-space: nowrap; }
+/* A colour behind the words: the callouts' pale fills, which hold on light paper and dark. Yellow is the highlight. */
+.aa-bg { background: var(--aa-callout-fill); }
+.aa-menu [data-command="color-bg-yellow"] .aa-icon[data-fill] { background: var(--aa-highlight, var(--ds-yellow, var(--yellow, Highlight))); }
 .aa-find-match, .aa-highlight { background: var(--aa-highlight, var(--ds-yellow, var(--yellow, Highlight))); color: var(--aa-highlight-ink, var(--ds-black, inherit)); }
 .aa-block[data-kind="bullet"] { margin-left: calc(var(--aa-depth, 0) * var(--aa-indent, var(--aa-unit))); }
 .aa-block[data-kind="bullet"][data-number]::before { content: attr(data-number) "."; }
@@ -435,8 +438,21 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
    lines; the header row in the medium face, Markdown's `---:` setting a
    column of numbers to its end in tabular figures. */
 .aa-block[data-kind="table"] { font-variant-numeric: tabular-nums; }
-.aa-table-row { display: grid; grid-template-columns: repeat(var(--aa-columns), minmax(0, 1fr)); }
-.aa-table-cell { box-sizing: border-box; min-height: calc(2 * var(--aa-unit)); padding: calc(var(--aa-unit) / 2); box-shadow: inset 0 -1px var(--aa-table-rule, var(--aa-rule-color)); line-height: var(--aa-unit); white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
+.aa-table-row { display: grid; min-width: 100%; width: max-content; grid-template-columns: var(--aa-table-columns, repeat(var(--aa-columns), minmax(0, 1fr))); }
+.aa-block[data-kind="table"]:not([style*="--aa-table-columns"]) .aa-table-row { width: auto; }
+.aa-block[data-kind="table"] { overflow-x: auto; scrollbar-width: none; }
+.aa-block[data-kind="table"][data-settling] .aa-table-row { transition: grid-template-columns 0.14s cubic-bezier(0.2, 1, 0.1, 1); }
+@media (prefers-reduced-motion: reduce) { .aa-block[data-kind="table"][data-settling] .aa-table-row { transition: none; } }
+/* A column's edge, as Design system 1's tables have it (.ds-table-column-resize in its table.css): a square wide to press, a hairline to see. */
+.aa-table-cell:has(> .ds-table-column-resize) { overflow: visible; }
+.ds-table-column-resize { position: absolute; z-index: 3; inset-block-start: 0; inset-inline-end: calc(var(--aa-unit) / -2); width: var(--aa-unit); height: var(--ds-table-resize-height, var(--aa-unit)); cursor: col-resize; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; }
+.ds-table-column-resize::after { content: ""; position: absolute; inset-block-start: 0; inset-inline-start: calc(50% - 0.5px); width: 1px; height: 100%; background: var(--aa-table-rule, var(--aa-rule-color)); opacity: 0; pointer-events: none; transition: opacity 0.14s ease-out; }
+.ds-table-column-resize:is(:focus, [data-resizing])::after { opacity: 1; }
+@media (hover: hover) { .ds-table-column-resize:hover::after { opacity: 1; } }
+.aa-table-cell:last-child > .ds-table-column-resize { inset-inline-end: 0; }
+.aa-table-cell:last-child > .ds-table-column-resize::after { inset-inline-start: auto; inset-inline-end: 0; }
+.aa-block[data-readonly="true"] .ds-table-column-resize { display: none; }
+.aa-table-cell { position: relative; box-sizing: border-box; min-width: 0; min-height: var(--aa-unit); padding: 0 calc(var(--aa-unit) / 2); box-shadow: inset 0 -1px var(--aa-table-rule, var(--aa-rule-color)); line-height: var(--aa-unit); white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
 .aa-table-cell[data-align="center"] { text-align: center; }
 .aa-table-cell[data-align="end"] { text-align: end; }
 .aa-table-row:first-child { color: var(--aa-table-header, inherit); font-family: "Inter Arrows", var(--ds-typeface-medium, var(--typeface-medium, inherit)), system-ui, sans-serif; font-weight: var(--ds-type-weight-bold, 500); }

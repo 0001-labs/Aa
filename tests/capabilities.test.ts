@@ -372,7 +372,7 @@ describe('the bar over selected words', () => {
     setup('Words', { toolbar: true, comments: { subscribe: () => () => {}, me: () => null } })
     const toolbar = document.querySelector('.aa-toolbar') as HTMLElement
     expect([...toolbar.querySelectorAll('button')].map(button => button.dataset.action))
-      .toEqual(['color', 'bold', 'italic', 'underline', 'strike', 'link', 'code', 'equation', 'comment'])
+      .toEqual(['color', 'background', 'bold', 'italic', 'underline', 'strike', 'link', 'code', 'equation', 'comment'])
     ;(toolbar.querySelector('[data-action="color"]') as HTMLButtonElement).click()
     const menu = document.querySelector('.aa-menu') as HTMLElement
     expect(menu.hidden).toBe(false)

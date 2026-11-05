@@ -306,6 +306,8 @@ export type Run = {
   highlight?: true
   /** `<span color="red">words</span>`, Notion's way of writing a text colour: one of `TEXT_COLORS`. */
   color?: string
+  /** `<span color="red_background">words</span>`, Notion's way of writing a colour behind words: one of `BACKGROUND_COLORS`. */
+  background?: string
   href?: string
   /**
    * Syntax belongs to a mark: the range of the whole mark, delimiters
@@ -380,11 +382,15 @@ export const EQUATION = atomPattern('equation', /\$(?!\$)(?:\\.|[^$\n])+\$/)
 /** The atoms an editor reads unless it is given others. */
 export const DEFAULT_ATOMS: readonly AtomSyntax[] = [IMAGE, EQUATION]
 
-type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'href' | 'highlight' | 'color' | 'autolink'>
+type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'href' | 'highlight' | 'color' | 'background' | 'autolink'>
 
 /** The colours words can be written in, by Notion's names for them. */
 export const TEXT_COLORS = ['gray', 'red', 'orange', 'green', 'blue', 'purple'] as const
 export type TextColor = (typeof TEXT_COLORS)[number]
+/** The colours behind words. Yellow is the highlight, written `==words==`; the others as Notion writes them. */
+export const BACKGROUND_COLORS = ['gray', 'yellow', 'orange', 'green', 'blue', 'purple', 'red'] as const
+export type BackgroundColor = (typeof BACKGROUND_COLORS)[number]
+const BACKGROUND = /_background$/
 /**
  * The tags that open an underline or a colour, at a place in a line. Any
  * colour's name is read, so Notion's others come in as tags and never as words;
@@ -645,7 +651,7 @@ function inline(text: string, start: number, end: number, base: number, out: Run
     if (count.strike) on.strike = true
     if (count.highlight) on.highlight = true
     if (count.underline) on.underline = true
-    if (colors.length) on.color = colors[colors.length - 1].color
+    for (const { color } of colors) { if (BACKGROUND.test(color)) on.background = color.replace(BACKGROUND, ''); else on.color = color }
     if (href !== undefined) on.href = href
     return on
   }

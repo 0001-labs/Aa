@@ -17,9 +17,9 @@ test('centres the bar directly above the selection and falls below when there is
  expect(selectionToolbarPosition({ left: 200, top: 200, width: 80, bottom: 220 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 190, top: 140 })
  expect(selectionToolbarPosition({ left: 0, top: 10, width: 20, bottom: 30 }, { width: 100, height: 60 }, { left: 0, top: 0, width: 800, height: 600 }, 1)).toEqual({ left: 0, top: 30 })
 })
-test('fills the last desktop grid cell without adding an action', () => {
+test('finishes a short last row with blank cells, not with anything that looks pressable', () => {
  defineAaToolbar(); const toolbar = new AaToolbarElement(); toolbar.actions = Array.from({ length: 9 }, (_, index) => ({ id: String(index), label: 'Action', icon: 'bold', run() {} })); document.body.append(toolbar)
- expect(toolbar.querySelectorAll('button')).toHaveLength(9); expect(toolbar.querySelectorAll('.aa-toolbar-spacer')).toHaveLength(1); expect(toolbar.lastElementChild?.getAttribute('aria-hidden')).toBe('true'); expect(toolbar.querySelector<HTMLElement>('.aa-toolbar-spacer .aa-icon')?.style.maskImage).toContain('svg')
+ expect(toolbar.querySelectorAll('button')).toHaveLength(9); expect(toolbar.querySelectorAll('.aa-toolbar-spacer')).toHaveLength(1); expect(toolbar.querySelector('.aa-toolbar-spacer')!.children).toHaveLength(0); expect(toolbar.lastElementChild?.getAttribute('aria-hidden')).toBe('true')
 })
 test('colour choices are icon-only, named by both accessibility and shared tooltips', () => {
  const host = document.createElement('div'); document.body.append(host); const editor = createEditor(host, { value: 'Colour these words', toolbar: true })
@@ -126,4 +126,8 @@ test('a right press in the writing opens the block menu instead of the browser\'
   made.readOnly = true
   expect(press(block).defaultPrevented).toBe(false)
   made.destroy(); host.remove()
+})
+test('every action on the bar has an icon drawn', () => {
+ const host = document.createElement('div'); document.body.append(host); const editor = createEditor(host, { value: 'Words', toolbar: true })
+ try { for (const icon of document.querySelectorAll<HTMLElement>('.aa-toolbar > button .aa-icon')) expect(icon.style.maskImage).toContain('svg') } finally { editor.destroy() }
 })

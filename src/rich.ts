@@ -26,6 +26,7 @@ export const HIGHLIGHT = simple('highlight', '==', '==', true, 5)
 export const UNDERLINE = simple('underline', '<u>', '</u>', false, 1)
 export const CODE = simple('code', '`', '`', false, 7)
 export const colorMark = (color: string): Mark => ({ family: 'color', key: `color:${color}`, open: `<span color="${color}">`, close: '</span>', tight: false, rank: 0 })
+export const backgroundMark = (color: string): Mark => ({ family: 'background', key: `background:${color}`, open: `<span color="${color}_background">`, close: '</span>', tight: false, rank: 0 })
 export const linkMark = (href: string): Mark => ({ family: 'link', key: `link:${href}`, open: '[', close: `](${href})`, tight: false, rank: 6 })
 
 /** The mark a toolbar's delimiters write; none for what is not a mark of words (an equation's `$`). */
@@ -46,6 +47,7 @@ export const isWritten = (block: Block) => WRITTEN.has(block.kind)
 
 function marksOf(run: Run): Mark[] {
   const marks: Mark[] = []
+  if (run.background) marks.push(backgroundMark(run.background))
   if (run.color) marks.push(colorMark(run.color))
   if (run.underline) marks.push(UNDERLINE)
   if (run.bold) marks.push(BOLD)
@@ -340,12 +342,13 @@ export function rangeWears(block: Block, from: number, to: number, key: string, 
 }
 
 /** A range's words given a mark, or with their marks of a family taken off. The offsets it gives are of the same words afterwards. */
-export function markRange(block: Block, from: number, to: number, change: { add?: Mark; remove?: string }, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): { source: string; from: number; to: number } {
+export function markRange(block: Block, from: number, to: number, change: { add?: Mark; remove?: string | readonly string[] }, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): { source: string; from: number; to: number } {
   const units = unitsOf(block, atoms)
   const start = startIndex(units, from), end = Math.max(start, endIndex(units, to))
   const next = units.map((unit, index) => {
     if (index < start || index >= end || unit.fixed) return unit
-    const off = change.remove ? unit.marks.filter(mark => mark.family !== change.remove && mark.key !== change.remove) : unit.marks
+    const gone = [change.remove ?? []].flat()
+    const off = unit.marks.filter(mark => !gone.includes(mark.family) && !gone.includes(mark.key))
     return { ...unit, marks: change.add ? wearing(off, [change.add]) : off }
   })
   const written = writeUnits(next)

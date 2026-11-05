@@ -4,7 +4,7 @@ import { createDragging } from './drag'
 import { openSheet, type SheetGroup } from './sheet'
 
 import { icons } from './icons'
-import { CALLOUT_COLORS, TEXT_COLORS, type CalloutColor } from './markdown'
+import { BACKGROUND_COLORS, CALLOUT_COLORS, TEXT_COLORS, type CalloutColor } from './markdown'
 import { REACTION_EMOJIS } from './comments'
 import { initTooltips } from './ds1/0-face/tooltips'
 import { word } from './words'
@@ -56,8 +56,9 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
       node.classList.add('note-menu-row', 'ds-context__item--icon'); node.dataset.action = action.id
       return node
     }))
+    // A last row short of five is finished with blank cells, never with something that looks pressable.
     if (!isCoarse(this.ownerDocument.defaultView!)) for (let index = this.actions.length; index % 5; index++) {
-      const spacer = document.createElement('span'); spacer.className = 'aa-toolbar-spacer'; spacer.setAttribute('aria-hidden', 'true'); spacer.append(button('Placeholder', 'plus', () => {}).firstElementChild!); this.append(spacer)
+      const spacer = document.createElement('span'); spacer.className = 'aa-toolbar-spacer'; spacer.setAttribute('aria-hidden', 'true'); this.append(spacer)
     }
     if (this.below) this.append(this.below)
   }
@@ -157,8 +158,12 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     ({ id, icon: id, label, shortcut, run: () => { restore(); editor.format(id) } })
   const colors: Command[] = [{ id: 'color-default', label: 'Default', icon: 'color', run: () => editor.color(null) },
     ...TEXT_COLORS.map(color => ({ id: `color-${color}`, label: color === 'gray' ? 'Grey' : color[0].toUpperCase() + color.slice(1), icon: 'color', ink: color, run: () => editor.color(color) }))]
+  const colourName = (color: string) => color === 'gray' ? 'Grey' : color[0].toUpperCase() + color.slice(1)
+  const backgrounds: Command[] = [{ id: 'color-bg-default', label: 'Default', icon: 'color', run: () => editor.background(null) },
+    ...BACKGROUND_COLORS.map(color => ({ id: `color-bg-${color}`, label: color === 'yellow' ? 'Highlight' : colourName(color), icon: 'color', swatch: color, run: () => editor.background(color) }))]
   toolbar.actions = [
     { id: 'color', icon: 'color', label: 'Text colour', run: () => { restore(); open(colors, (toolbar.querySelector('[data-action="color"]') ?? toolbar).getBoundingClientRect()) } },
+    { id: 'background', icon: 'background', label: 'Background colour', run: () => { restore(); open(backgrounds, (toolbar.querySelector('[data-action="background"]') ?? toolbar).getBoundingClientRect()) } },
     mark('bold', 'Bold', '⌘B'), mark('italic', 'Italic', '⌘I'), mark('underline', 'Underline', '⌘U'), mark('strike', 'Strikethrough', '⌘⇧S'),
     mark('link', 'Link', '⌘K'), mark('code', 'Code', '⌘E'), mark('equation', 'Equation'),
     // Comment on the selected words, where the product keeps comments.
@@ -387,7 +392,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   }
   function open(commands: readonly Command[], rect: DOMRect) {
     choices = commands.filter(command => command.enabled?.(editor) !== false)
-    menu.toggleAttribute('data-palette', choices.length > 0 && choices.every(command => command.id.startsWith('color-'))); menu.setAttribute('aria-label', word('palette' in menu.dataset ? 'Text colour' : 'Block commands'))
+    menu.toggleAttribute('data-palette', choices.length > 0 && choices.every(command => command.id.startsWith('color-'))); menu.setAttribute('aria-label', word('palette' in menu.dataset ? choices[0].id.startsWith('color-bg') ? 'Background colour' : 'Text colour' : 'Block commands'))
     active = 0; menu.hidden = false; paint(); moveMenu(rect); positionPreview()
   }
   const builtin: Command[] = [...kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, run: () => editor.turnInto(kind.kind) })), ...inserts]

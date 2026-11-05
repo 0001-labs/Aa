@@ -1,6 +1,6 @@
 {
   "Design system 1": {
-    "commit": "02bdaf7e082cd7e8ba5efc30a324bedc18550af6",
+    "commit": "2171b780d82b6cd188b667973fcbc53a66adda4f",
     "version": "0.3.2",
     "files": {
       "public/ds1/component-appearance.css": "dc1475596fc59566c77a77beb56f258c5f68931917338302a2c945ceae430460",
@@ -18,7 +18,7 @@
       "public/ds1/grid.css": "effe1e772aa2c08b309fb06be427955d24ef73e37dbacc549714edc040275c29",
       "public/ds1/one.css": "d1153b299d30e9f0ca11e9f54421012a7bf088909987dd3a4847ad8cef1b5e4f",
       "public/ds1/palette.css": "a0fdc3dd2df5c9d05dd18f429be421355fcf3141356ad1d03ea64fc9d570cff0",
-      "public/ds1/prose.css": "9af5171fb3aa2d222d87fcdfa4c999792fb8155a6fe6b3b5ce3f2874ce0a9cc0",
+      "public/ds1/prose.css": "a1b123ef1db5a55e6073aac62ef0f5dc8ec7d4a50b43bd0c7b4e675da037d7df",
       "public/ds1/text.css": "4443f7fa086e0f66c6137dbe9f7dacee58b863aaed4268edf5e9e48e3d664145",
       "src/ds1/0-face/button-label.ts": "d5cbeaa064631584347d7888b0f78e92100d120c73b7e45ede402e4d5fd0a241",
       "src/ds1/0-face/constraint-panel.ts": "0d181e83d394941f257d6fb95c72c0ff28584fba2d8814fa89ec00991a2ee12e",

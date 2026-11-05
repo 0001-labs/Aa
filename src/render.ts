@@ -6,7 +6,8 @@
  */
 
 import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block, type Run } from './markdown'
-import { tableAlignments, tableRows } from './table'
+import { tableAlignments, tableRows, tableWidths } from './table'
+import { word } from './words'
 import { icons } from './icons'
 import { initialOf } from './comments'
 
@@ -59,7 +60,7 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
 }
 
 /** What a run's element looks like, kept beside it to tell a word typed from a look changed. */
-const lookOf = (run: Run) => `${run.href ?? ''}|${run.bold ? 'b' : ''}${run.italic ? 'i' : ''}${run.strike ? 's' : ''}${run.underline ? 'u' : ''}${run.code ? 'c' : ''}${run.highlight ? 'h' : ''}|${run.color ?? ''}`
+const lookOf = (run: Run) => `${run.href ?? ''}|${run.bold ? 'b' : ''}${run.italic ? 'i' : ''}${run.strike ? 's' : ''}${run.underline ? 'u' : ''}${run.code ? 'c' : ''}${run.highlight ? 'h' : ''}|${run.color ?? ''}|${run.background ?? ''}`
 const looks = new WeakMap<Node, string>()
 
 /** A run of words as its element, decorated. */
@@ -71,6 +72,7 @@ function wordsOf(document: Document, run: Run, text: string, decorations: readon
   if (run.strike) node.classList.add('aa-s')
   if (run.underline) node.classList.add('aa-u')
   if (run.color) node.dataset.color = run.color
+  if (run.background) { node.classList.add('aa-bg'); node.dataset.fill = run.background }
   if (run.code) { node.classList.add('aa-c'); node.spellcheck = false }
   if (run.highlight) node.classList.add('aa-highlight')
   node.textContent = text
@@ -251,7 +253,10 @@ function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) 
 function renderTable(element: HTMLElement, block: Block, decorations: readonly Decoration[], atoms: readonly AtomSyntax[]) {
   const document = element.ownerDocument
   element.contentEditable = 'false'
-  const rows = tableRows(block.source), alignments = tableAlignments(block.source)
+  const rows = tableRows(block.source), alignments = tableAlignments(block.source), widths = tableWidths(block.source)
+  // Columns with widths of their own stand at them; without, they share the line.
+  if (widths.some(width => width !== null)) element.style.setProperty('--aa-table-columns', widths.map(width => width === null ? 'minmax(0, 1fr)' : `calc(${width} * var(--aa-unit))`).join(' '))
+  else element.style.removeProperty('--aa-table-columns')
   const fragment = document.createDocumentFragment()
   let offset = 0
   rows.forEach((cells, row) => {
@@ -280,6 +285,18 @@ function renderTable(element: HTMLElement, block: Block, decorations: readonly D
         else content.append(document.createTextNode(text))
       }
       if (!cell.text) { const br = document.createElement('br'); br.dataset.filler = ''; content.append(br) }
+      // Before the words, which `pointAt` looks for last in the cell.
+      if (row === 0) {
+        const handle = document.createElement('span')
+        handle.className = 'ds-table-column-resize'
+        handle.contentEditable = 'false'
+        handle.tabIndex = 0
+        handle.setAttribute('data-aa-interactive', '')
+        handle.setAttribute('role', 'separator')
+        handle.setAttribute('aria-orientation', 'vertical')
+        handle.setAttribute('aria-label', word('Column width'))
+        node.append(handle)
+      }
       node.append(leading, content)
       line.append(node)
       offset = cell.to

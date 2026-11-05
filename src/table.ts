@@ -39,11 +39,33 @@ export function tableAlignments(source: string): Alignment[] {
     return start && end ? 'center' : end ? 'end' : start ? 'start' : null
   })
 }
-const DELIMITER: Record<string, string> = { start: ':---', center: ':---:', end: '---:' }
-export function writeTable(rows: readonly (readonly string[])[], alignments: readonly Alignment[] = []): string {
+/**
+ * A column's width in squares: its dashes in the delimiter row, counted. Every
+ * Markdown reader lets them run to any length and pandoc reads them as relative
+ * widths, so the width travels with the table. Three, the least there can be, is
+ * no width of its own.
+ */
+export function tableWidths(source: string): (number | null)[] {
+  const line = source.split('\n')[1] ?? ''
+  return line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(cell => {
+    const dashes = cell.trim().replace(/:/g, '').length
+    return dashes > 3 ? dashes : null
+  })
+}
+const delimiterOf = (alignment: Alignment | undefined, width: number | null | undefined) => {
+  const dashes = '-'.repeat(Math.max(3, width ?? 3))
+  return alignment === 'center' ? `:${dashes}:` : alignment === 'end' ? `${dashes}:` : alignment === 'start' ? `:${dashes}` : dashes
+}
+/** A table's source with its columns set to these widths, nothing else changed. */
+export function setTableWidths(source: string, widths: readonly (number | null)[]): string {
+  const lines = source.split('\n'), alignments = tableAlignments(source)
+  lines[1] = `| ${widths.map((width, index) => delimiterOf(alignments[index], width)).join(' | ')} |`
+  return lines.join('\n')
+}
+export function writeTable(rows: readonly (readonly string[])[], alignments: readonly Alignment[] = [], widths: readonly (number | null)[] = []): string {
   const width = Math.max(1, ...rows.map(row => row.length))
   const line = (row: readonly string[]) => `| ${Array.from({ length: width }, (_, i) => (row[i] ?? '').replace(/\r?\n/g, ' ').replace(/(?<!\\)\|/g, '\\|')).join(' | ')} |`
-  const delimiter = `| ${Array.from({ length: width }, (_, i) => DELIMITER[alignments[i] ?? ''] ?? '---').join(' | ')} |`
+  const delimiter = `| ${Array.from({ length: width }, (_, i) => delimiterOf(alignments[i], widths[i])).join(' | ')} |`
   return [line(rows[0] ?? ['']), delimiter, ...rows.slice(1).map(line)].join('\n')
 }
 export function fromTSV(text: string): string | null {
@@ -53,12 +75,12 @@ export function fromTSV(text: string): string | null {
 export type TableAction = 'add-row' | 'delete-row' | 'add-column' | 'delete-column'
 export function editTable(block: Block, action: TableAction, row: number, column: number): string {
   const rows = tableRows(block.source).map(row => row.map(cell => cell.text))
-  const alignments = tableAlignments(block.source)
+  const alignments = tableAlignments(block.source), widths = tableWidths(block.source)
   const width = Math.max(1, ...rows.map(row => row.length))
   rows.forEach(row => { while (row.length < width) row.push('') })
   if (action === 'add-row') rows.splice(row + 1, 0, Array(width).fill(''))
   if (action === 'delete-row' && row > 0 && rows.length > 1) rows.splice(row, 1)
-  if (action === 'add-column') { rows.forEach(row => row.splice(column + 1, 0, '')); alignments.splice(column + 1, 0, null) }
-  if (action === 'delete-column' && width > 1) { rows.forEach(row => row.splice(column, 1)); alignments.splice(column, 1) }
-  return writeTable(rows, alignments)
+  if (action === 'add-column') { rows.forEach(row => row.splice(column + 1, 0, '')); alignments.splice(column + 1, 0, null); widths.splice(column + 1, 0, null) }
+  if (action === 'delete-column' && width > 1) { rows.forEach(row => row.splice(column, 1)); alignments.splice(column, 1); widths.splice(column, 1) }
+  return writeTable(rows, alignments, widths)
 }

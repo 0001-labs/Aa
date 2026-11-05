@@ -6,7 +6,7 @@
  */
 
 import { parseBlocks, serialize, codeClosed, QUOTE, readCallout, writeCallout, DEFAULT_ATOMS, type AtomSyntax, type Block, type CalloutColor } from './markdown'
-import { colorMark, editBlock, isWritten, joinBlocks, markOf, markRange, partBlock, rangeWears, sliceBlock, type Carry } from './rich'
+import { backgroundMark, colorMark, editBlock, HIGHLIGHT, isWritten, joinBlocks, markOf, markRange, partBlock, rangeWears, sliceBlock, type Carry } from './rich'
 
 /** A place in the document: a block, and a character offset into its source. */
 export type Pos = { block: number; offset: number }
@@ -246,6 +246,20 @@ function wrapText(blocks: readonly Block[], from: Pos, to: Pos, delimiter: strin
  * blocks each block's part is coloured on its own, as a mark is.
  */
 export function colorSelection(blocks: readonly Block[], from: Pos, to: Pos, color: string | null, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Wrapped | null {
+  return paintSelection(blocks, from, to, color ? { add: colorMark(color) } : { remove: 'color' }, atoms)
+}
+
+/**
+ * Put a colour behind the selected words, or none with `null`. Yellow is the
+ * highlight, `==words==`, so a highlight and a background are one choice and
+ * either gives way to the other.
+ */
+export function backgroundSelection(blocks: readonly Block[], from: Pos, to: Pos, color: string | null, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Wrapped | null {
+  if (!color) return paintSelection(blocks, from, to, { remove: ['background', 'highlight'] }, atoms)
+  return paintSelection(blocks, from, to, color === 'yellow' ? { add: HIGHLIGHT, remove: 'background' } : { add: backgroundMark(color), remove: 'highlight' }, atoms)
+}
+
+function paintSelection(blocks: readonly Block[], from: Pos, to: Pos, change: Parameters<typeof markRange>[3], atoms: readonly AtomSyntax[]): Wrapped | null {
   const [a, b] = order(from, to)
   let next = [...blocks], anchor = a, focus = b, changed = false
   for (let index = b.block; index >= a.block; index--) {
@@ -254,7 +268,7 @@ export function colorSelection(blocks: readonly Block[], from: Pos, to: Pos, col
     const start = index === a.block ? Math.max(a.offset, block.prefix) : block.prefix
     const end = index === b.block ? b.offset : block.source.length
     if (end <= start) continue
-    const marked = markRange(block, start, end, color ? { add: colorMark(color) } : { remove: 'color' }, atoms)
+    const marked = markRange(block, start, end, change, atoms)
     if (marked.source === block.source) continue
     next = setSource(next, index, marked.source).blocks
     changed = true

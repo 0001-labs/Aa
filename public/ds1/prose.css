@@ -171,7 +171,7 @@
   box-shadow: 0 1px var(--ds-border-color);
 }
 
-/* A table's row is two squares, ruled by a hairline under it. A wide table
+/* A table's row is one square, ruled by a hairline under it. A wide table
    scrolls on its own rather than widening the page. */
 [data-ds-prose] :where(table):not(:where([data-ds-not-prose] *)) {
   display: block;
@@ -184,7 +184,7 @@
 }
 
 [data-ds-prose] :where(th, td):not(:where([data-ds-not-prose] *)) {
-  padding: calc(var(--ds-unit) / 2);
+  padding: 0 calc(var(--ds-unit) / 2);
   border: 0;
   box-shadow: inset 0 -1px var(--ds-border-color);
   text-align: start;
