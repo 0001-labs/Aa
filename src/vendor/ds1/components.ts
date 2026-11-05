@@ -3,5 +3,6 @@ export * from './2-core/ds-button';
 export * from './2-core/ds-input';
 export * from './3-unit/ds-menu';
 export * from './4-page/ds-overlay';
+export * from './4-page/ds-page';
 export * from './3-unit/ds-select';
 export * from './3-unit/ds-table-of-contents';

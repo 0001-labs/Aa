@@ -167,6 +167,17 @@ export function mountFront(root: HTMLElement) {
   const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
   const panels = Array.from(root.querySelectorAll<HTMLElement>('[role="tabpanel"]'));
   const drawn = new Set<string>();
+  // The divider stays where it was left, in both tabs and across visits, as Reach's does.
+  const panes = Array.from(root.querySelectorAll<HTMLElement & { split: number }>('ds-page'));
+  try {
+    const saved = Number(localStorage.getItem('aa-playground-split'));
+    if (saved >= 0.1 && saved <= 0.9) for (const pane of panes) pane.split = saved;
+  } catch { /* Private browsing may deny storage. */ }
+  for (const pane of panes) pane.addEventListener('ds-page-resize', event => {
+    const { split } = (event as CustomEvent<{ split: number }>).detail;
+    for (const other of panes) other.split = split;
+    try { localStorage.setItem('aa-playground-split', String(split)); } catch { /* Private browsing may deny storage. */ }
+  });
   const choose = (tab: HTMLButtonElement, focus = false) => {
     for (const other of tabs) { const on = other === tab; other.setAttribute('aria-selected', String(on)); other.tabIndex = on ? 0 : -1; }
     for (const panel of panels) panel.hidden = panel.id !== tab.getAttribute('aria-controls');

@@ -18,14 +18,16 @@ import commentIcon from '../../../src/icons/comment.svg?raw';
       <span class="split" role="group" aria-label="History"><button data-front="undo">Undo</button><button data-front="redo">Redo</button></span>
       <button data-front="comments" class="with-icon" aria-pressed="false"><span class="icon" aria-hidden="true" set:html={commentIcon}></span>Open comments</button>
     </div>
-    <div class="panes">
-      <div class="front-editor"></div>
-      <p class="label">What it stores</p>
-      <div class="stored">
-        <aside class="front-comments" hidden></aside>
-        <pre class="front-source"></pre>
+    <ds-page class="panes" layout="split" resizable split="0.6">
+      <div slot="nav" class="front-editor"></div>
+      <div class="pane">
+        <p class="label">What it stores</p>
+        <div class="stored">
+          <aside class="front-comments" hidden></aside>
+          <pre class="front-source"></pre>
+        </div>
       </div>
-    </div>
+    </ds-page>
     <div class="shared">
       <div><div class="bar"><p class="name">Shared editing</p><button data-front="share">Try two editors</button></div><div class="front-shared-first"></div></div>
       <div><div class="bar"><p class="name">Second editor</p></div><div class="front-shared-second"></div></div>
@@ -38,18 +40,21 @@ import commentIcon from '../../../src/icons/comment.svg?raw';
       <span class="split" role="group" aria-label="History"><button data-front="undo">Undo</button><button data-front="redo">Redo</button></span>
       <button data-front="comments" class="with-icon" aria-pressed="false"><span class="icon" aria-hidden="true" set:html={commentIcon}></span>Open comments</button>
     </div>
-    <div class="panes">
-      <div class="front-editor"></div>
-      <p class="label">What it stores</p>
-      <div class="stored">
-        <aside class="front-comments" hidden></aside>
-        <pre class="front-source"></pre>
+    <ds-page class="panes" layout="split" resizable split="0.6">
+      <div slot="nav" class="front-editor"></div>
+      <div class="pane">
+        <p class="label">What it stores</p>
+        <div class="stored">
+          <aside class="front-comments" hidden></aside>
+          <pre class="front-source"></pre>
+        </div>
       </div>
-    </div>
+    </ds-page>
   </section>
 </div>
 
 <script>
+  import '../../../src/vendor/ds1/4-page/ds-page';
   import { mountFront } from '../lib/front';
   const root = document.querySelector<HTMLElement>('[data-front-root]');
   if (root) mountFront(root);
@@ -69,11 +74,9 @@ import commentIcon from '../../../src/icons/comment.svg?raw';
   .shared .name { margin: 0; font-family: var(--typeface-medium, var(--ds-typeface-medium)); }
   .label { margin: 0 0 var(--grid); }
   /* The page and what it stores start on the same line; the label stands over the Markdown alone. */
-  .panes { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-areas: ". label" "editor stored"; column-gap: calc(2 * var(--grid)); }
-  .front-editor { grid-area: editor; }
-  .label { grid-area: label; }
-  .stored { grid-area: stored; }
-  @media (max-width: 1100px) { .panes { grid-template-columns: minmax(0, 1fr); grid-template-areas: "editor" "label" "stored"; } .label { margin-top: calc(2 * var(--grid)); } }
+  /* Design system 1's split, as Reach has it: its divider moves, on whole squares. The page's own padding is the site's. */
+  .panes { display: block; min-width: 0; }
+  .panes::part(page) { padding: 0; }
   .front-editor { min-width: 0; min-height: calc(20 * var(--grid)); }
   .front-comments { margin-bottom: calc(2 * var(--grid)); color: var(--ds-text-color); }
   .front-comments[hidden] { display: none; }

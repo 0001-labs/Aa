@@ -45,7 +45,8 @@
           "input",
           "select",
           "menu",
-          "overlay"
+          "overlay",
+          "page"
         ],
         "react": false
       }
