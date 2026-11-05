@@ -19,6 +19,11 @@ for (const name of engines) {
   const grip = at => page.evaluate(at => { const r = document.querySelectorAll('.ds-table-column-resize')[at].getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } }, at)
 
   await open()
+  check('editor resize styles leave sibling native-table handles alone', await page.evaluate(() => {
+    const handle = document.createElement('span'); handle.className = 'ds-table-column-resize';
+    document.body.append(handle);
+    const untouched = getComputedStyle(handle).position === 'static'; handle.remove(); return untouched;
+  }))
   check('a row is one square high', await page.evaluate(() => [...document.querySelectorAll('.aa-table-row')].every(row => row.getBoundingClientRect().height === 20)))
   check('a table says nothing of widths until one is set', await page.evaluate(() => !document.querySelector('.aa-block[data-kind=table]').style.getPropertyValue('--aa-table-columns')))
   await page.setViewportSize({ width: 760, height: 500 })

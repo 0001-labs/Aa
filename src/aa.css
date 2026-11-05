@@ -455,10 +455,10 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
 @media (prefers-reduced-motion: reduce) { .aa-block[data-kind="table"][data-settling] .aa-table-row { transition: none; } }
 /* A column's edge, as Design system 1's tables have it (.ds-table-column-resize in its table.css): a square wide to press, a hairline to see. */
 .aa-table-cell:has(> .ds-table-column-resize) { overflow: visible; }
-.ds-table-column-resize { position: absolute; z-index: 3; inset-block-start: 0; inset-inline-end: calc(var(--aa-unit) / -2); width: var(--aa-unit); height: var(--ds-table-resize-height, var(--aa-unit)); cursor: col-resize; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; }
-.ds-table-column-resize::after { content: ""; position: absolute; inset-block-start: 0; inset-inline-start: calc(50% - 1px); width: 1px; height: 100%; background: var(--ds-focus-ring, currentColor); opacity: 0; pointer-events: none; transition: opacity 0.14s ease-out; }
-.ds-table-column-resize:is(:focus, [data-resizing])::after { opacity: 1; }
-@media (hover: hover) { .ds-table-column-resize:hover::after { opacity: 1; } }
+.aa-table-cell > .ds-table-column-resize { position: absolute; z-index: 3; inset-block-start: 0; inset-inline-end: calc(var(--aa-unit) / -2); width: var(--aa-unit); height: var(--ds-table-resize-height, var(--aa-unit)); cursor: col-resize; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; }
+.aa-table-cell > .ds-table-column-resize::after { content: ""; position: absolute; inset-block-start: 0; inset-inline-start: calc(50% - 1px); width: 1px; height: 100%; background: var(--ds-focus-ring, currentColor); opacity: 0; pointer-events: none; transition: opacity 0.14s ease-out; }
+.aa-table-cell > .ds-table-column-resize:is(:focus, [data-resizing])::after { opacity: 1; }
+@media (hover: hover) { .aa-table-cell > .ds-table-column-resize:hover::after { opacity: 1; } }
 .aa-table-cell:last-child > .ds-table-column-resize { inset-inline-end: 0; }
 .aa-table-cell:last-child > .ds-table-column-resize::after { inset-inline-start: auto; inset-inline-end: 0; }
 .aa-block[data-readonly="true"] .ds-table-column-resize { display: none; }
