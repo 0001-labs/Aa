@@ -471,18 +471,23 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       field.type = 'text'
       field.className = 'aa-tab-field'
       field.value = tabs[index].name
+      field.size = 1
       field.setAttribute('aria-label', word('Tab name'))
-      field.size = Math.max(1, tabs[index].name.length || 5)
+      // The field stands over its own words, unseen and holding their exact width, so nothing moves as it opens or closes, and the row grows only as letters do.
+      const shown = words.textContent ?? ''
+      const hold = () => { words.dataset.editing = field.value || shown }
       let done = false
       const finish = (keep: boolean) => {
         if (done) return
         done = true
         const name = field.value.trim()
-        field.replaceWith(words)
+        field.remove()
+        delete words.dataset.editing
+        words.textContent = shown
         if (keep && name !== tabs[index].name) { tabs = tabs.map((tab, at) => at === index ? { ...tab, name } : tab); changed(); buildRow() }
         row.querySelector<HTMLButtonElement>(`[data-tab="${index}"]`)?.focus({ preventScroll: true })
       }
-      field.addEventListener('input', () => { field.size = Math.max(1, field.value.length || 1) })
+      field.addEventListener('input', hold)
       field.addEventListener('keydown', event => {
         event.stopPropagation()
         if (event.key === 'Enter') { event.preventDefault(); finish(true) }
@@ -491,7 +496,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       field.addEventListener('blur', () => finish(true))
       field.addEventListener('pointerdown', event => event.stopPropagation())
       field.addEventListener('click', event => event.stopPropagation())
-      words.replaceWith(field)
+      hold()
+      words.replaceChildren(field)
       field.focus(); field.select()
     }
     const show = (index: number, focus = false) => {

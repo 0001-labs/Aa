@@ -861,9 +861,14 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-tab { flex: none; display: inline-flex; align-items: flex-end; gap: calc(4px * var(--aa-sf)); box-sizing: border-box; height: calc(16px * var(--aa-sf)); margin: 0; padding: 0 calc(4px * var(--aa-sf)); border: 0; border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: none; color: var(--ds-text-color-muted, GrayText); font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf)); white-space: nowrap; cursor: pointer; -webkit-user-select: none; user-select: none; }
 .aa-tab[aria-selected="true"] { color: var(--ds-text-color, inherit); }
 .aa-tab:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: -2px; }
+/* A colour emoji stands taller than its letters, and the row clips what passes its sixteen: it is set a size down to clear them. */
+.aa-tab-icon { font-size: calc(12px * var(--aa-sf)); line-height: calc(16px * var(--aa-sf)); }
 .aa-tab-add { color: var(--ds-text-color-muted, GrayText); }
 .aa-tab-add:hover, .aa-tab-add:focus-visible { color: var(--ds-text-color, inherit); }
-.aa-tab-field { box-sizing: border-box; height: calc(16px * var(--aa-sf)); min-width: calc(2 * var(--aa-unit)); margin: 0; padding: 0; border: 0; border-bottom: 1px solid currentColor; border-radius: 0; background: none; color: var(--ds-text-color, inherit); font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf)); outline: none; }
+/* Renaming a tab moves nothing: its words stay, unseen, holding the exact width, and the field stands over them. */
+.aa-tab-name[data-editing] { display: inline-grid; }
+.aa-tab-name[data-editing]::after { content: attr(data-editing); grid-area: 1 / 1; visibility: hidden; white-space: pre; }
+.aa-tab-field { grid-area: 1 / 1; box-sizing: border-box; width: 100%; min-width: 1px; height: calc(16px * var(--aa-sf)); margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--ds-text-color, inherit); font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf)); outline: none; }
 .aa-tab-panel { margin-top: var(--aa-unit); min-height: var(--aa-unit); }
 .aa-block[data-readonly="true"] .aa-tab { cursor: default; }
 
