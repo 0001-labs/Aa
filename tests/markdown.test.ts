@@ -53,15 +53,16 @@ describe('blockRuns', () => {
     expect(show('*i* and _i_')).toEqual(['syntax:*', 'text:i/i', 'syntax:*', 'text: and ', 'syntax:_', 'text:i/i', 'syntax:_'])
     expect(show('`x` ~~y~~')).toEqual(['syntax:`', 'text:x/c', 'syntax:`', 'text: ', 'syntax:~~', 'text:y/s', 'syntax:~~'])
     expect(show('[d](e)')).toEqual(['syntax:[', 'text:d/e', 'syntax:](e)'])
-    expect(show('***both***')).toEqual(['syntax:**', 'syntax:*', 'text:both/b/i', 'syntax:*', 'syntax:**'])
+    expect(show('***both***')).toEqual(['syntax:*', 'syntax:**', 'text:both/b/i', 'syntax:**', 'syntax:*'])
   })
   it('marks underline and text colour, written as Notion writes them', () => {
     const marked = (source: string) => runs(source).map(run => `${run.kind}:${source.slice(run.from, run.to)}${run.underline ? '/u' : ''}${run.color ? `/${run.color}` : ''}${run.bold ? '/b' : ''}`)
     expect(marked('a <u>b</u>')).toEqual(['text:a ', 'syntax:<u>', 'text:b/u', 'syntax:</u>'])
     expect(marked('<span color="red">**r**</span>')).toEqual(['syntax:<span color="red">', 'syntax:**', 'text:r/red/b', 'syntax:**', 'syntax:</span>'])
-    // An unknown colour, or a tag never closed, is only words.
-    expect(marked('<span color="teal">t</span>')).toEqual(['text:<span color="teal">t</span>'])
-    expect(marked('<u>open')).toEqual(['text:<u>open'])
+    // A tag is never words: a colour Aa has no ink for reads as the text's own, and one left open reads on to the block's end.
+    expect(marked('<span color="teal">t</span>')).toEqual(['syntax:<span color="teal">', 'text:t/teal', 'syntax:</span>'])
+    expect(marked('<u>open')).toEqual(['syntax:<u>', 'text:open/u'])
+    expect(marked('stray</span> end')).toEqual(['text:stray', 'syntax:</span>', 'text: end'])
   })
   it('leaves snake_case and lone stars alone', () => {
     expect(show('snake_case_name')).toEqual(['text:snake_case_name'])

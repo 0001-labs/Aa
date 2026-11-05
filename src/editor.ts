@@ -8,14 +8,15 @@ import { exportMarkdown, hasCommentSource } from './comments-markdown'
  */
 
 import { IMAGE, EQUATION, blockRuns, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type CalloutColor, type Tab } from './markdown'
-import { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
+import { fromMarkdown, toMarkdown, replaceRange, setSource, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
-import { renderBlock, readBlock, offsetIn, pointAt, revealKey, atomElement, type Reveal, type Decoration } from './render'
+import { isWritten, markOf, wordEdges, wornAt, editBlock, type Carry } from './rich'
+import { renderBlock, readBlock, offsetIn, pointAt, revealKey, stillShows, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout, setCallout } from './document'
 import { editTable, fromTSV, tableAlignments, tableRows, writeTable, type TableAction } from './table'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
-import { selectAcrossBlocks } from './span'
+import { holdingAcross, releaseAcross, selectAcrossBlocks, selectFromTo } from './span'
 import { createCorrection, type Corrector } from './correction'
 import { shimmer } from './shimmer'
 import { drawStyles } from './styles'
@@ -248,6 +249,21 @@ export type Editor = {
 }
 
 type Selection2 = { anchor: Pos; focus: Pos }
+
+/**
+ * The smallest replacement that turns `before` into `after`, the caret standing
+ * at `caret` in `after`: what was typed ends at the caret, which settles where
+ * in a row of like characters it went (a star typed beside bold's stars).
+ */
+export function textChange(before: string, after: string, caret: number): { from: number; to: number; text: string } {
+  let tail = 0
+  const tailMost = Math.min(before.length, after.length - Math.min(caret, after.length))
+  while (tail < tailMost && before[before.length - 1 - tail] === after[after.length - 1 - tail]) tail++
+  let head = 0
+  const headMost = Math.min(before.length - tail, after.length - tail)
+  while (head < headMost && before[head] === after[head]) head++
+  return { from: head, to: before.length - tail, text: after.slice(head, after.length - tail) }
+}
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
@@ -591,19 +607,24 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     return (block.kind === 'paragraph' || block.kind === 'bullet') && /[^\s][.!?]["”’)]? $/.test(block.source)
   }
 
+  // Only the block with the caret ever says anything, so only it and the one that last did are touched.
+  let saying: HTMLElement | null = null, hinting: HTMLElement | null = null
   const showPlaceholder = (selection?: Selection2 | null) => {
     if (selection === undefined) selection = readSelection()
     const sentence = atSentence(selection) ? selection!.focus.block : -1
     const caret = selection && !selected && !readOnly && comparePos(selection.anchor, selection.focus) === 0 ? selection.focus.block : -1
-    elements().forEach((element, index) => {
-      const block = blocks[index]
-      const text = blocks.length === 1 && !block.source && placeholder ? placeholder : index === caret && !block.source && block.kind === 'paragraph' ? blockPlaceholder : ''
-      if (text) element.dataset.placeholder = text
-      else if (element.dataset.placeholder !== undefined) delete element.dataset.placeholder
-      // At a sentence's end, only the AI is offered, never the commands.
-      if (index === sentence) element.dataset.hint = word('Press space for AI')
-      else if (element.dataset.hint !== undefined) delete element.dataset.hint
-    })
+    const index = blocks.length === 1 ? 0 : caret
+    const block = blocks[index]
+    const text = !block || block.source ? '' : blocks.length === 1 && placeholder ? placeholder : index === caret && block.kind === 'paragraph' ? blockPlaceholder : ''
+    const element = text ? host.children[index] as HTMLElement | undefined : undefined
+    if (saying && saying !== element) delete saying.dataset.placeholder
+    saying = element ?? null
+    if (element && element.dataset.placeholder !== text) element.dataset.placeholder = text
+    // At a sentence's end, only the AI is offered, never the commands.
+    const hinted = sentence >= 0 ? host.children[sentence] as HTMLElement | undefined : undefined
+    if (hinting && hinting !== hinted) delete hinting.dataset.hint
+    hinting = hinted ?? null
+    if (hinted) hinted.dataset.hint = word('Press space for AI')
   }
 
   const renderAll = () => {
@@ -613,8 +634,14 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     sweep()
   }
 
-  /** Bring the DOM to the new blocks, touching only the blocks that changed. */
-  const syncDom = (next: Block[]) => {
+  /**
+   * Bring the DOM to the new blocks, touching only the blocks that changed.
+   * A block that is still one block keeps its element, so the focus, a phone's
+   * keyboard and the browser's spelling stay with it; one the browser has
+   * already typed the same words into is not drawn at all. True when nothing
+   * had to be drawn, so the caret is where the browser left it.
+   */
+  const syncDom = (next: Block[]): boolean => {
     const old = blocks
     const els = elements()
     let start = 0
@@ -622,17 +649,29 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     let endOld = old.length, endNew = next.length
     while (endOld > start && endNew > start && old[endOld - 1] === next[endNew - 1]) { endOld--; endNew-- }
     blocks = next
-    // The same number of blocks changed as were there: each fresh element takes over its atoms, and the focus in one of them with its selection.
+    // The same number of blocks changed as were there: each keeps its element, and its atoms, and the focus in one of them with its selection.
     const same = endOld - start === endNew - start
+    let untouched = same
     const selection = document.getSelection()
     const focused = document.activeElement as HTMLElement | null
     const saved = same && focused && host.contains(focused) && focused.closest('.aa-atom')
       ? { focused, ...(selection?.rangeCount ? { anchorNode: selection.anchorNode, anchorOffset: selection.anchorOffset, focusNode: selection.focusNode, focusOffset: selection.focusOffset } : {}) }
       : null
-    const fresh = next.slice(start, endNew).map((block, i) => makeElement(block, same ? els[start + i] : undefined))
-    const anchor = els[endOld] ?? null
-    for (let i = start; i < endOld; i++) els[i].remove()
-    for (const element of fresh) host.insertBefore(element, anchor)
+    if (same) {
+      for (let i = 0; i < endNew - start; i++) {
+        const element = els[start + i], was = old[start + i], block = next[start + i]
+        if (!decorations.length && stillShows(element, was, block, atoms)) continue
+        untouched = false
+        const staying = block.kind !== 'table' && was.kind !== 'table'
+        if (staying) draw(element, block, null)
+        else element.replaceWith(makeElement(block, element))
+      }
+    } else {
+      const fresh = next.slice(start, endNew).map(block => makeElement(block))
+      const anchor = els[endOld] ?? null
+      for (let i = start; i < endOld; i++) els[i].remove()
+      for (const element of fresh) host.insertBefore(element, anchor)
+    }
     if (saved && host.contains(saved.focused) && document.activeElement !== saved.focused) {
       saved.focused.focus({ preventScroll: true })
       if (saved.anchorNode && saved.focusNode && saved.focused.contains(saved.focusNode)) {
@@ -643,6 +682,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     showPlaceholder()
     sweep()
     marks?.draw()
+    return untouched
   }
 
   // ----- the selection -----
@@ -681,7 +721,10 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const selection = window.getSelection()
     if (!selection) return
     settingSelection = true
-    try { selection.setBaseAndExtent(a.node, a.offset, f.node, f.offset) } finally { settingSelection = false }
+    try {
+      if (anchor.block === focus.block && holdingAcross(host)) { releaseAcross(host); els[focus.block].focus({ preventScroll: true }) }
+      selectFromTo(host, selection, a, f)
+    } finally { settingSelection = false }
   }
 
   const revealFor = (index: number, selection: Selection2 | null): Reveal => {
@@ -699,7 +742,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     let changed = false
     blocks.forEach((block, index) => {
       const reveal = revealFor(index, selection)
-      if (els[index].dataset.reveal === revealKey(block, reveal, atoms)) return
+      if (els[index].dataset.reveal === revealKey(block, reveal, atoms)) { if (reveal || els[index].hasAttribute('data-active')) els[index].toggleAttribute('data-active', !!reveal); return }
       draw(els[index], block, reveal)
       changed = true
     })
@@ -753,11 +796,13 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const numbered = renumber(next)
     const adjust = (pos: Pos) => ({ ...pos, offset: Math.max(0, pos.offset + numbered[pos.block].prefix - next[pos.block].prefix) })
     anchor = adjust(anchor); focus = adjust(focus)
-    syncDom(numbered)
-    setSelection(anchor, focus)
+    // The browser's own typing left the caret right where it belongs: setting it again would only wake everything that listens for it.
+    const drawn = !syncDom(numbered)
+    const now = drawn ? null : readSelection()
+    if (drawn || !now || comparePos(now.anchor, anchor) !== 0 || comparePos(now.focus, focus) !== 0) setSelection(anchor, focus)
     applyReveal({ anchor, focus })
     showPlaceholder({ anchor, focus })
-    keepCaretInView(focused)
+    if (drawn) keepCaretInView(focused)
     if (!transactionDepth) {
       history.record(snapshot(anchor, focus), kind)
       options.onChange?.(toMarkdown(blocks))
@@ -785,16 +830,36 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   const undo = () => { if (readOnly) return false; correction?.undoing(); if (historyProvider) return historyProvider.undo(); const state = history.undo(); if (state) restore(state); return !!state }
   const redo = () => { if (readOnly) return false; correction?.stop(); if (historyProvider) return historyProvider.redo(); const state = history.redo(); if (state) restore(state); return !!state }
 
+  /**
+   * What the next letters typed wear beyond what stands before the caret: ⌘B
+   * with nothing selected, or a space typed at bold's end, which is written
+   * outside the bold though the next word goes on in it. It stays only while
+   * the caret does.
+   */
+  let carry: (Carry & { block: Block; offset: number }) | null = null
+  const carrying = (anchor: Pos, focus: Pos, change: Carry | undefined) => {
+    if (!change || comparePos(anchor, focus) !== 0) return
+    carry = { ...change, block: blocks[focus.block], offset: focus.offset }
+  }
+
   /** The block the browser just changed, read back into the document. */
   const readBack = (element: HTMLElement) => {
     const index = elements().indexOf(element)
     if (index < 0) return
     const raw = readBlock(element)
-    const text = raw.replace(/^\[\] /, '- [ ] ')
-    if (text === blocks[index].source) return
-    const kind: ChangeKind = text.length < blocks[index].source.length ? 'delete' : 'type'
+    let text = raw.replace(/^\[\] /, '- [ ] ')
+    const old = blocks[index]
+    if (text === old.source) return
+    const kind: ChangeKind = text.length < old.source.length ? 'delete' : 'type'
     const selection = readSelection()
-    const { blocks: next, caret } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, text)
+    // The browser changed letters. Its change, found exactly, goes through the same door as every other, so a pair it parted is kept.
+    const held = carry?.block === old ? carry : null
+    carry = null
+    const change = textChange(old.source, text, selection?.focus.block === index ? selection.focus.offset : text.length)
+    const edit = text === raw ? editBlock(old, change.from, change.to, change.text, atoms, held && change.from === held.offset && change.to === held.offset ? held : null) : null
+    if (edit) text = edit.source
+    const { blocks: next, caret } = setSource(blocks, index, text, edit?.caret)
+    if (edit) { commit(next, caret, caret, kind); carrying(caret, caret, edit.carry); return }
     const within = (pos: Pos): Pos => pos.block !== index ? { ...pos, block: pos.block + (next.length - blocks.length) * (pos.block > index ? 1 : 0) } : mapOffset(next, index, caret, text, pos.offset)
     const adjust = (pos: Pos) => text !== raw && pos.block === index ? { ...pos, offset: pos.offset + text.length - raw.length } : pos
     const anchor = selection ? within(adjust(selection.anchor)) : caret
@@ -815,8 +880,9 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   }
 
   const insert = (selection: Selection2, text: string, kind: ChangeKind = 'edit') => {
-    const { blocks: next, caret } = replaceRange(blocks, selection.anchor, selection.focus, text)
+    const { blocks: next, caret, carry: carried } = replaceRange(blocks, selection.anchor, selection.focus, text, atoms)
     commit(next, caret, caret, kind)
+    carrying(caret, caret, carried)
   }
 
   // ----- correction -----
@@ -876,18 +942,20 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       const cell = tableRows(block.source).flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
       return !!cell && (direction === 'backward' ? a.offset === cell.from : a.offset === cell.to)
     }
+    // A block's edge is where its words end: a caret against bold at the start of a line stands after hidden stars, and Backspace there must still work.
+    const edges = isWritten(block) ? wordEdges(block, atoms) : { start: 0, end: block.source.length }
     if (direction === 'backward') {
-      if (a.offset <= block.prefix) {
+      if (a.offset <= Math.max(block.prefix, edges.start)) {
         const change = liftPrefix(blocks, a.block)
         if (change) { commit(change.blocks, change.caret, change.caret, 'edit'); return true }
       }
-      if (a.offset !== 0) return false
-      const change = joinWithPrevious(blocks, a.block)
+      if (a.offset > edges.start) return false
+      const change = joinWithPrevious(blocks, a.block, atoms)
       if (change) commit(change.blocks, change.caret, change.caret, 'edit')
       return true
     }
-    if (a.offset !== block.source.length) return false
-    const change = joinWithNext(blocks, a.block)
+    if (a.offset < edges.end) return false
+    const change = joinWithNext(blocks, a.block, atoms)
     if (change) commit(change.blocks, change.caret, change.caret, 'edit')
     return true
   }
@@ -1003,13 +1071,22 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (soft) { insert(selection, '\n'); return }
     const [a, b] = order(selection.anchor, selection.focus)
     let current = blocks, pos = a
-    if (comparePos(a, b) !== 0) ({ blocks: current, caret: pos } = replaceRange(blocks, a, b, ''))
-    const change = splitAt(current, pos)
+    if (comparePos(a, b) !== 0) ({ blocks: current, caret: pos } = replaceRange(blocks, a, b, '', atoms))
+    const change = splitAt(current, pos, atoms)
     commit(change.blocks, change.caret, change.caret, 'edit')
   }
 
   const wrap = (selection: Selection2, delimiter: string, closing = delimiter) => {
-    const wrapped = wrapSelection(blocks, selection.anchor, selection.focus, delimiter, closing)
+    const mark = markOf(delimiter, closing)
+    // With nothing selected a mark waits for the next letters, rather than writing `****` into the line.
+    if (mark && delimiter !== '[' && comparePos(selection.anchor, selection.focus) === 0) {
+      const { block, offset } = selection.focus
+      const held = carry?.block === blocks[block] && carry.offset === offset ? carry : null
+      if (held?.add.some(each => each.key === mark.key) || held?.remove.includes(mark.key)) { carry = null; return }
+      carry = { add: [...(held?.add ?? []), ...(wornAt(blocks[block], offset, mark.key, atoms) ? [] : [mark])], remove: [...(held?.remove ?? []), ...(wornAt(blocks[block], offset, mark.key, atoms) ? [mark.key] : [])], back: 0, block: blocks[block], offset }
+      return
+    }
+    const wrapped = wrapSelection(blocks, selection.anchor, selection.focus, delimiter, closing, atoms)
     if (wrapped) commit(wrapped.blocks, wrapped.anchor, wrapped.focus, 'edit')
   }
 
@@ -1127,7 +1204,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   }
 
   const dismiss = () => {
-    comments?.close(); marks?.clear(); clearBlocks()
+    comments?.close(); marks?.clear(); clearBlocks(); releaseAcross(host)
     const native = host.ownerDocument.getSelection()
     if (native && (host.contains(native.anchorNode) || host.contains(native.focusNode))) native.removeAllRanges()
     const active = host.ownerDocument.activeElement
@@ -1156,6 +1233,14 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (!selection) return
     const key = event.key.toLowerCase()
     plainPaste = false
+    // A selection across blocks is the editor's, whichever browser: Safari keeps
+    // its typing inside the first block, and would leave the rest selected and whole.
+    const across = selection.anchor.block !== selection.focus.block
+    if (across && !selected && !mod && !event.ctrlKey) {
+      if (event.key === 'Backspace' || event.key === 'Delete') { event.preventDefault(); insert(selection, ''); return }
+      if (event.key === 'Process' || event.keyCode === 229) { insert(selection, ''); return }
+      if (event.key.length === 1 && !event.altKey) { event.preventDefault(); insert(selection, event.key, 'type'); return }
+    }
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
     if (mod && event.shiftKey && !event.altKey && key === 'm' && comments) { event.preventDefault(); comments.start(); return }
     if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
@@ -1276,11 +1361,12 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (comparePos(selection.anchor, selection.focus) !== 0) return
     const { block: index, offset } = selection.focus
     const element = elements()[index]
-    if (event.key === 'ArrowLeft' && offset === 0 && index > 0) {
+    const edges = isWritten(blocks[index]) ? wordEdges(blocks[index], atoms) : { start: 0, end: blocks[index].source.length }
+    if (event.key === 'ArrowLeft' && offset <= edges.start && index > 0) {
       event.preventDefault()
       const pos = { block: index - 1, offset: blocks[index - 1].source.length }
       setSelection(pos); applyReveal({ anchor: pos, focus: pos }); keepCaretInView()
-    } else if (event.key === 'ArrowRight' && offset === blocks[index].source.length && index + 1 < blocks.length) {
+    } else if (event.key === 'ArrowRight' && offset >= edges.end && index + 1 < blocks.length) {
       event.preventDefault()
       const pos = { block: index + 1, offset: startOf(index + 1) }
       setSelection(pos); applyReveal({ anchor: pos, focus: pos }); keepCaretInView()
@@ -1303,7 +1389,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const selection = readSelection()
     if (!selection || !event.clipboardData || comparePos(selection.anchor, selection.focus) === 0) return
     event.preventDefault()
-    event.clipboardData.setData('text/plain', sliceMarkdown(blocks, selection.anchor, selection.focus))
+    event.clipboardData.setData('text/plain', sliceMarkdown(blocks, selection.anchor, selection.focus, atoms))
     if (event.type === 'cut' && !readOnly) {
       if (selected) changeBlocks('delete', selected)
       else insert(selection, '')
@@ -1382,7 +1468,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (element && element.parentElement === host) readBack(element)
     if (pendingDecorations) redecorate(pendingDecorations)
   }
-  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !ownControl() && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { applyReveal(); showPlaceholder(); host.dispatchEvent(new Event('aa-selectionchange')); correction?.moved() } }
+  const onSelectionChange = () => { if (!destroyed && !composing && !settingSelection && !ownControl() && !(window.getSelection()?.anchorNode?.parentElement?.closest('.aa-caption'))) { if (carry) { const at = readSelection(); if (!at || at.focus.offset !== carry.offset || at.anchor.offset !== carry.offset || blocks[at.focus.block] !== carry.block) carry = null } if (holdingAcross(host) && !selected) { const at = readSelection(); if (at && at.anchor.block === at.focus.block) setSelection(at.anchor, at.focus) } applyReveal(); showPlaceholder(); host.dispatchEvent(new Event('aa-selectionchange')); correction?.moved() } }
   /**
    * An atom that edits itself where it is drawn (a diagram's board) hands
    * back its block's whole new source in `aa-atom-change`. The block is
@@ -1419,6 +1505,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     atom.dataset.source = source
     const next = [...blocks]
     next[index] = { ...blocks[index], source: readBlock(element) }
+    // Drawn anew with its new width, rather than kept as the block is drawn again.
+    atom.remove()
     const { blocks: drawn } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, next[index].source)
     clearBlocks()
     syncDom(renumber(drawn))
@@ -1809,7 +1897,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     },
     replace(start, end, text) {
       if (destroyed) return
-      const { blocks: next, caret } = replaceRange(blocks, posOf(Math.min(start, end)), posOf(Math.max(start, end)), text)
+      const { blocks: next, caret } = replaceRange(blocks, posOf(Math.min(start, end)), posOf(Math.max(start, end)), text, atoms)
       commit(next, caret, caret, 'edit')
       // Written from outside, by a picker or an upload, the editor may not have the focus to show the caret in.
       if (!host.contains(document.activeElement)) { elements()[caret.block]?.focus({ preventScroll: true }); setSelection(caret) }
@@ -1819,7 +1907,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     activeBlock() { const selection = readSelection(); if (!selection) return null; const index = selection.focus.block; return { index, block: blocks[index], start: offsetOf({ block: index, offset: 0 }), end: offsetOf({ block: index, offset: blocks[index].source.length }) } },
     selectBlocks,
     format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; if (mark === 'link') { insertLink(selection); return }; if (mark === 'underline') { wrap(selection, '<u>', '</u>'); return }; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark]) },
-    color(color) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const colored = colorSelection(blocks, selection.anchor, selection.focus, color); if (colored) commit(colored.blocks, colored.anchor, colored.focus, 'edit') },
+    color(color) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const colored = colorSelection(blocks, selection.anchor, selection.focus, color, atoms); if (colored) commit(colored.blocks, colored.anchor, colored.focus, 'edit') },
     turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
     blockAction(action) { if (readOnly) return; const selection = readSelection(); if (selection) changeBlocks(action, selected ?? select(blocks, selection.anchor.block, selection.focus.block)) },
     moveBlock(from, to, count = 1) {
@@ -1903,6 +1991,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     set correcting(value: boolean) { if (!correction || correction.enabled === value) return; correction.enabled = value; markSpelling(value) },
     destroy() {
       destroyed = true
+      releaseAcross(host)
       correction?.stop()
       for (const stop of shimmers) stop()
       shimmers.clear()

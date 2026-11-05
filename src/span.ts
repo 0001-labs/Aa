@@ -21,6 +21,33 @@ const EDGE = 24
 const OWN = 'button, input, textarea, select, video, audio, .aa-caption, [data-aa-interactive]'
 
 type Point = { node: Node; offset: number }
+
+export const holdingAcross = (host: HTMLElement) => host.hasAttribute('data-aa-across')
+
+/** Each block its own editable element again, the selection having come back within one. */
+export function releaseAcross(host: HTMLElement) {
+  if (!holdingAcross(host)) return
+  host.removeAttribute('data-aa-across')
+  host.removeAttribute('contenteditable')
+  for (const block of Array.from(host.children) as HTMLElement[]) if (block.contentEditable === 'inherit') block.contentEditable = 'true'
+}
+
+/**
+ * A selection set from one place in the writing to another. Safari will not
+ * hold a selection across two editable elements and clips it to the first, so
+ * where a browser does that the editor is one editable element for as long as
+ * the selection crosses blocks. Its keys are Aa's meanwhile, so the browser
+ * edits nothing, and `releaseAcross` gives each block back its own.
+ */
+export function selectFromTo(host: HTMLElement, selection: Selection, a: Point, f: Point) {
+  selection.setBaseAndExtent(a.node, a.offset, f.node, f.offset)
+  if (selection.focusNode === f.node && selection.anchorNode === a.node || !a.node.isConnected || !f.node.isConnected) return
+  host.setAttribute('data-aa-across', '')
+  host.contentEditable = 'true'
+  for (const block of Array.from(host.children) as HTMLElement[]) if (block.contentEditable === 'true') block.contentEditable = 'inherit'
+  host.focus({ preventScroll: true })
+  selection.setBaseAndExtent(a.node, a.offset, f.node, f.offset)
+}
 /** A place in the text kept as its block and its offset into the block's source, which outlives the block being drawn again. */
 type Place = { block: HTMLElement; offset: number }
 
@@ -66,7 +93,7 @@ export function selectAcrossBlocks(host: HTMLElement, readOnly: () => boolean): 
     const a = pointAt(anchor.block, anchor.offset), f = pointAt(focus.block, focus.offset)
     if (selection.anchorNode === a.node && selection.anchorOffset === a.offset && selection.focusNode === f.node && selection.focusOffset === f.offset) return
     setting = true
-    try { selection.setBaseAndExtent(a.node, a.offset, f.node, f.offset) } finally { setting = false }
+    try { selectFromTo(host, selection, a, f) } finally { setting = false }
   }
 
   /** The press selecting words: where it began, and, once it has reached another block, the selection it draws. */

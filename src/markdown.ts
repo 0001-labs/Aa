@@ -316,6 +316,12 @@ export type Run = {
   prefix?: true
   /** An atom's kind: the run is drawn as one thing, never letter by letter. */
   atom?: string
+  /** A bare address drawn as a link: `href` set with no brackets of its own in the text. */
+  autolink?: true
+  /** The backslash of an escaped character (`\\*`): hidden, and what it escapes reads as itself. */
+  escape?: true
+  /** A tag with no partner: hidden, as a tag is, but no pair for an edit to keep. */
+  lone?: true
 }
 
 /**
@@ -374,54 +380,233 @@ export const EQUATION = atomPattern('equation', /\$(?!\$)(?:\\.|[^$\n])+\$/)
 /** The atoms an editor reads unless it is given others. */
 export const DEFAULT_ATOMS: readonly AtomSyntax[] = [IMAGE, EQUATION]
 
-type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'href' | 'highlight' | 'color'>
+type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'href' | 'highlight' | 'color' | 'autolink'>
 
 /** The colours words can be written in, by Notion's names for them. */
 export const TEXT_COLORS = ['gray', 'red', 'orange', 'green', 'blue', 'purple'] as const
 export type TextColor = (typeof TEXT_COLORS)[number]
-/** The tags that open an underline or a colour, at a place in a line. */
-const TAG = /<u>|<span color="(gray|red|orange|green|blue|purple)">/y
+/**
+ * The tags that open an underline or a colour, at a place in a line. Any
+ * colour's name is read, so Notion's others come in as tags and never as words;
+ * one Aa has no ink for keeps the text's own.
+ */
+const TAG = /<u>|<span color="([a-z_]+)">/y
 
-const DELIMITERS = ['**', '__', '~~', '==', '*', '_'] as const
-const MARK_OF: Record<(typeof DELIMITERS)[number], 'bold' | 'strike' | 'italic' | 'highlight'> = { '**': 'bold', '__': 'bold', '~~': 'strike', '==': 'highlight', '*': 'italic', '_': 'italic' }
-const LINK = /^\[([^[\]]*)\]\(([^\s()]*)\)/
+const LINK = /\[([^[\]]*)\]\(([^\s()]*)\)/y
 const AUTOLINK = /(?:https?:\/\/|www\.)[^\s<>()]*[^\s<>().,;:!?'"]/g
+/** Characters a backslash can make plain, CommonMark's ASCII punctuation. */
+const ESCAPABLE = /[!-/:-@[-`{-~]/
 
-const isWord = (char: string | undefined) => !!char && /[\p{L}\p{N}]/u.test(char)
+const isWord = (char: string | undefined) => !!char && (/[A-Za-z0-9]/.test(char) || char > '\u007f' && /[\p{L}\p{N}]/u.test(char))
 const isSpace = (char: string | undefined) => !char || /\s/.test(char)
 
-/** How many of the delimiter's character stand in a row at `i`. */
-function runLength(text: string, i: number, char: string, end: number): number {
-  let r = 0
-  while (i + r < end && text[i + r] === char) r++
-  return r
+/** What a delimiter's character marks, with how many of it make the mark. */
+const EMPHASIS: Record<string, { one?: 'bold' | 'italic'; two: 'bold' | 'strike' | 'highlight' }> = {
+  '*': { one: 'italic', two: 'bold' }, _: { one: 'italic', two: 'bold' }, '~': { two: 'strike' }, '=': { two: 'highlight' },
 }
 
-function canOpen(text: string, i: number, d: string, end: number): boolean {
-  const r = runLength(text, i, d[0], end)
-  if (r < d.length || i + r >= end || isSpace(text[i + r])) return false
-  if (d[0] === '_' && isWord(text[i - 1])) return false
-  return true
+/** A row of one delimiter's character, and how the letters round it let it be used. */
+type Delimiters = {
+  at: number
+  length: number
+  char: string
+  /** Characters not yet used, left of them the closers' and right of them the openers'. */
+  left: number
+  right: number
+  opens: boolean
+  closes: boolean
+  /**
+   * Only an edit could have left these: a double mark standing apart from its
+   * words (`** words**`, `**words **`). Markdown does not read them, but a
+   * pair of them with the other side sound is plainly a mark, not two sets of
+   * stars, so it is drawn as one and the document heals on its next edit.
+   */
+  looseOpen: boolean
+  looseClose: boolean
+  used: { at: number; length: number; mark: 'bold' | 'italic' | 'strike' | 'highlight'; opening: boolean; group: [number, number] }[]
+}
+
+type Token =
+  | { type: 'break'; at: number; prefix: number }
+  | { type: 'code'; at: number; ticks: number; close: number }
+  | { type: 'atom'; at: number; length: number; name: string }
+  | { type: 'escape'; at: number }
+  | { type: 'delimiters'; run: Delimiters }
+  | { type: 'tag'; at: number; length: number; mark: 'underline' | 'color'; color?: string; closing: boolean; group: [number, number]; lone: boolean; id: number }
+  | { type: 'link'; at: number; href: string; close: number; end: number; group: [number, number] }
+  | { type: 'link-end'; at: number; end: number; group: [number, number] }
+
+/** How many characters a line's own prefix takes at a place: a quote's `> ` on each of its lines. */
+type LinePrefix = (at: number) => number
+
+/** Read a stretch of writing into what marks it, leaving the words between as they are. */
+function scan(text: string, start: number, end: number, atoms: readonly AtomSyntax[], linePrefix?: LinePrefix): Token[] {
+  const tokens: Token[] = []
+  let i = start
+  let lineStart = text.lastIndexOf('\n', start - 1) + 1
+  let line: string | null = null
+  let linkText = -1, linkEnd = -1
+  let link: Extract<Token, { type: 'link' }> | null = null
+  const lineOf = () => {
+    if (line === null) { const next = text.indexOf('\n', lineStart); line = text.slice(lineStart, next < 0 ? text.length : next) }
+    return line
+  }
+  while (i < end) {
+    if (i === linkText) {
+      tokens.push({ type: 'link-end', at: i, end: linkEnd, group: link!.group })
+      i = linkEnd
+      linkText = -1; link = null
+      continue
+    }
+    const char = text[i]
+    const limit = linkText >= 0 ? linkText : end
+    if (char === '\n') {
+      const prefix = linePrefix?.(i + 1) ?? 0
+      tokens.push({ type: 'break', at: i, prefix })
+      i += 1 + prefix
+      lineStart = text.lastIndexOf('\n', i - 1) + 1
+      line = null
+      continue
+    }
+    if (char === '\\' && i + 1 < limit && ESCAPABLE.test(text[i + 1])) {
+      tokens.push({ type: 'escape', at: i })
+      i += 2
+      continue
+    }
+    if (char === '`') {
+      let n = 1
+      while (text[i + n] === '`') n++
+      const ticks = '`'.repeat(n)
+      let close = text.indexOf(ticks, i + n)
+      while (close >= 0 && close + n < limit && text[close + n] === '`') {
+        let m = close
+        while (text[m] === '`') m++
+        close = text.indexOf(ticks, m)
+      }
+      if (close >= 0 && close + n <= limit && !(linePrefix && text.slice(i, close).includes('\n'))) {
+        tokens.push({ type: 'code', at: i, ticks: n, close })
+        i = close + n
+        continue
+      }
+      i += n
+      continue
+    }
+    if (linkText < 0 && atoms.length) {
+      let length = 0, name = ''
+      for (const atom of atoms) { length = atom.match(lineOf(), i - lineStart); if (length && i + length <= end) { name = atom.name; break }; length = 0 }
+      if (length) {
+        tokens.push({ type: 'atom', at: i, length, name })
+        i += length
+        continue
+      }
+    }
+    if (char === '[' && linkText < 0) {
+      LINK.lastIndex = i
+      const found = LINK.exec(text)
+      if (found && i + found[0].length <= end) {
+        link = { type: 'link', at: i, href: found[2], close: i + 1 + found[1].length, end: i + found[0].length, group: [i, i + found[0].length] }
+        tokens.push(link)
+        linkText = link.close; linkEnd = link.end
+        i++
+        continue
+      }
+    }
+    if (char === '<') {
+      TAG.lastIndex = i
+      const tag = TAG.exec(text)
+      if (tag && i + tag[0].length <= limit) {
+        tokens.push({ type: 'tag', at: i, length: tag[0].length, mark: tag[1] ? 'color' : 'underline', color: tag[1], closing: false, group: [i, end], lone: true, id: tokens.length })
+        i += tag[0].length
+        continue
+      }
+      const closing = text.startsWith('</span>', i) ? 7 : text.startsWith('</u>', i) ? 4 : 0
+      if (closing && i + closing <= limit) {
+        tokens.push({ type: 'tag', at: i, length: closing, mark: closing === 7 ? 'color' : 'underline', closing: true, group: [i, i + closing], lone: true, id: tokens.length })
+        i += closing
+        continue
+      }
+    }
+    if (EMPHASIS[char]) {
+      let r = 1
+      while (i + r < limit && text[i + r] === char) r++
+      const double = r >= 2
+      if (double || EMPHASIS[char].one) {
+        const atLineStart = i === lineStart || text[i - 1] === '\n' || tokens.at(-1)?.type === 'break' && (tokens.at(-1) as { at: number; prefix: number }).at + 1 + (tokens.at(-1) as { prefix: number }).prefix === i
+        const before = i === start ? undefined : atLineStart ? '\n' : text[i - 1]
+        const after = i + r < limit ? text[i + r] : undefined
+        // A closing mark left alone on the next line, by selecting a whole line in an earlier version: the mark is still meant.
+        const written = text.slice(0, i).replace(/\n[^\n]*$/, '')
+        const lineClose = atLineStart && i > start && !isSpace(written[written.length - 1]) && (!after || after === '\n')
+        const opens = !isSpace(after) && !(char === '_' && isWord(before))
+        const closes = (!isSpace(before) || lineClose) && !(char === '_' && isWord(after))
+        tokens.push({ type: 'delimiters', run: { at: i, length: r, char, left: 0, right: 0, opens, closes, looseOpen: double && !opens && !!after && isSpace(before), looseClose: double && !closes && !!before && isSpace(after), used: [] } })
+      }
+      i += r
+      continue
+    }
+    i++
+  }
+  if (linkText >= 0) tokens.push({ type: 'link-end', at: linkText, end: linkEnd, group: link!.group })
+  return tokens
 }
 
 /**
- * Where a mark opened at `from` closes: the start of a run of its character
- * that follows a letter. A single delimiter closes at the run's first
- * character and a double at its last two, so `***both***` nests.
+ * Pair the delimiters as Markdown does: each closer takes the nearest opener of
+ * its character, from the inside out, so `*a **b** c*` and `***both***` nest and
+ * `**a***b*` closes one and opens the next. Unlike Markdown, a pair may cross
+ * another (`**a *b** c*`): the marks are drawn independently, so nothing an
+ * earlier version wrote shows as stars.
  */
-function findClose(text: string, from: number, end: number, d: string): number {
-  for (let k = from; k < end; k++) {
-    if (text[k] !== d[0]) continue
-    const r = runLength(text, k, d[0], end)
-    const close = d.length === 1 ? k : k + r - d.length
-    // A standalone closing mark after a soft break can be produced by selecting
-    // a whole line in the editor. Preserve its source and draw the intended mark.
-    const lineClose = text[k - 1] === '\n' && !isSpace(text[k - 2]) && (k + r === end || text[k + r] === '\n')
-    const fits = r >= d.length && (!isSpace(text[k - 1]) || lineClose) && close > from && !(d[0] === '_' && isWord(text[k + r]))
-    if (fits) return close
-    k += r - 1
+function pairDelimiters(tokens: Token[]) {
+  const runs = tokens.flatMap(token => token.type === 'delimiters' ? [token.run] : [])
+  const free = (run: Delimiters) => run.length - run.left - run.right
+  for (let c = 0; c < runs.length; c++) {
+    const closer = runs[c]
+    if (!closer.closes && !closer.looseClose) continue
+    while (free(closer) > 0) {
+      let found = -1, use = 0
+      for (let o = c - 1; o >= 0; o--) {
+        const opener = runs[o]
+        if (opener.char !== closer.char || !free(opener) || !(opener.opens || opener.looseOpen)) continue
+        // Two loose ends make no mark: `2 ** 8 and 3 ** 4`.
+        if (!opener.opens && !closer.closes) continue
+        // Markdown's rule of three, on what is left of each row: one that could open or
+        // close does not close one whose length would make three, so `*a**b***` keeps its
+        // bold whole. Two even rows are two marks touching (`**a****b**`), an earlier version's.
+        const either = opener.opens && opener.closes || closer.opens && closer.closes
+        const a = free(opener), b = free(closer)
+        if (either && (a + b) % 3 === 0 && (a % 3 || b % 3) && (a % 2 || b % 2)) continue
+        const both = Math.min(free(opener), free(closer))
+        use = both >= 2 ? 2 : EMPHASIS[closer.char].one ? 1 : 0
+        if (!use) continue
+        found = o
+        break
+      }
+      if (found < 0) break
+      const opener = runs[found]
+      const open = opener.at + opener.length - opener.right - use, close = closer.at + closer.left
+      const mark = use === 2 ? EMPHASIS[closer.char].two : EMPHASIS[closer.char].one!
+      const group: [number, number] = [open, close + use]
+      opener.used.push({ at: open, length: use, mark, opening: true, group })
+      closer.used.push({ at: close, length: use, mark, opening: false, group })
+      opener.right += use
+      closer.left += use
+    }
   }
-  return -1
+}
+
+/** Pair the tags: each closes the nearest open tag of its kind; one left open reads on to the stretch's end. */
+function pairTags(tokens: Token[]) {
+  const open: Record<'underline' | 'color', Extract<Token, { type: 'tag' }>[]> = { underline: [], color: [] }
+  for (const token of tokens) {
+    if (token.type !== 'tag') continue
+    if (!token.closing) { open[token.mark].push(token); continue }
+    const opener = open[token.mark].pop()
+    if (!opener) continue
+    opener.lone = token.lone = false
+    opener.group = token.group = [opener.at, token.at + token.length]
+    token.id = opener.id
+  }
 }
 
 function pushText(text: string, from: number, to: number, base: number, marks: Marks, out: Run[]) {
@@ -433,106 +618,96 @@ function pushText(text: string, from: number, to: number, base: number, marks: M
     const index = match.index!
     if (index > last) out.push({ kind: 'text', from: base + from + last, to: base + from + index, ...marks })
     const url = match[0]
-    out.push({ kind: 'text', from: base + from + index, to: base + from + index + url.length, ...marks, href: url.startsWith('www.') ? `https://${url}` : url })
+    out.push({ kind: 'text', from: base + from + index, to: base + from + index + url.length, ...marks, autolink: true, href: url.startsWith('www.') ? `https://${url}` : url })
     last = index + url.length
   }
   if (last < slice.length) out.push({ kind: 'text', from: base + from + last, to: base + to, ...marks })
 }
 
-/** The runs of inline writing between `start` and `end`, offsets made absolute with `base`. */
-function inline(text: string, start: number, end: number, base: number, marks: Marks, out: Run[], atoms: readonly AtomSyntax[]) {
-  let i = start
+/**
+ * The runs of inline writing between `start` and `end`, offsets made absolute
+ * with `base`. Three passes: what is marked is found, its pairs are matched,
+ * and a sweep over the words wears whichever marks are open at each. Marks are
+ * intervals, not a tree, so a pair that crosses another draws as written.
+ */
+function inline(text: string, start: number, end: number, base: number, out: Run[], atoms: readonly AtomSyntax[], linePrefix?: LinePrefix) {
+  const tokens = scan(text, start, end, atoms, linePrefix)
+  pairDelimiters(tokens)
+  pairTags(tokens)
+  const count = { bold: 0, italic: 0, strike: 0, highlight: 0, underline: 0 }
+  const colors: { id: number; color: string }[] = []
+  let href: string | undefined
   let from = start
-  const flush = (to: number) => pushText(text, from, to, base, marks, out)
-  while (i < end) {
-    const char = text[i]
-    if (char === '\n') {
-      flush(i)
-      out.push({ kind: 'break', from: base + i, to: base + i + 1 })
-      from = ++i
-      continue
-    }
-    if (char === '`' && !marks.code) {
-      let n = 1
-      while (text[i + n] === '`') n++
-      const ticks = '`'.repeat(n)
-      let close = text.indexOf(ticks, i + n)
-      while (close >= 0 && close + n < end && text[close + n] === '`') {
-        let m = close
-        while (text[m] === '`') m++
-        close = text.indexOf(ticks, m)
-      }
-      if (close >= 0 && close + n <= end) {
-        flush(i)
-        const group: [number, number] = [base + i, base + close + n]
-        out.push({ kind: 'syntax', from: base + i, to: base + i + n, group })
-        if (close > i + n) out.push({ kind: 'text', from: base + i + n, to: base + close, ...marks, code: true })
-        out.push({ kind: 'syntax', from: base + close, to: base + close + n, group })
-        i = close + n
-        from = i
-        continue
-      }
-    }
-    if (!marks.href && !marks.code && atoms.length) {
-      let length = 0, name = ''
-      const lineStart = text.lastIndexOf('\n', i - 1) + 1, nextBreak = text.indexOf('\n', i)
-      const line = text.slice(lineStart, nextBreak < 0 ? text.length : nextBreak)
-      for (const atom of atoms) { length = atom.match(line, i - lineStart); if (length && i + length <= end) { name = atom.name; break }; length = 0 }
-      if (length) {
-        flush(i)
-        out.push({ kind: 'atom', atom: name, from: base + i, to: base + i + length, ...(name === 'equation' ? { group: [base + i, base + i + length] as [number, number] } : {}) })
-        i += length
-        from = i
-        continue
-      }
-    }
-    if (char === '[' && !marks.href && !marks.code) {
-      const link = LINK.exec(text.slice(i, end))
-      if (link) {
-        flush(i)
-        const group: [number, number] = [base + i, base + i + link[0].length]
-        out.push({ kind: 'syntax', from: base + i, to: base + i + 1, group })
-        inline(text, i + 1, i + 1 + link[1].length, base, { ...marks, href: link[2] }, out, atoms)
-        out.push({ kind: 'syntax', from: base + i + 1 + link[1].length, to: base + i + link[0].length, group })
-        i += link[0].length
-        from = i
-        continue
-      }
-    }
-    if (char === '<' && !marks.code) {
-      TAG.lastIndex = i
-      const tag = TAG.exec(text)
-      const color = tag?.[1], closing = color ? '</span>' : '</u>'
-      const close = tag && !(color ? marks.color : marks.underline) ? text.indexOf(closing, i + tag[0].length) : -1
-      if (tag && close >= 0 && close + closing.length <= end) {
-        flush(i)
-        const group: [number, number] = [base + i, base + close + closing.length]
-        out.push({ kind: 'syntax', from: base + i, to: base + i + tag[0].length, group })
-        inline(text, i + tag[0].length, close, base, color ? { ...marks, color } : { ...marks, underline: true }, out, atoms)
-        out.push({ kind: 'syntax', from: base + close, to: base + close + closing.length, group })
-        i = close + closing.length
-        from = i
-        continue
-      }
-    }
-    let opened = false
-    if (!marks.code) {
-      for (const d of DELIMITERS) {
-        if (!text.startsWith(d, i) || marks[MARK_OF[d]] || !canOpen(text, i, d, end)) continue
-        const close = findClose(text, i + d.length, end, d)
-        if (close < 0) continue
-        flush(i)
-        const group: [number, number] = [base + i, base + close + d.length]
-        out.push({ kind: 'syntax', from: base + i, to: base + i + d.length, group })
-        inline(text, i + d.length, close, base, { ...marks, [MARK_OF[d]]: true }, out, atoms)
-        out.push({ kind: 'syntax', from: base + close, to: base + close + d.length, group })
-        i = close + d.length
-        from = i
-        opened = true
+  const marks = (): Marks => {
+    const on: Marks = {}
+    if (count.bold) on.bold = true
+    if (count.italic) on.italic = true
+    if (count.strike) on.strike = true
+    if (count.highlight) on.highlight = true
+    if (count.underline) on.underline = true
+    if (colors.length) on.color = colors[colors.length - 1].color
+    if (href !== undefined) on.href = href
+    return on
+  }
+  const flush = (to: number) => pushText(text, from, to, base, marks(), out)
+  const syntax = (at: number, to: number, group: [number, number], lone = false) => {
+    flush(at)
+    out.push({ kind: 'syntax', from: base + at, to: base + to, group: [base + group[0], base + group[1]], ...(lone ? { lone: true as const } : {}) })
+    from = to
+  }
+  for (const token of tokens) {
+    switch (token.type) {
+      case 'break':
+        flush(token.at)
+        out.push({ kind: 'break', from: base + token.at, to: base + token.at + 1 })
+        if (token.prefix) out.push({ kind: 'syntax', from: base + token.at + 1, to: base + token.at + 1 + token.prefix, prefix: true })
+        from = token.at + 1 + token.prefix
+        break
+      case 'code': {
+        const group: [number, number] = [token.at, token.close + token.ticks]
+        syntax(token.at, token.at + token.ticks, group)
+        if (token.close > from) out.push({ kind: 'text', from: base + from, to: base + token.close, ...marks(), code: true })
+        from = token.close
+        syntax(token.close, token.close + token.ticks, group)
         break
       }
+      case 'atom':
+        flush(token.at)
+        out.push({ kind: 'atom', atom: token.name, from: base + token.at, to: base + token.at + token.length, ...marks(), ...(token.name === 'equation' ? { group: [base + token.at, base + token.at + token.length] as [number, number] } : {}) })
+        from = token.at + token.length
+        break
+      case 'escape':
+        flush(token.at)
+        out.push({ kind: 'syntax', from: base + token.at, to: base + token.at + 1, escape: true })
+        from = token.at + 1
+        break
+      case 'delimiters':
+        for (const use of [...token.run.used].sort((a, b) => a.at - b.at)) {
+          if (!use.opening) { flush(use.at); count[use.mark]--; from = use.at }
+          syntax(use.at, use.at + use.length, use.group)
+          if (use.opening) count[use.mark]++
+        }
+        break
+      case 'tag':
+        syntax(token.at, token.at + token.length, token.group, token.lone)
+        if (token.closing) {
+          if (token.lone) break
+          if (token.mark === 'underline') count.underline--
+          else colors.splice(colors.findIndex(each => each.id === token.id), 1)
+        } else if (token.mark === 'underline') count.underline++
+        else colors.push({ id: token.id, color: token.color! })
+        break
+      case 'link':
+        syntax(token.at, token.at + 1, token.group)
+        href = token.href
+        break
+      case 'link-end':
+        flush(token.at)
+        from = token.at
+        href = undefined
+        syntax(token.at, token.end, token.group)
+        break
     }
-    if (!opened) i++
   }
   flush(end)
 }
@@ -550,10 +725,20 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   if (block.kind === 'tabs') return [{ kind: 'atom', atom: 'tabs', from: 0, to: block.source.length }]
   const fenced = fencedAtom(block, atoms)
   if (fenced) return [{ kind: 'atom', atom: fenced.name, from: 0, to: block.source.length, group: [0, block.source.length] }]
-  // Soft breaks stay within one paragraph's formatting; block prefixes and
-  // fenced code retain their line-specific parsing below.
+  // Marks read across soft breaks, in a quote or callout as in a paragraph: the
+  // prefix on each line is passed over, so a colour or bold written over two
+  // lines is one mark. Fenced code keeps its line-by-line reading below.
   if (block.kind === 'paragraph') {
-    inline(block.source, 0, block.source.length, 0, {}, runs, atoms)
+    inline(block.source, 0, block.source.length, 0, runs, atoms)
+    return runs
+  }
+  if (block.kind === 'quote' || block.kind === 'callout') {
+    const first = block.kind === 'callout' ? block.prefix : QUOTE.exec(lines[0])?.[0].length ?? 0
+    if (first) runs.push({ kind: 'syntax', from: 0, to: first, prefix: true })
+    inline(block.source, first, block.source.length, 0, runs, atoms, at => {
+      const next = block.source.indexOf('\n', at)
+      return QUOTE.exec(block.source.slice(at, next < 0 ? block.source.length : next))?.[0].length ?? 0
+    })
     return runs
   }
   let at = 0
@@ -565,11 +750,9 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
     } else if (block.kind === 'divider') {
       runs.push({ kind: 'syntax', from: at, to: at + line.length, prefix: true })
     } else {
-      let prefix = 0
-      if (index === 0 && (block.kind === 'heading' || block.kind === 'bullet')) prefix = block.prefix
-      else if (block.kind === 'quote' || block.kind === 'callout') prefix = index === 0 && block.kind === 'callout' ? block.prefix : QUOTE.exec(line)?.[0].length ?? 0
+      const prefix = index === 0 && (block.kind === 'heading' || block.kind === 'bullet') ? block.prefix : 0
       if (prefix) runs.push({ kind: 'syntax', from: at, to: at + prefix, prefix: true })
-      inline(line, prefix, line.length, at, {}, runs, atoms)
+      inline(line, prefix, line.length, at, runs, atoms)
     }
     at += line.length + 1
   })

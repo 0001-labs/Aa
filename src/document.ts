@@ -5,12 +5,14 @@
  * bullet, and a paragraph that lost its `## ` is a paragraph.
  */
 
-import { parseBlocks, serialize, codeClosed, QUOTE, readCallout, writeCallout, type Block, type CalloutColor } from './markdown'
+import { parseBlocks, serialize, codeClosed, QUOTE, readCallout, writeCallout, DEFAULT_ATOMS, type AtomSyntax, type Block, type CalloutColor } from './markdown'
+import { colorMark, editBlock, isWritten, joinBlocks, markOf, markRange, partBlock, rangeWears, sliceBlock, type Carry } from './rich'
 
 /** A place in the document: a block, and a character offset into its source. */
 export type Pos = { block: number; offset: number }
 
-export type Change = { blocks: Block[]; caret: Pos }
+/** `carry` is what the next letters typed at the caret go on wearing. */
+export type Change = { blocks: Block[]; caret: Pos; carry?: Carry }
 
 export function fromMarkdown(text: string): Block[] {
   return parseBlocks(text.replace(/\r\n?/g, '\n').replace(/^\n+|\n+$/g, '')).map(({ start: _start, ...block }) => block)
@@ -34,33 +36,51 @@ export function order(a: Pos, b: Pos): [Pos, Pos] {
   return comparePos(a, b) <= 0 ? [a, b] : [b, a]
 }
 
-/** Replace what stands between `from` and `to` with `text`. The caret lands after the text. */
-export function replaceRange(blocks: readonly Block[], from: Pos, to: Pos, text: string): Change {
-  const [a, b] = order(from, to)
-  const head = blocks[a.block].source.slice(0, a.offset)
-  const tail = blocks[b.block].source.slice(b.offset)
-  const joined = head + text + tail
-  const caretAt = head.length + text.length
+/** Blocks `first` to `last` give way to a text read afresh; the caret lands `caretAt` into it. */
+function rewrite(blocks: readonly Block[], first: number, last: number, joined: string, caretAt: number): Change {
   const placed = parseBlocks(joined)
   const replacement = placed.map(({ start: _start, ...block }) => block)
-  const next = [...blocks.slice(0, a.block), ...replacement, ...blocks.slice(b.block + 1)]
-  let caret: Pos = { block: a.block + placed.length - 1, offset: replacement[replacement.length - 1].source.length }
+  const next = [...blocks.slice(0, first), ...replacement, ...blocks.slice(last + 1)]
+  let caret: Pos = { block: first + placed.length - 1, offset: replacement[replacement.length - 1].source.length }
   for (let i = 0; i < placed.length; i++) {
     const block = placed[i]
-    if (caretAt < block.start) { caret = { block: a.block + i, offset: 0 }; break }
-    if (caretAt <= block.start + block.source.length) { caret = { block: a.block + i, offset: caretAt - block.start }; break }
+    if (caretAt < block.start) { caret = { block: first + i, offset: 0 }; break }
+    if (caretAt <= block.start + block.source.length) { caret = { block: first + i, offset: caretAt - block.start }; break }
   }
   return { blocks: next, caret }
 }
 
-/** The Markdown between two positions, as it would be copied. */
-export function sliceMarkdown(blocks: readonly Block[], from: Pos, to: Pos): string {
+/**
+ * Replace what stands between `from` and `to` with `text`. The caret lands
+ * after the text. Marks stay on their words: where the range would part a
+ * pair, the words are written again (`rich.ts`), so nothing shows as syntax.
+ */
+export function replaceRange(blocks: readonly Block[], from: Pos, to: Pos, text: string, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Change {
   const [a, b] = order(from, to)
-  if (a.block === b.block) return blocks[a.block].source.slice(a.offset, b.offset)
+  const edit = a.block === b.block
+    ? editBlock(blocks[a.block], a.offset, b.offset, text, atoms)
+    : joinBlocks(blocks[a.block], a.offset, blocks[b.block], b.offset, text, atoms)
+  if (edit) return { ...rewrite(blocks, a.block, b.block, edit.source, edit.caret), ...(edit.carry ? { carry: edit.carry } : {}) }
+  const head = blocks[a.block].source.slice(0, a.offset)
+  const tail = blocks[b.block].source.slice(b.offset)
+  return rewrite(blocks, a.block, b.block, head + text + tail, head.length + text.length)
+}
+
+/** A block's source written anew and read again, exactly as given. */
+export function setSource(blocks: readonly Block[], index: number, source: string, caret = source.length): Change {
+  return rewrite(blocks, index, index, source, caret)
+}
+
+/** The Markdown between two positions, as it would be copied: a piece of a bold phrase is bold. */
+export function sliceMarkdown(blocks: readonly Block[], from: Pos, to: Pos, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): string {
+  const [a, b] = order(from, to)
+  const piece = (block: Block, start: number, end: number) => sliceBlock(block, start, end, atoms) ?? block.source.slice(start, end)
+  if (a.block === b.block) return piece(blocks[a.block], a.offset, b.offset)
+  const first = blocks[a.block], last = blocks[b.block]
   const parts: Block[] = [
-    { ...blocks[a.block], source: blocks[a.block].source.slice(a.offset) },
+    { ...first, source: piece(first, a.offset, first.source.length) },
     ...blocks.slice(a.block + 1, b.block),
-    { ...blocks[b.block], source: blocks[b.block].source.slice(0, b.offset) },
+    { ...last, source: piece(last, 0, b.offset) },
   ]
   return serialize(parts)
 }
@@ -80,13 +100,15 @@ function nextMarker(block: Block): string {
  * line in code is a line, and after a closed fence a paragraph follows; a
  * heading's rest is a paragraph.
  */
-export function splitAt(blocks: readonly Block[], pos: Pos): Change {
+export function splitAt(blocks: readonly Block[], pos: Pos, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Change {
   const block = blocks[pos.block]
   const source = block.source
-  let head = source.slice(0, pos.offset)
-  let tail = source.slice(pos.offset)
+  // Both sides keep their marks: bold parted by Enter is bold on each line.
+  const parted = block.kind === 'quote' ? null : partBlock(block, pos.offset, atoms)
+  let head = parted ? parted[0] : source.slice(0, pos.offset)
+  let tail = parted ? parted[1] : source.slice(pos.offset)
   if (block.kind === 'code') {
-    if (!(pos.offset === source.length && codeClosed(block))) return replaceRange(blocks, pos, pos, '\n')
+    if (!(pos.offset === source.length && codeClosed(block))) return replaceRange(blocks, pos, pos, '\n', atoms)
   } else if (block.kind === 'bullet') {
     if (!source.slice(block.prefix).trim()) {
       if (block.depth) return indentBlocks(blocks, { anchor: pos.block, focus: pos.block }, -1)!
@@ -97,7 +119,7 @@ export function splitAt(blocks: readonly Block[], pos: Pos): Change {
     const lineStart = source.lastIndexOf('\n', pos.offset - 1) + 1
     const line = source.slice(lineStart, pos.offset).replace(QUOTE, '')
     if (!line.trim() && !tail.trim()) { head = source.slice(0, Math.max(0, lineStart - 1)); tail = '' }
-    else return replaceRange(blocks, pos, pos, '\n> ')
+    else return replaceRange(blocks, pos, pos, '\n> ', atoms)
   }
   const before = blocksOf(head)
   const after = blocksOf(tail)
@@ -115,32 +137,67 @@ export function liftPrefix(blocks: readonly Block[], index: number): Change | nu
 }
 
 /** Backspace at the very start of a block: it joins the block before it. */
-export function joinWithPrevious(blocks: readonly Block[], index: number): Change | null {
+export function joinWithPrevious(blocks: readonly Block[], index: number, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Change | null {
   if (index === 0) return null
   const previous = blocks[index - 1]
   const end = { block: index - 1, offset: previous.source.length }
-  if (previous.kind === 'divider') return replaceRange(blocks, { block: index - 1, offset: 0 }, { block: index, offset: 0 }, '')
+  if (previous.kind === 'divider') return replaceRange(blocks, { block: index - 1, offset: 0 }, { block: index, offset: 0 }, '', atoms)
   if (previous.kind === 'code' && blocks[index].source) return { blocks: [...blocks], caret: end }
-  return replaceRange(blocks, end, { block: index, offset: 0 }, '')
+  // Its words join, not its `## ` or `- `, which would stand in the line as letters.
+  const prefix = ['heading', 'bullet', 'quote', 'callout'].includes(blocks[index].kind) ? blocks[index].prefix : 0
+  const change = replaceRange(blocks, end, { block: index, offset: prefix }, '', atoms)
+  return { ...change, caret: end }
 }
 
 /** Delete at the very end of a block: the next block joins it. */
-export function joinWithNext(blocks: readonly Block[], index: number): Change | null {
+export function joinWithNext(blocks: readonly Block[], index: number, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Change | null {
   if (index + 1 >= blocks.length) return null
   const next = blocks[index + 1]
-  if (next.kind === 'divider') return replaceRange(blocks, { block: index, offset: blocks[index].source.length }, { block: index + 1, offset: next.source.length }, '')
-  const change = joinWithPrevious(blocks, index + 1)
+  if (next.kind === 'divider') return replaceRange(blocks, { block: index, offset: blocks[index].source.length }, { block: index + 1, offset: next.source.length }, '', atoms)
+  const change = joinWithPrevious(blocks, index + 1, atoms)
   return change && { ...change, caret: { block: index, offset: blocks[index].source.length } }
 }
 
 export type Wrapped = { blocks: Block[]; anchor: Pos; focus: Pos }
 
 /**
- * Put a mark round the selection, or take it off: `**` for bold. Within
- * each selected block. With nothing selected the delimiters are typed with the
- * caret between them.
+ * Put a mark on the selected words, or take it off: on unless every word
+ * already wears it, as a word processor decides. What the words wear already
+ * stays, wherever the selection starts and ends. Each selected block is marked
+ * on its own, and code and dividers are left. An equation's `$` is not a mark
+ * of words; with nothing selected its delimiters are typed, the caret between
+ * them. (Marks with nothing selected wait for the next letters: `Carry`.)
  */
-export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, delimiter: string, closing = delimiter): Wrapped | null {
+export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, delimiter: string, closing = delimiter, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Wrapped | null {
+  const [a, b] = order(from, to)
+  const mark = markOf(delimiter, closing)
+  if (!mark || comparePos(a, b) === 0) return wrapText(blocks, from, to, delimiter, closing)
+  const ends = (index: number): [number, number] => [index === a.block ? Math.max(a.offset, blocks[index].prefix) : blocks[index].prefix, index === b.block ? b.offset : blocks[index].source.length]
+  const targets: number[] = []
+  let words = false, all = true
+  for (let index = a.block; index <= b.block; index++) {
+    const block = blocks[index]
+    if (!isWritten(block)) continue
+    const [start, end] = ends(index)
+    const wears = rangeWears(block, start, end, mark.key, atoms)
+    if (!wears.words) continue
+    targets.push(index); words = true
+    all &&= wears.all
+  }
+  if (!words) return { blocks: [...blocks], anchor: a, focus: b }
+  let next = [...blocks], anchor = a, focus = b
+  for (const index of targets.reverse()) {
+    const [start, end] = ends(index)
+    const marked = markRange(blocks[index], start, end, all ? { remove: mark.family } : { add: mark }, atoms)
+    next = setSource(next, index, marked.source).blocks
+    if (index === a.block) anchor = { block: index, offset: marked.from }
+    if (index === b.block) focus = { block: index, offset: marked.to }
+  }
+  return { blocks: next, anchor, focus }
+}
+
+/** Delimiters written into the text as they are: an equation's, and any with nothing selected. */
+function wrapText(blocks: readonly Block[], from: Pos, to: Pos, delimiter: string, closing: string): Wrapped | null {
   const [a, b] = order(from, to)
   if (a.block !== b.block) {
     let next = [...blocks]
@@ -152,7 +209,7 @@ export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, deli
       if (index === a.block && source.slice(start - delimiter.length, start) === delimiter && source.endsWith(closing)) end -= closing.length
       if (index === b.block && source.slice(end, end + closing.length) === closing && source.slice(start, start + delimiter.length) === delimiter) start += delimiter.length
       if (end <= start || blocks[index].kind === 'code' || blocks[index].kind === 'divider') continue
-      const wrapped = wrapSelection(next, { block: index, offset: start }, { block: index, offset: end }, delimiter, closing)!
+      const wrapped = wrapText(next, { block: index, offset: start }, { block: index, offset: end }, delimiter, closing)!
       next = wrapped.blocks
       if (index === a.block) anchor = wrapped.anchor
       if (index === b.block) focus = wrapped.focus
@@ -182,37 +239,27 @@ export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, deli
   return { blocks: change.blocks, anchor: at(a.offset + leading.length + d), focus: at(a.offset + leading.length + d + words.length) }
 }
 
-const COLOR_OPEN = /<span color="[a-z]+">$/
-const COLOR_PAIRS = /<span color="[a-z]+">([\s\S]*?)<\/span>/g
 /**
  * Write the selected words in a colour (`<span color="red">`), or back in the
- * text's own with `null`: a colour already round exactly these words is
- * changed or taken off rather than nested, and colours wholly inside them go.
- * Across blocks each block's part is coloured on its own, as a mark is.
+ * text's own with `null`. A colour already on any of them gives way, so a word
+ * recoloured inside a coloured sentence parts it rather than nests in it. Across
+ * blocks each block's part is coloured on its own, as a mark is.
  */
-export function colorSelection(blocks: readonly Block[], from: Pos, to: Pos, color: string | null): Wrapped | null {
+export function colorSelection(blocks: readonly Block[], from: Pos, to: Pos, color: string | null, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Wrapped | null {
   const [a, b] = order(from, to)
   let next = [...blocks], anchor = a, focus = b, changed = false
   for (let index = b.block; index >= a.block; index--) {
-    const block = next[index]
-    if (block.kind === 'code' || block.kind === 'divider') continue
+    const block = blocks[index]
+    if (!isWritten(block)) continue
     const start = index === a.block ? Math.max(a.offset, block.prefix) : block.prefix
     const end = index === b.block ? b.offset : block.source.length
     if (end <= start) continue
-    const source = block.source, inner = source.slice(start, end)
-    const open = COLOR_OPEN.exec(source.slice(0, start))
-    let from = start, to = end, words: string
-    if (open && source.startsWith('</span>', end)) { from = start - open[0].length; to = end + 7; words = inner.replace(COLOR_PAIRS, '$1') }
-    else {
-      const whole = /^<span color="[a-z]+">([\s\S]*)<\/span>$/.exec(inner)
-      words = (whole && !whole[1].includes('</span>') ? whole[1] : inner).replace(COLOR_PAIRS, '$1')
-      if (!color && words === inner) continue
-    }
-    const tag = color ? `<span color="${color}">` : ''
-    next = replaceRange(next, { block: index, offset: from }, { block: index, offset: to }, color ? `${tag}${words}</span>` : words).blocks
+    const marked = markRange(block, start, end, color ? { add: colorMark(color) } : { remove: 'color' }, atoms)
+    if (marked.source === block.source) continue
+    next = setSource(next, index, marked.source).blocks
     changed = true
-    if (index === a.block) anchor = { block: index, offset: from + tag.length }
-    if (index === b.block) focus = { block: index, offset: from + tag.length + words.length }
+    if (index === a.block) anchor = { block: index, offset: marked.from }
+    if (index === b.block) focus = { block: index, offset: marked.to }
   }
   return changed ? { blocks: next, anchor, focus } : null
 }

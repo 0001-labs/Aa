@@ -105,6 +105,8 @@
 /* Markdown stays in the DOM for lossless storage, and none of it shows while
    writing: a heading is its size, a bullet its marker, never its # or -. */
 .aa-syntax { display: none; }
+/* The editor as one editable element while a selection crosses its blocks, where the browser asks that. */
+.aa[data-aa-across] { outline: none; }
 
 /* Words: the medium face for strong, the text's own colour for a link,
    underlined, and code in the code face at 13px on the same line. */

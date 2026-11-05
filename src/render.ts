@@ -5,7 +5,7 @@
  * were not there, and the text still reads straight back.
  */
 
-import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block } from './markdown'
+import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block, type Run } from './markdown'
 import { tableAlignments, tableRows } from './table'
 import { icons } from './icons'
 import { initialOf } from './comments'
@@ -41,17 +41,81 @@ const isAtom = (node: Node): boolean => isElement(node) && node.classList.contai
 /** Which part of a block the selection is in, in its own offsets; null when the selection is elsewhere. */
 export type Reveal = { from: number; to: number } | null
 
-/** The key of what a reveal shows: which groups, and whether the block is active. Same key, same drawing. */
+/**
+ * The key of what a reveal changes in a block's drawing: which atoms show their
+ * source, and whether the caret is in a callout's body. Same key, same drawing:
+ * delimiters are never shown, so the caret crossing bold redraws nothing.
+ */
 export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): string {
   // A block an atom draws whole (a diagram) is drawn the same wherever the caret is.
   if (!reveal || fencedAtom(block, atoms)) return ''
   const groups: string[] = []
   for (const run of blockRuns(block, atoms)) {
-    if (!run.group) continue
-    const key = `${run.group[0]}-${run.group[1]}`
-    if (reveal.from <= run.group[1] && reveal.to >= run.group[0] && !groups.includes(key)) groups.push(key)
+    if (run.kind !== 'atom' || !run.group) continue
+    if (reveal.from <= run.group[1] && reveal.to >= run.group[0]) groups.push(`${run.group[0]}-${run.group[1]}`)
   }
-  return `on:${groups.join(',')}`
+  const body = block.kind === 'callout' && block.source.includes('\n') && reveal.to > block.source.indexOf('\n')
+  return groups.length || body ? `on:${groups.join(',')}${body ? ':body' : ''}` : ''
+}
+
+/** What a run's element looks like, kept beside it to tell a word typed from a look changed. */
+const lookOf = (run: Run) => `${run.href ?? ''}|${run.bold ? 'b' : ''}${run.italic ? 'i' : ''}${run.strike ? 's' : ''}${run.underline ? 'u' : ''}${run.code ? 'c' : ''}${run.highlight ? 'h' : ''}|${run.color ?? ''}`
+const looks = new WeakMap<Node, string>()
+
+/** A run of words as its element, decorated. */
+function wordsOf(document: Document, run: Run, text: string, decorations: readonly Decoration[], base = 0): HTMLElement {
+  const node = run.href ? document.createElement('a') : document.createElement('span')
+  if (run.href) { (node as HTMLAnchorElement).href = run.href; node.className = 'aa-link'; (node as HTMLAnchorElement).rel = 'noopener' }
+  if (run.bold) node.classList.add('aa-b')
+  if (run.italic) node.classList.add('aa-i')
+  if (run.strike) node.classList.add('aa-s')
+  if (run.underline) node.classList.add('aa-u')
+  if (run.color) node.dataset.color = run.color
+  if (run.code) { node.classList.add('aa-c'); node.spellcheck = false }
+  if (run.highlight) node.classList.add('aa-highlight')
+  node.textContent = text
+  looks.set(node, lookOf(run))
+  decorateNode(node, base + run.from, decorations)
+  return node
+}
+
+function hiddenSyntax(document: Document, text: string): HTMLElement {
+  const span = document.createElement('span')
+  span.className = 'aa-syntax'
+  span.setAttribute('data-hidden', '')
+  span.textContent = text
+  return span
+}
+
+/**
+ * Whether a block's element already shows `block`, the browser having typed
+ * the same words into it: same runs, same looks, same letters, and nothing
+ * that sets the block apart changed. Then nothing is drawn, so the text
+ * nodes, the caret, the spelling marks and a phone's keyboard all stay.
+ */
+export function stillShows(element: HTMLElement, was: Block, block: Block, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): boolean {
+  if (block.kind !== was.kind || block.kind === 'table' || block.kind === 'callout' || block.prefix !== was.prefix || block.level !== was.level || block.checked !== was.checked || block.number !== was.number || block.depth !== was.depth) return false
+  if (block.kind === 'heading' && !block.source.slice(block.prefix).trim() !== !was.source.slice(was.prefix).trim()) return false
+  if (block.kind === 'code' && !!fencedAtom(block, atoms) !== !!fencedAtom(was, atoms)) return false
+  let child = element.firstChild as ChildNode | null
+  let visible = false, lastBreak = false
+  for (const run of blockRuns(block, atoms)) {
+    lastBreak = run.kind === 'break'
+    if (run.kind === 'atom') return false
+    if (run.kind === 'break') {
+      if (!child || (child as HTMLElement).tagName !== 'BR' || !('line' in (child as HTMLElement).dataset)) return false
+      child = child.nextSibling
+      continue
+    }
+    const text = block.source.slice(run.from, run.to)
+    if (!text) continue
+    if (run.kind === 'text') visible = true
+    if (!child || child.childNodes.length !== 1 || child.firstChild!.nodeType !== 3 || (child.firstChild as Text).data !== text) return false
+    if (run.kind === 'syntax' ? !(child as HTMLElement).classList?.contains('aa-syntax') : looks.get(child) !== lookOf(run)) return false
+    child = child.nextSibling
+  }
+  if (!visible || lastBreak) return !!child && (child as HTMLElement).tagName === 'BR' && 'filler' in (child as HTMLElement).dataset && !child.nextSibling
+  return !child
 }
 
 export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS, draw: AtomDrawer = drawAtomAsText, decorations: readonly Decoration[] = []) {
@@ -105,7 +169,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     element.removeAttribute('data-folded')
     element.removeAttribute('data-body-active')
   }
-  if (block.kind === 'table') { renderTable(element, block, decorations); renderCarets(element, decorations); return }
+  if (block.kind === 'table') { renderTable(element, block, decorations, atoms); renderCarets(element, decorations); return }
   // A fenced block an atom draws (a diagram) is that drawing, the caret in it
   // or not: its words are never shown, and it is changed where it is drawn.
   const fenced = fencedAtom(block, atoms)
@@ -130,7 +194,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   for (const run of blockRuns(block, atoms)) {
     if (block.kind === 'callout' && run.from >= block.source.indexOf('\n') && block.source.includes('\n') && destination === fragment) { fragment.append(body); destination = body }
     lastBreak = run.kind === 'break'
-    if (run.kind === 'break') { destination.append(document.createElement('br')); continue }
+    if (run.kind === 'break') { const line = document.createElement('br'); line.dataset.line = ''; destination.append(line); continue }
     const text = block.source.slice(run.from, run.to)
     if (!text) continue
     if (run.kind === 'atom') {
@@ -139,27 +203,9 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
       visible = true
       continue
     }
-    if (run.kind === 'syntax') {
-      const span = document.createElement('span')
-      span.className = 'aa-syntax'
-      span.setAttribute('data-hidden', '')
-      span.textContent = text
-      destination.append(span)
-      continue
-    }
+    if (run.kind === 'syntax') { destination.append(hiddenSyntax(document, text)); continue }
     visible = true
-    const node = run.href ? document.createElement('a') : document.createElement('span')
-    if (run.href) { (node as HTMLAnchorElement).href = run.href; node.className = 'aa-link'; (node as HTMLAnchorElement).rel = 'noopener' }
-    if (run.bold) node.classList.add('aa-b')
-    if (run.italic) node.classList.add('aa-i')
-    if (run.strike) node.classList.add('aa-s')
-    if (run.underline) node.classList.add('aa-u')
-    if (run.color) node.dataset.color = run.color
-    if (run.code) { node.classList.add('aa-c'); node.spellcheck = false }
-    if (run.highlight) node.classList.add('aa-highlight')
-    node.textContent = text
-    decorateNode(node, run.from, decorations)
-    destination.append(node)
+    destination.append(wordsOf(document, run, text, decorations))
   }
   // A block with no line to stand on gets one: an empty block, one ending on
   // a line break, or one whose every character is hidden syntax.
@@ -202,7 +248,7 @@ function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) 
   }
 }
 
-function renderTable(element: HTMLElement, block: Block, decorations: readonly Decoration[]) {
+function renderTable(element: HTMLElement, block: Block, decorations: readonly Decoration[], atoms: readonly AtomSyntax[]) {
   const document = element.ownerDocument
   element.contentEditable = 'false'
   const rows = tableRows(block.source), alignments = tableAlignments(block.source)
@@ -224,9 +270,15 @@ function renderTable(element: HTMLElement, block: Block, decorations: readonly D
       leading.className = 'aa-syntax'
       leading.dataset.hidden = ''
       leading.textContent = block.source.slice(offset, cell.from)
+      // A cell's words are Markdown as any writing is; only a pipe of its own is not read as a cell's edge.
       const content = document.createElement('span')
-      content.textContent = cell.text
-      decorateNode(content, cell.from, decorations)
+      for (const run of blockRuns({ kind: 'paragraph', source: cell.text, prefix: 0 }, atoms)) {
+        const text = cell.text.slice(run.from, run.to)
+        if (!text) continue
+        if (run.kind === 'syntax') content.append(hiddenSyntax(document, text))
+        else if (run.kind === 'text') content.append(wordsOf(document, run, text, decorations, cell.from))
+        else content.append(document.createTextNode(text))
+      }
       if (!cell.text) { const br = document.createElement('br'); br.dataset.filler = ''; content.append(br) }
       node.append(leading, content)
       line.append(node)
@@ -245,17 +297,36 @@ function renderTable(element: HTMLElement, block: Block, decorations: readonly D
 /** The block's source, read back from whatever the browser left in it. */
 export function readBlock(element: HTMLElement): string {
   let out = ''
+  // Aa's own line breaks are marked. A bare one is the browser's, left to hold the
+  // line open when the last letter goes, and counts only once words stand after it.
+  let breaks = 0, hidden = ''
+  const settle = () => { out += '\n'.repeat(breaks) + hidden; breaks = 0; hidden = '' }
   const walk = (node: Node) => {
     for (const child of Array.from(node.childNodes)) {
-      if (child.nodeType === Node.TEXT_NODE) { out += (child.textContent ?? '').replace(/ /g, ' '); continue }
+      if (child.nodeType === Node.TEXT_NODE) {
+        const text = child.textContent ?? ''
+        if (!text) continue
+        // Hidden syntax is not something standing after a break: bold's last letter gone leaves the browser's break between its stars.
+        if (breaks && isHidden(child)) { hidden += text; continue }
+        settle()
+        out += text.replace(/\u00a0/g, ' ')
+        continue
+      }
       if (!(isElement(child))) continue
-      if (isAtom(child)) { out += child.dataset.source ?? ''; continue }
-      if (child.tagName === 'BR') { if (!('filler' in child.dataset)) out += '\n'; continue }
+      if (isAtom(child)) { settle(); out += child.dataset.source ?? ''; continue }
+      if (child.tagName === 'BR') {
+        if ('filler' in child.dataset) settle()
+        else if ('line' in child.dataset) { settle(); out += '\n' }
+        else breaks++
+        continue
+      }
       if (/^(DIV|P)$/.test(child.tagName) && out && !out.endsWith('\n')) out += '\n'
       walk(child)
     }
   }
   walk(element)
+  breaks = Math.max(0, breaks - 1)
+  settle()
   return out
 }
 

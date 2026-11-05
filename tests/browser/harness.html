@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Aa harness</title>
+<style>body{margin:40px;font:16px/20px system-ui} #host{max-width:640px}</style></head>
+<body><div id="host"></div>
+<script type="module">
+  import { createEditor } from '/dist/aa.js'
+  let editor = null
+  window.make = (value, options = {}) => {
+    editor?.destroy()
+    const old = document.getElementById('host'), host = document.createElement('div')
+    host.id = 'host'; old.replaceWith(host)
+    window.changes = 0
+    editor = createEditor(host, { value, toolbar: false, menus: false, onChange() { window.changes++ }, ...options })
+    window.editor = editor
+    return editor.value
+  }
+  // Offsets in what the reader sees, so a scenario never names hidden syntax.
+  const shown = () => { const host = document.getElementById('host'); return walk(host) }
+  function walk(root) {
+    const out = [], walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.parentElement.closest('.aa-syntax')) continue
+      out.push(node)
+    }
+    return out
+  }
+  const reads = block => { let out = ''; const go = node => { for (const child of node.childNodes) { if (child.nodeType === 3) { if (!child.parentElement.closest('.aa-syntax')) out += child.data } else if (child.tagName === 'BR') { if (!('filler' in child.dataset)) out += '\n' } else go(child) } }; go(block); return out }
+  window.visible = () => Array.from(document.querySelectorAll('#host .aa-block')).map(reads).join('\n')
+  window.pick = (start, end = start) => {
+    const nodes = shown()
+    const find = (at, starting) => { let left = at; for (const node of nodes) { const block = node.parentElement.closest('.aa-block'); if (starting ? left < node.length : left <= node.length) return [node, left, block]; left -= node.length } return [nodes.at(-1), nodes.at(-1).length, nodes.at(-1).parentElement.closest('.aa-block')] }
+    const a = find(start, start !== end), b = find(end, false)
+    a[2].focus({ preventScroll: true })
+    window.getSelection().setBaseAndExtent(a[0], a[1], b[0], b[1])
+  }
+  // The offset of words in the concatenated visible text.
+  window.pickWords = (words, occurrence = 0) => {
+    const text = shown().map(node => node.data).join('')
+    let at = -1
+    for (let i = 0; i <= occurrence; i++) at = text.indexOf(words, at + 1)
+    if (at < 0) throw new Error(`no "${words}" in "${text}"`)
+    window.pick(at, at + words.length)
+  }
+  // Which marks each visible word wears, for checking formatting survived.
+  window.look = () => {
+    const blocks = []
+    for (const block of document.querySelectorAll('#host .aa-block')) {
+      const parts = []
+      for (const node of walk(block)) {
+        const el = node.parentElement, marks = []
+        const has = selector => !!el.closest(selector)
+        if (has('.aa-b')) marks.push('b'); if (has('.aa-i')) marks.push('i'); if (has('.aa-s')) marks.push('s')
+        if (has('.aa-u')) marks.push('u'); if (has('.aa-c')) marks.push('c'); if (has('.aa-highlight')) marks.push('h')
+        if (has('a')) marks.push('a')
+        const color = el.closest('[data-color]')?.dataset.color; if (color) marks.push(color)
+        const last = parts.at(-1), key = marks.join('+')
+        if (last && last[1] === key) last[0] += node.data; else parts.push([node.data, key])
+      }
+      blocks.push(parts)
+    }
+    return blocks
+  }
+  window.ready = true
+</script></body></html>
