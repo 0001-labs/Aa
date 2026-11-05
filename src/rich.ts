@@ -39,7 +39,7 @@ export function markOf(delimiter: string, closing: string): Mark | null {
  * One thing that reads as one: a letter, an atom, a line break with the prefix
  * of the line it starts. `fixed` is a block's own prefix, which wears nothing.
  */
-export type Unit = { source: string; marks: readonly Mark[]; from: number; to: number; fixed?: boolean; breaks?: boolean }
+export type Unit = { source: string; marks: readonly Mark[]; from: number; to: number; fixed?: boolean; breaks?: boolean; bare?: string }
 
 /** The blocks whose words are Markdown's inline writing. */
 const WRITTEN = new Set(['paragraph', 'heading', 'bullet', 'quote', 'callout', 'table'])
@@ -81,7 +81,7 @@ export function unitsOf(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_ATO
     if (run.kind === 'atom') { units.push({ source: text, marks, from: run.from, to: run.to }); continue }
     for (let i = 0; i < text.length; i++) {
       const lead = i === 0 ? escape : ''
-      units.push({ source: lead + text[i], marks, from: run.from + i - lead.length, to: run.from + i + 1 })
+      units.push({ source: lead + text[i], marks, from: run.from + i - lead.length, to: run.from + i + 1, ...(run.autolink ? { bare: run.href } : {}) })
     }
     escape = ''
   }
@@ -341,10 +341,28 @@ export function rangeWears(block: Block, from: number, to: number, key: string, 
   return { words: within.length > 0, all: within.length > 0 && within.every(unit => sameKeys(unit.marks, key)) }
 }
 
+/**
+ * A bare address is a link only while its letters stand together, so a mark on
+ * some of them would end the link. One a range's edge falls inside is written
+ * out as a link first, and its letters then wear whatever they are given.
+ */
+function holdAddresses(units: Unit[], start: number, end: number) {
+  for (const edge of [start, end]) {
+    const href = units[edge]?.bare
+    if (!href || units[edge - 1]?.bare !== href) continue
+    let first = edge, last = edge
+    while (units[first - 1]?.bare === href) first--
+    while (units[last + 1]?.bare === href) last++
+    const link = linkMark(href)
+    for (let at = first; at <= last; at++) if (!sameKeys(units[at].marks, link.key)) units[at] = { ...units[at], marks: wearing(units[at].marks, [link]) }
+  }
+}
+
 /** A range's words given a mark, or with their marks of a family taken off. The offsets it gives are of the same words afterwards. */
 export function markRange(block: Block, from: number, to: number, change: { add?: Mark; remove?: string | readonly string[] }, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): { source: string; from: number; to: number } {
   const units = unitsOf(block, atoms)
   const start = startIndex(units, from), end = Math.max(start, endIndex(units, to))
+  if (change.add && end > start) holdAddresses(units, start, end)
   const next = units.map((unit, index) => {
     if (index < start || index >= end || unit.fixed) return unit
     const gone = [change.remove ?? []].flat()

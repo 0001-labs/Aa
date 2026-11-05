@@ -126,7 +126,8 @@
 [data-color="purple"] { color: var(--aa-color-purple, light-dark(#e63aaf, #f5aad1)); }
 .aa-c, .aa-block[data-kind="code"] { font-family: "Inter Arrows", var(--aa-typeface-mono, var(--typeface-mono, "Aa Mono")), "Aa Mono", ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--aa-code-size, calc(var(--ds-code-text-size, 13px) * var(--aa-sf))); font-variant-ligatures: none; letter-spacing: 0; }
 .aa-c { padding: 0 calc(4px * var(--aa-sf)); border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); background: var(--aa-code-fill, var(--ds-fill, light-dark(#e6e6e6, #3c3c3c))); }
-a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: calc(3px * var(--aa-sf)); cursor: text; }
+a.aa-link:not([data-color]) { color: var(--aa-link, currentColor); }
+a.aa-link { text-decoration-line: underline; text-decoration-thickness: 1px; text-underline-offset: calc(3px * var(--aa-sf)); cursor: text; }
 
 /* Headings, in the medium face: a title (#) is 20px on two squares, ## and
    ### 17px and 15px on one, the rest the text's size on one. */

@@ -176,3 +176,32 @@ describe('sturdiness', () => {
     expect(sliceMarkdown(blocks, { block: 0, offset: 6 }, { block: 0, offset: 17 })).toBe('**two** three')
   })
 })
+
+describe('coloured links', () => {
+  const paint = (source: string, words: string, color: string | null = 'purple') => {
+    const blocks = fromMarkdown(source), at = source.indexOf(words)
+    return serialize(colorSelection(blocks, { block: 0, offset: at }, { block: 0, offset: at + words.length }, color)!.blocks)
+  }
+  const links = (source: string) => blockRuns(parseBlocks(source)[0]).filter(run => run.kind === 'text' && run.href)
+  it('colours a whole bare address and leaves it bare', () => {
+    expect(paint('See https://using.link now', 'https://using.link')).toBe('See <span color="purple">https://using.link</span> now')
+  })
+  it('colours a written link and takes the colour off again', () => {
+    const painted = paint('See [Using](https://using.link) now', 'Using')
+    expect(painted).toBe('See <span color="purple">[Using](https://using.link)</span> now')
+    expect(paint(painted, 'Using', null)).toBe('See [Using](https://using.link) now')
+  })
+  it('keeps a bare address a link when part of it is coloured', () => {
+    const painted = paint('See https://using.link now', 'using')
+    expect(painted).toBe('See [https://<span color="purple">using</span>.link](https://using.link) now')
+    expect(links(painted).map(run => [run.href, run.color])).toEqual([['https://using.link', undefined], ['https://using.link', 'purple'], ['https://using.link', undefined]])
+  })
+  it('keeps a bare address a link when colour runs in from outside it', () => {
+    const painted = paint('See https://using.link now', 'See https')
+    expect(links(painted).every(run => run.href === 'https://using.link')).toBe(true)
+    expect(links(painted).map(run => run.color)).toEqual(['purple', undefined])
+  })
+  it('gives a www address its https when it has to be written out', () => {
+    expect(paint('www.using.link', 'using')).toBe('[www.<span color="purple">using</span>.link](https://www.using.link)')
+  })
+})

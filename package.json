@@ -85,7 +85,7 @@
     "build": "vp exec tsc -p tsconfig.build.json && vp build --config vite.config.lib.ts && vp build --config vite.config.icons.ts && vp build --config vite.config.react.ts && vp build --config vite.config.collaboration.ts && vp build --config vite.config.convex.ts && vp build --config vite.config.diagram.ts && vp build --config vite.config.diagram-language.ts && vp build --config vite.config.marker.ts && vp build --config vite.config.partial-reader.ts && vp build --config vite.config.comments.ts && vp build --config vite.config.parse.ts",
     "check": "sync1 check && vp exec tsc --noEmit",
     "test": "vp test",
-    "test:browser": "node tests/browser/sturdy.mjs && node tests/browser/diagram.mjs && node tests/browser/tabs.mjs && node tests/browser/tables.mjs",
+    "test:browser": "node tests/browser/sturdy.mjs && node tests/browser/diagram.mjs && node tests/browser/tabs.mjs && node tests/browser/tables.mjs && node tests/browser/links.mjs",
     "bench": "node tests/browser/bench.mjs",
     "release": "node scripts/release.mjs"
   },
