@@ -105,7 +105,8 @@ h1#_top {
 .expressive-code .frame .ec-line,
 .expressive-code .frame .ec-line .code,
 .expressive-code .frame .ec-line .code span { font-family: var(--typeface-mono); }
-.expressive-code .copy { display: none; }
+/* Every example can be copied: its button stands in the frame's first square. */
+.expressive-code .frame .copy button { width: var(--grid); height: var(--grid); }
 
 /* On this page: one square a line, muted, the section you are in in the ink. */
 .right-sidebar-panel h2 { font-size: var(--docs-type); font-weight: 400; color: var(--ds-text-color-muted); line-height: var(--grid); margin: 0; }

@@ -59,6 +59,8 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
   return groups.length || body ? `on:${groups.join(',')}${body ? ':body' : ''}` : ''
 }
 
+const pictureOf = (name: string) => `url("data:image/svg+xml,${encodeURIComponent((icons[`./icons/${name}.svg`] ?? '').replace(/currentColor/g, 'black'))}")`
+
 /** What a run's element looks like, kept beside it to tell a word typed from a look changed. */
 const lookOf = (run: Run) => `${run.href ?? ''}|${run.bold ? 'b' : ''}${run.italic ? 'i' : ''}${run.strike ? 's' : ''}${run.underline ? 'u' : ''}${run.code ? 'c' : ''}${run.highlight ? 'h' : ''}|${run.color ?? ''}|${run.background ?? ''}`
 const looks = new WeakMap<Node, string>()
@@ -178,6 +180,14 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   element.toggleAttribute('data-drawn', !!fenced || block.kind === 'columns' || block.kind === 'tabs' || block.kind === 'toc')
   if (fenced) element.dataset.fence = fenced.name
   else delete element.dataset.fence
+  // A code block's copy button is drawn by the sheet in its first square, so the text in the block stays the text alone.
+  if (block.kind === 'code' && !fenced) {
+    element.style.setProperty('--aa-copy-icon', pictureOf('copy'))
+    element.style.setProperty('--aa-copied-icon', pictureOf('check'))
+  } else {
+    element.style.removeProperty('--aa-copy-icon')
+    element.style.removeProperty('--aa-copied-icon')
+  }
 
   // An atom already drawn for the same words is kept rather than drawn
   // again, so a picture does not load twice as the caret moves past it.
@@ -257,6 +267,9 @@ function renderTable(element: HTMLElement, block: Block, decorations: readonly D
   // Columns with widths of their own stand at them; without, they share the line.
   if (widths.some(width => width !== null)) element.style.setProperty('--aa-table-columns', widths.map(width => width === null ? 'minmax(0, 1fr)' : `calc(${width} * var(--aa-unit))`).join(' '))
   else element.style.removeProperty('--aa-table-columns')
+  // Without widths the columns share the table in whole squares, the last taking what is left.
+  const columns = Math.max(1, rows[0]?.length ?? 1)
+  element.style.setProperty('--aa-table-auto', `${columns > 1 ? `repeat(${columns - 1}, round(down, calc(100% / ${columns}), var(--aa-unit))) ` : ''}minmax(0, 1fr)`)
   const fragment = document.createDocumentFragment()
   let offset = 0
   rows.forEach((cells, row) => {

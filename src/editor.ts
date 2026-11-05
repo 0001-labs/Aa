@@ -7,7 +7,7 @@ import { exportMarkdown, hasCommentSource } from './comments-markdown'
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, blockRuns, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type BackgroundColor, type CalloutColor, type Tab } from './markdown'
+import { IMAGE, EQUATION, blockRuns, codeClosed, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type BackgroundColor, type CalloutColor, type Tab } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, setSource, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, backgroundSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { isWritten, markOf, wordEdges, wornAt, editBlock, type Carry } from './rich'
@@ -466,42 +466,46 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         row.append(add)
       }
     }
-    /** The open tab's name written anew in its place: Enter keeps it, Escape leaves it as it was. */
+    /**
+     * The open tab's name written anew where it stands: Enter keeps it, Escape
+     * leaves it as it was. The words themselves are edited, not a field laid
+     * over them, so nothing moves: a browser sets an input's letters a pixel
+     * away from the same letters in the page. A button can hold no caret, so a
+     * plain element stands in its place for as long as the name is written.
+     */
     const rename = (index: number, button: HTMLButtonElement) => {
       const words = button.querySelector<HTMLElement>('.aa-tab-name')
       if (!words) return
-      const field = document.createElement('input')
-      field.type = 'text'
-      field.className = 'aa-tab-field'
-      field.value = tabs[index].name
-      field.size = 1
-      field.setAttribute('aria-label', word('Tab name'))
-      // The field stands over its own words, unseen and holding their exact width, so nothing moves as it opens or closes, and the row grows only as letters do.
-      const shown = words.textContent ?? ''
-      const hold = () => { words.dataset.editing = field.value || shown }
+      const writing = document.createElement('span')
+      writing.className = button.className
+      writing.dataset.tab = String(index)
+      writing.append(...Array.from(button.childNodes))
+      button.replaceWith(writing)
+      words.textContent = tabs[index].name
+      try { words.contentEditable = 'plaintext-only' } catch { words.contentEditable = 'true' }
+      words.setAttribute('role', 'textbox')
+      words.setAttribute('aria-label', word('Tab name'))
       let done = false
       const finish = (keep: boolean) => {
         if (done) return
         done = true
-        const name = field.value.trim()
-        field.remove()
-        delete words.dataset.editing
-        words.textContent = shown
-        if (keep && name !== tabs[index].name) { tabs = tabs.map((tab, at) => at === index ? { ...tab, name } : tab); changed(); buildRow() }
+        const name = (words.textContent ?? '').replace(/\s+/g, ' ').trim()
+        if (keep && name !== tabs[index].name) { tabs = tabs.map((tab, at) => at === index ? { ...tab, name } : tab); changed() }
+        buildRow()
         row.querySelector<HTMLButtonElement>(`[data-tab="${index}"]`)?.focus({ preventScroll: true })
       }
-      field.addEventListener('input', hold)
-      field.addEventListener('keydown', event => {
+      // What is written here is the row's, and goes no further than the name.
+      for (const type of ['beforeinput', 'input', 'paste', 'cut', 'copy', 'pointerdown', 'click']) words.addEventListener(type, event => event.stopPropagation())
+      words.addEventListener('keydown', event => {
         event.stopPropagation()
         if (event.key === 'Enter') { event.preventDefault(); finish(true) }
         if (event.key === 'Escape') { event.preventDefault(); finish(false) }
       })
-      field.addEventListener('blur', () => finish(true))
-      field.addEventListener('pointerdown', event => event.stopPropagation())
-      field.addEventListener('click', event => event.stopPropagation())
-      hold()
-      words.replaceChildren(field)
-      field.focus(); field.select()
+      words.addEventListener('blur', () => finish(true))
+      words.focus({ preventScroll: true })
+      const selection = document.getSelection(), range = document.createRange()
+      range.selectNodeContents(words)
+      selection?.removeAllRanges(); selection?.addRange(range)
     }
     const show = (index: number, focus = false) => {
       current = Math.max(0, Math.min(tabs.length - 1, index))
@@ -1436,6 +1440,16 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   }
 
   const onClick = (event: MouseEvent) => {
+    const code = codeCopyAt(event)
+    if (code) {
+      event.preventDefault()
+      const block = blocks[code.index], lines = block.source.split('\n').slice(1)
+      if (codeClosed(block)) lines.pop()
+      void navigator.clipboard?.writeText(lines.join('\n'))
+      code.element.setAttribute('data-copied', '')
+      setTimeout(() => code.element.removeAttribute('data-copied'), 1200)
+      return
+    }
     clearBlocks()
     const target = event.target as HTMLElement | null
     const link = target?.closest?.('a.aa-link') as HTMLAnchorElement | null
@@ -1782,7 +1796,19 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     detail.available = !!options.prompt
     if (options.prompt && detail.prompt && detail.signal) detail.answer = options.prompt(detail.prompt, { kind: 'diagram', text: detail.text ?? '', signal: detail.signal }).then(answer => typeof answer === 'string' ? answer : answer.insert ?? '')
   }
-  const onPointerDown = () => clearBlocks()
+  /** The copy button in a code block's first square, which belongs to the block's frame and not its text. */
+  const codeCopyAt = (event: MouseEvent): { element: HTMLElement; index: number } | null => {
+    const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
+    if (!element || element.parentElement !== host || element.dataset.kind !== 'code' || 'drawn' in element.dataset || element.hasAttribute('data-drawn')) return null
+    const box = element.getBoundingClientRect(), square = squareIn(element)
+    const rtl = getComputedStyle(element).direction === 'rtl'
+    const across = rtl ? event.clientX - box.left : box.right - event.clientX
+    return across >= 0 && across < square && event.clientY - box.top >= 0 && event.clientY - box.top < square ? { element, index: elements().indexOf(element) } : null
+  }
+  const onPointerDown = (event: PointerEvent) => {
+    if (codeCopyAt(event)) { event.preventDefault(); return }
+    clearBlocks()
+  }
   const filesOf = (data: DataTransfer | null) => Array.from(data?.files ?? [])
   // A file pasted is the product's to keep; Aa only says where it arrived.
   const onPaste = (event: ClipboardEvent) => {

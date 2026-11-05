@@ -40,6 +40,7 @@ import icon33 from "./icons/slash.svg?raw"
 import icon34 from "./icons/underline.svg?raw"
 import icon35 from "./icons/color.svg?raw"
 import backgroundIcon from "./icons/background.svg?raw"
+import copyIcon from "./icons/copy.svg?raw"
 import icon36 from "./icons/tabs.svg?raw"
 export const icons: Record<string, string> = {
   "./icons/check.svg": checkIcon,
@@ -84,5 +85,6 @@ export const icons: Record<string, string> = {
   "./icons/underline.svg": icon34,
   "./icons/color.svg": icon35,
   "./icons/background.svg": backgroundIcon,
+  "./icons/copy.svg": copyIcon,
   "./icons/tabs.svg": icon36,
 }

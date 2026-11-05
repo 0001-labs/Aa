@@ -72,7 +72,7 @@ export function fromTSV(text: string): string | null {
   if (!text.includes('\t')) return null
   return writeTable(text.replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n').map(line => line.split('\t')))
 }
-export type TableAction = 'add-row' | 'delete-row' | 'add-column' | 'delete-column'
+export type TableAction = 'add-row' | 'delete-row' | 'add-column' | 'delete-column' | 'bold-header'
 export function editTable(block: Block, action: TableAction, row: number, column: number): string {
   const rows = tableRows(block.source).map(row => row.map(cell => cell.text))
   const alignments = tableAlignments(block.source), widths = tableWidths(block.source)
@@ -80,6 +80,13 @@ export function editTable(block: Block, action: TableAction, row: number, column
   rows.forEach(row => { while (row.length < width) row.push('') })
   if (action === 'add-row') rows.splice(row + 1, 0, Array(width).fill(''))
   if (action === 'delete-row' && row > 0 && rows.length > 1) rows.splice(row, 1)
+  if (action === 'bold-header') {
+    // Bold unless every word in the row already is: the header is as bold as its Markdown says.
+    const bold = /^\*\*(.+)\*\*$/
+    const written = rows[0].filter(cell => cell.trim())
+    const all = written.length > 0 && written.every(cell => bold.test(cell))
+    rows[0] = rows[0].map(cell => !cell.trim() ? cell : all ? cell.replace(bold, '$1') : bold.test(cell) ? cell : `**${cell}**`)
+  }
   if (action === 'add-column') { rows.forEach(row => row.splice(column + 1, 0, '')); alignments.splice(column + 1, 0, null); widths.splice(column + 1, 0, null) }
   if (action === 'delete-column' && width > 1) { rows.forEach(row => row.splice(column, 1)); alignments.splice(column, 1); widths.splice(column, 1) }
   return writeTable(rows, alignments, widths)

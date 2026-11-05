@@ -38,7 +38,7 @@ The backdrop, three by two metres, hung before the doors open.
 </tab>
 </tabs>
 
-| Capability | Try it |
+| **Capability** | **Try it** |
 | --- | --- |
 | Tables | Tab moves between cells; Enter leaves the table |
 | Menus | Space for AI, / for commands, ⌘/ for the block's commands |

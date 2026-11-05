@@ -171,24 +171,40 @@
   box-shadow: 0 1px var(--ds-border-color);
 }
 
-/* A table's row is one square, ruled by a hairline under it. A wide table
-   scrolls on its own rather than widening the page. */
+/* A table is framed, with a line between its rows and its columns, each line
+   inside its cell's square and every row one square, so all of them stand on
+   the grid; words an item's padding in, as a box's are. A wide table scrolls on
+   its own rather than widening the page. */
 [data-ds-prose] :where(table):not(:where([data-ds-not-prose] *)) {
   display: block;
+  width: fit-content;
   max-width: 100%;
   overflow-x: auto;
   border-collapse: collapse;
   border-spacing: 0;
-  border-radius: 0;
+  border-radius: var(--ds-radius);
+  box-shadow: inset 0 0 0 1px var(--ds-border-color);
   font-variant-numeric: tabular-nums;
 }
 
 [data-ds-prose] :where(th, td):not(:where([data-ds-not-prose] *)) {
-  padding: 0 calc(var(--ds-unit) / 2);
+  padding: 0 calc(4px * var(--ds-sf, 1));
   border: 0;
-  box-shadow: inset 0 -1px var(--ds-border-color);
+  box-shadow: inset -1px 0 var(--ds-border-color), inset 0 -1px var(--ds-border-color);
   text-align: start;
   vertical-align: top;
+}
+
+[data-ds-prose] :where(th, td):where(:last-child):not(:where([data-ds-not-prose] *)) {
+  box-shadow: inset 0 -1px var(--ds-border-color);
+}
+
+[data-ds-prose] :where(tr:last-child > :is(th, td)):not(:where([data-ds-not-prose] *)) {
+  box-shadow: inset -1px 0 var(--ds-border-color);
+}
+
+[data-ds-prose] :where(tr:last-child > :is(th, td):last-child):not(:where([data-ds-not-prose] *)) {
+  box-shadow: none;
 }
 
 [data-ds-prose] :where(img, video):not(:where([data-ds-not-prose] *)) {

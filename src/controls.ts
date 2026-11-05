@@ -413,7 +413,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
       { id: 'down', label: 'Move down', icon: 'down', enabled: e => e.reordering, run: () => editor.blockAction('down') },
       { id: 'indent', label: 'Indent', icon: 'indent', run: () => editor.indent(1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
       { id: 'outdent', label: 'Outdent', icon: 'outdent', run: () => editor.indent(-1), enabled: e => e.activeBlock()?.block.kind === 'bullet' },
-      ...(['add-row', 'delete-row', 'add-column', 'delete-column'] as const).map(action => ({ id: action, label: action.replace('-', ' ').replace(/^./, letter => letter.toUpperCase()), icon: 'table', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'table', run: () => editor.table(action) })),
+      ...(['bold-header', 'add-row', 'delete-row', 'add-column', 'delete-column'] as const).map(action => ({ id: action, label: action.replace('-', ' ').replace(/^./, letter => letter.toUpperCase()), icon: 'table', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'table', run: () => editor.table(action) })),
       // A callout's fill, one of Notion's: each row's mark a square of the colour; grey is the default.
       ...CALLOUT_COLORS.map(color => ({ id: `fill-${color}`, label: `${color === 'gray' ? 'Grey' : color[0].toUpperCase() + color.slice(1)} fill`, icon: 'color', swatch: color, keywords: 'callout colour background', enabled: (e: Editor) => e.activeBlock()?.block.kind === 'callout', run: () => editor.callout({ color }, target) })),
       ...(options.blockCommands ?? []),

@@ -69,6 +69,44 @@ for (const name of engines) {
   await page.mouse.click(cell.x, cell.y); await page.keyboard.type('X'); await page.waitForTimeout(40)
   check('a cell still takes words', /\| \S*X\S* \|/.test(await page.evaluate(() => window.editor.value)))
 
+  // On the grid
+  await page.evaluate(() => { document.getElementById('host').style.width = '643.8px' })
+  await open()
+  const lines = () => page.evaluate(() => { const table = document.querySelector('.aa-block[data-kind=table]'), box = table.getBoundingClientRect(), rows = [...table.querySelectorAll('.aa-table-row')].map(row => row.getBoundingClientRect()), cells = [...table.querySelectorAll('.aa-table-row:first-child .aa-table-cell')].map(cell => cell.getBoundingClientRect()), word = document.createRange(); word.selectNodeContents(table.querySelector('.aa-table-cell span:last-child')); return { width: box.width, tops: rows.map(row => row.top - box.top), columns: cells.map(cell => cell.left - box.left), inset: word.getBoundingClientRect().left - cells[0].left, frame: getComputedStyle(table).boxShadow, lastRule: getComputedStyle(table.querySelector('.aa-table-row:nth-last-child(2) .aa-table-cell:last-child')).boxShadow } })
+  const grid = await lines()
+  check('the table is as wide as whole squares', grid.width % 20 === 0, grid.width)
+  check('every row starts on a square', grid.tops.every(top => top % 20 === 0), grid.tops.join(' '))
+  check('every column starts on a square', grid.columns.every(left => left % 20 === 0), grid.columns.join(' '))
+  check('words stand an item\'s padding in', grid.inset === 4, grid.inset)
+  check('it has lines all around', grid.frame !== 'none' && !grid.frame.includes('0px 0px 0px 0px'), grid.frame.slice(0, 50))
+
+  // Code blocks
+  await open('Before\n\n```ts\nconst a = 1\nconst b = 2\n```\n\nAfter')
+  const code = await page.evaluate(() => { const b = document.querySelector('[data-kind=code]'), r = b.getBoundingClientRect(), t = b.querySelector('.aa-c'), tr = t.getBoundingClientRect(), c = getComputedStyle(t); return { top: tr.top - r.top, height: r.height, fill: c.backgroundColor, button: getComputedStyle(b, '::before').content, x: r.right - 10, y: r.top + 10, words: t.textContent } })
+  check('a code block has one square above its code', code.top >= 20 && code.top < 25, code.top)
+  check('its height is its lines and one square each way', code.height === 80, code.height)
+  check('its code is not drawn as inline code', code.fill === 'rgba(0, 0, 0, 0)')
+  check('it always shows a copy button', code.button !== 'none')
+  await page.evaluate(() => { window.copied = null; Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: text => { window.copied = text; return Promise.resolve() } } }) })
+  await page.mouse.click(code.x, code.y); await page.waitForTimeout(40)
+  check('it copies the code, without its fences', await page.evaluate(() => window.copied) === 'const a = 1\nconst b = 2', await page.evaluate(() => JSON.stringify(window.copied)))
+  check('it changes nothing', await page.evaluate(() => window.editor.value.includes('```ts\nconst a = 1')))
+  await page.evaluate(() => window.pickWords('const a')); await page.keyboard.press('ArrowRight'); await page.keyboard.type('X'); await page.waitForTimeout(40)
+  check('code can still be typed in', (await page.evaluate(() => window.editor.value)).includes('const aX = 1'), JSON.stringify((await page.evaluate(() => window.editor.value)).slice(8, 34)))
+
+  // A header is as bold as its Markdown
+  await open()
+  check('a header is not bold by itself', await page.evaluate(() => Number(getComputedStyle(document.querySelector('.aa-table-cell span:last-child')).fontWeight) < 500))
+  await page.evaluate(() => { document.querySelector('.aa-table-cell').focus(); window.pickWords('Capability') })
+  await page.keyboard.press(`${mod}+b`); await page.waitForTimeout(40)
+  check('Bold on a header\'s words bolds them', (await page.evaluate(() => window.editor.value)).includes('| **Capability** | Try it |'))
+  await page.evaluate(() => window.pickWords('Capability')); await page.keyboard.press(`${mod}+b`); await page.waitForTimeout(40)
+  check('and again takes it off', (await page.evaluate(() => window.editor.value)).includes('| Capability | Try it |'))
+  await page.evaluate(() => { window.pickWords('Capability'); window.editor.table('bold-header') }); await page.waitForTimeout(40)
+  check('the menu bolds the whole row', (await page.evaluate(() => window.editor.value)).includes('| **Capability** | **Try it** |'))
+  await page.evaluate(() => { window.pickWords('Capability'); window.editor.table('bold-header') }); await page.waitForTimeout(40)
+  check('and takes it off the whole row', (await page.evaluate(() => window.editor.value)).includes('| Capability | Try it |'))
+
   // The bar
   await open('Colour these words', { toolbar: true })
   await page.evaluate(() => window.pickWords('these')); await page.waitForTimeout(260)

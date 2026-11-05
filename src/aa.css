@@ -139,7 +139,14 @@ a.aa-link { color: var(--aa-link, currentColor); text-decoration-line: underline
 .aa-block[data-kind="quote"] { padding-left: var(--aa-unit); box-shadow: inset 1px 0 var(--aa-quote-rule, var(--ds-text-color-muted, light-dark(#5f5f5f, #cacaca))); }
 
 /* A block of code: a square of room around it, its frame a hairline. */
-.aa-block[data-kind="code"] { padding: var(--aa-unit); border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); box-shadow: inset 0 0 0 1px var(--aa-rule-color); background: var(--aa-code-paper, transparent); }
+/* A code block is one square of room on every side, the top included: its copy button stands in that square.
+   The opening fence and the line break after it take no room, and code in a block is not drawn as inline code. */
+.aa-block[data-kind="code"] > .aa-syntax:first-child + br { display: none; }
+.aa-block[data-kind="code"] .aa-c { padding: 0; border-radius: 0; background: none; }
+.aa-block[data-kind="code"]:not([data-drawn])::before { content: ""; position: absolute; inset-block-start: calc((var(--aa-unit) - 16px * var(--aa-sf)) / 2); inset-inline-end: calc((var(--aa-unit) - 16px * var(--aa-sf)) / 2); width: calc(16px * var(--aa-sf)); height: calc(16px * var(--aa-sf)); background: currentColor; opacity: 0.6; cursor: pointer; pointer-events: auto; -webkit-mask: var(--aa-copy-icon) center / contain no-repeat; mask: var(--aa-copy-icon) center / contain no-repeat; }
+.aa-block[data-kind="code"][data-copied]:not([data-drawn])::before { opacity: 1; -webkit-mask-image: var(--aa-copied-icon); mask-image: var(--aa-copied-icon); }
+@media (hover: hover) { .aa-block[data-kind="code"]:not([data-drawn]):hover::before { opacity: 1; } }
+.aa-block[data-kind="code"] { position: relative; padding: var(--aa-unit); border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); box-shadow: inset 0 0 0 1px var(--aa-rule-color); background: var(--aa-code-paper, transparent); }
 
 /* A bullet: the marker drawn while its `- ` is hidden, and a box for a tick,
    a square in from the text's edge. */
@@ -438,24 +445,30 @@ dialog.aa-sheet::backdrop { background: color-mix(in srgb, var(--ds-black, #2a2a
    lines; the header row in the medium face, Markdown's `---:` setting a
    column of numbers to its end in tabular figures. */
 .aa-block[data-kind="table"] { font-variant-numeric: tabular-nums; }
-.aa-table-row { display: grid; min-width: 100%; width: max-content; grid-template-columns: var(--aa-table-columns, repeat(var(--aa-columns), minmax(0, 1fr))); }
-.aa-block[data-kind="table"]:not([style*="--aa-table-columns"]) .aa-table-row { width: auto; }
-.aa-block[data-kind="table"] { overflow-x: auto; scrollbar-width: none; }
+/* Framed, as Design system 1's prose tables are: a line round it and between its rows and columns, each inside its
+   cell's square, so all of them stand on the grid. It is as wide as whole squares, and its columns start on them. */
+.aa-table-row { display: grid; grid-template-columns: var(--aa-table-columns, var(--aa-table-auto)); }
+.aa-block[data-kind="table"] { overflow-x: auto; scrollbar-width: none; width: 100%; width: round(down, 100%, var(--aa-unit)); box-sizing: border-box; border-radius: var(--ds-radius, calc(4px * var(--aa-sf))); box-shadow: inset 0 0 0 1px var(--aa-table-rule, var(--aa-rule-color)); }
+.aa-block[data-kind="table"][style*="--aa-table-columns"] { width: fit-content; max-width: 100%; }
 .aa-block[data-kind="table"][data-settling] .aa-table-row { transition: grid-template-columns 0.14s cubic-bezier(0.2, 1, 0.1, 1); }
 @media (prefers-reduced-motion: reduce) { .aa-block[data-kind="table"][data-settling] .aa-table-row { transition: none; } }
 /* A column's edge, as Design system 1's tables have it (.ds-table-column-resize in its table.css): a square wide to press, a hairline to see. */
 .aa-table-cell:has(> .ds-table-column-resize) { overflow: visible; }
 .ds-table-column-resize { position: absolute; z-index: 3; inset-block-start: 0; inset-inline-end: calc(var(--aa-unit) / -2); width: var(--aa-unit); height: var(--ds-table-resize-height, var(--aa-unit)); cursor: col-resize; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; }
-.ds-table-column-resize::after { content: ""; position: absolute; inset-block-start: 0; inset-inline-start: calc(50% - 0.5px); width: 1px; height: 100%; background: var(--aa-table-rule, var(--aa-rule-color)); opacity: 0; pointer-events: none; transition: opacity 0.14s ease-out; }
+.ds-table-column-resize::after { content: ""; position: absolute; inset-block-start: 0; inset-inline-start: calc(50% - 1px); width: 1px; height: 100%; background: var(--ds-focus-ring, currentColor); opacity: 0; pointer-events: none; transition: opacity 0.14s ease-out; }
 .ds-table-column-resize:is(:focus, [data-resizing])::after { opacity: 1; }
 @media (hover: hover) { .ds-table-column-resize:hover::after { opacity: 1; } }
 .aa-table-cell:last-child > .ds-table-column-resize { inset-inline-end: 0; }
 .aa-table-cell:last-child > .ds-table-column-resize::after { inset-inline-start: auto; inset-inline-end: 0; }
 .aa-block[data-readonly="true"] .ds-table-column-resize { display: none; }
-.aa-table-cell { position: relative; box-sizing: border-box; min-width: 0; min-height: var(--aa-unit); padding: 0 calc(var(--aa-unit) / 2); box-shadow: inset 0 -1px var(--aa-table-rule, var(--aa-rule-color)); line-height: var(--aa-unit); white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
+.aa-table-cell { position: relative; box-sizing: border-box; min-width: 0; min-height: var(--aa-unit); padding: 0 calc(4px * var(--aa-sf)); box-shadow: inset -1px 0 var(--aa-table-rule, var(--aa-rule-color)), inset 0 -1px var(--aa-table-rule, var(--aa-rule-color)); line-height: var(--aa-unit); white-space: pre-wrap; outline: none; -webkit-user-modify: read-write-plaintext-only; }
+.aa-table-cell:last-child { box-shadow: inset 0 -1px var(--aa-table-rule, var(--aa-rule-color)); }
+.aa-table-row:nth-last-child(2) .aa-table-cell { box-shadow: inset -1px 0 var(--aa-table-rule, var(--aa-rule-color)); }
+.aa-table-row:nth-last-child(2) .aa-table-cell:last-child { box-shadow: none; }
 .aa-table-cell[data-align="center"] { text-align: center; }
 .aa-table-cell[data-align="end"] { text-align: end; }
-.aa-table-row:first-child { color: var(--aa-table-header, inherit); font-family: "Inter Arrows", var(--ds-typeface-medium, var(--typeface-medium, inherit)), system-ui, sans-serif; font-weight: var(--ds-type-weight-bold, 500); }
+/* A header is as bold as its Markdown says, as any words are. */
+.aa-table-row:first-child { color: var(--aa-table-header, inherit); }
 .aa-atom video, .aa-atom audio { display: block; max-width: 100%; }
 .aa-caption { display: block; font: inherit; font-size: var(--ds-type-size-small, calc(10px * var(--aa-sf))); color: var(--ds-text-color-muted, inherit); min-height: 1lh; outline: none; cursor: text; -webkit-user-modify: read-write-plaintext-only; }
 .aa-caption:empty::before { content: attr(data-placeholder); color: var(--aa-placeholder, var(--ds-input-placeholder-color, GrayText)); }
@@ -881,10 +894,8 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 .aa-tab-icon { font-size: calc(12px * var(--aa-sf)); line-height: calc(16px * var(--aa-sf)); }
 .aa-tab-add { color: var(--ds-text-color-muted, GrayText); }
 .aa-tab-add:hover, .aa-tab-add:focus-visible { color: var(--ds-text-color, inherit); }
-/* Renaming a tab moves nothing: its words stay, unseen, holding the exact width, and the field stands over them. */
-.aa-tab-name[data-editing] { display: inline-grid; }
-.aa-tab-name[data-editing]::after { content: attr(data-editing); grid-area: 1 / 1; visibility: hidden; white-space: pre; }
-.aa-tab-field { grid-area: 1 / 1; box-sizing: border-box; width: 100%; min-width: 1px; height: calc(16px * var(--aa-sf)); margin: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--ds-text-color, inherit); font: inherit; letter-spacing: inherit; line-height: calc(16px * var(--aa-sf)); outline: none; }
+/* Renaming a tab writes in its own words, so nothing moves; a caret needs somewhere to stand in an empty name. */
+.aa-tab-name[contenteditable] { display: inline-block; min-width: 1px; outline: none; white-space: pre; cursor: text; -webkit-user-select: text; user-select: text; color: var(--ds-text-color, inherit); }
 .aa-tab-panel { margin-top: var(--aa-unit); min-height: var(--aa-unit); }
 .aa-block[data-readonly="true"] .aa-tab { cursor: default; }
 

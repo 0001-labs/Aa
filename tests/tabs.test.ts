@@ -52,16 +52,16 @@ describe('tabs', () => {
     expect(onChange).toHaveBeenCalled()
     // The open tab pressed again takes its name: Enter keeps it.
     tabs()[0].click()
-    const field = row().querySelector<HTMLInputElement>('.aa-tab-field')!
-    expect(field.value).toBe('Indgang og reception')
-    field.value = 'Entrance'
+    const field = row().querySelector<HTMLElement>('.aa-tab-name[contenteditable]')!
+    expect(field.textContent).toBe('Indgang og reception')
+    field.textContent = 'Entrance'
     field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
     expect(e.value).toContain('<tab name="Entrance">')
     expect(tabs()[0].textContent).toBe('Entrance')
     // The plus adds a tab after the last, open and ready to name; Escape keeps the name it was given.
     row().querySelector<HTMLButtonElement>('.aa-tab-add')!.click()
     expect(readTabs(parseBlocks(e.value)[0].source).map(tab => tab.name)).toEqual(['Entrance', 'Scene', 'Tab 3'])
-    row().querySelector<HTMLInputElement>('.aa-tab-field')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    row().querySelector<HTMLElement>('.aa-tab-name[contenteditable]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
     expect(tabs()[2].getAttribute('aria-selected')).toBe('true')
     // Delete on a tab takes it away, its words with it; the last tab stays.
     tabs()[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }))
@@ -77,7 +77,7 @@ describe('tabs', () => {
     setup(source, { readOnly: true })
     expect(row().querySelector('.aa-tab-add')).toBeNull()
     tabs()[0].click()
-    expect(row().querySelector('.aa-tab-field')).toBeNull()
+    expect(row().querySelector('.aa-tab-name[contenteditable]')).toBeNull()
     tabs()[1].click()
     expect(host!.querySelector('.aa-tab-panel')?.textContent).toContain('one')
   })
