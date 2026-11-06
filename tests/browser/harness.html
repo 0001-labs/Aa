@@ -4,7 +4,8 @@
 <style>body{margin:40px;font:16px/20px system-ui} #host{max-width:640px}</style></head>
 <body><div id="host"></div>
 <script type="module">
-  import { createEditor } from '/dist/aa.js'
+  import { createEditor, imageAtom, personAtom } from '/dist/aa.js'
+  window.personAtom = personAtom; window.imageAtom = imageAtom
   let editor = null
   window.make = (value, options = {}) => {
     editor?.destroy()
