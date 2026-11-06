@@ -22,9 +22,13 @@ Select words within one block and paste an address starting `https://` or `http:
 | A link | ⌘K, Link on the toolbar, or an address pasted over words | `[words](https://example.com)` |
 | An address | Type or paste it | `https://example.com` or `www.example.com`, as written |
 
-An address in the text is a link as it stands: one starting `https://`, `http://` or `www.` is drawn as a link and kept exactly as it was written. A `www.` address opens as `https://`. Addresses in code and in a link's words stay as they are.
+An address in the text is a link as it stands: one starting `https://`, `http://` or `www.` is drawn as a link and kept exactly as it was written. A `www.` address opens as `https://`. Addresses in code stay as they are.
 
-A link's words can be formatted like any others. Its address has no spaces, and parentheses in an address written through the field or pasted over words are stored as `%28` and `%29`, so the Markdown reads back as one link.
+A link whose words are its own address reads short: `https://www.example.com/news/` shows as `example.com/news`, and a long one is cut at a word with an ellipsis. Only the drawing changes. Put the caret in the link and the whole address comes back to edit; rest the pointer on it to read it, and the document keeps every letter.
+
+Aa reads every link CommonMark writes: a title after the address in `"`, `'` or `()`, an address in `<angle brackets>`, and a pair of parentheses in an address. A title shows when the pointer rests on the link, and it is kept. An empty one, as Trello writes, is read as none.
+
+A link's words can be formatted like any others. An address written through the field or pasted over words has no spaces, and its parentheses are stored as `%28` and `%29`, so the Markdown reads back as one link.
 
 ## Opening a link
 

@@ -27,7 +27,7 @@ export const UNDERLINE = simple('underline', '<u>', '</u>', false, 1)
 export const CODE = simple('code', '`', '`', false, 7)
 export const colorMark = (color: string): Mark => ({ family: 'color', key: `color:${color}`, open: `<span color="${color}">`, close: '</span>', tight: false, rank: 0 })
 export const backgroundMark = (color: string): Mark => ({ family: 'background', key: `background:${color}`, open: `<span color="${color}_background">`, close: '</span>', tight: false, rank: 0 })
-export const linkMark = (href: string): Mark => ({ family: 'link', key: `link:${href}`, open: '[', close: `](${href})`, tight: false, rank: 6 })
+export const linkMark = (href: string, source = `(${href})`): Mark => ({ family: 'link', key: `link:${source}`, open: '[', close: `]${source}`, tight: false, rank: 6 })
 
 /** The mark a toolbar's delimiters write; none for what is not a mark of words (an equation's `$`). */
 export function markOf(delimiter: string, closing: string): Mark | null {
@@ -54,7 +54,7 @@ function marksOf(run: Run): Mark[] {
   if (run.italic) marks.push(ITALIC)
   if (run.strike) marks.push(STRIKE)
   if (run.highlight) marks.push(HIGHLIGHT)
-  if (run.href !== undefined && !run.autolink) marks.push(linkMark(run.href))
+  if (run.href !== undefined && !run.autolink) marks.push(linkMark(run.href, run.linkSource))
   if (run.code) marks.push(CODE)
   return marks
 }

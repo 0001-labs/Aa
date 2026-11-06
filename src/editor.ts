@@ -7,7 +7,7 @@ import { exportMarkdown, hasCommentSource } from './comments-markdown'
  * edge, paste, marks, undo and the caret's way between blocks.
  */
 
-import { IMAGE, EQUATION, blockRuns, codeClosed, fencedAtom, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type BackgroundColor, type CalloutColor, type Tab } from './markdown'
+import { IMAGE, EQUATION, blockRuns, codeClosed, fencedAtom, linkAround, parseBlocks, readColumns, readPicture, readTabs, serialize, writeColumns, writePicture, writeTabs, type AtomSyntax, type Block, type TextColor, type BackgroundColor, type CalloutColor, type Tab } from './markdown'
 import { fromMarkdown, toMarkdown, replaceRange, setSource, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, colorSelection, backgroundSelection, toggleBox, sliceMarkdown, order, comparePos, select, turnInto, moveBlocks, duplicateBlocks, deleteBlocks, type BlockSelection, type TurnKind, type Pos } from './document'
 import { History, type ChangeKind, type Snapshot } from './history'
 import { isWritten, markOf, wordEdges, wornAt, editBlock, type Carry } from './rich'
@@ -1138,11 +1138,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const [a, b] = order(selection.anchor, selection.focus)
     if (a.block !== b.block || blocks[a.block].kind === 'table' && !inOneCell(blocks[a.block].source, a.offset, b.offset)) return
     let start = a.offset, end = b.offset, text = blocks[a.block].source.slice(start, end), url = ''
-    for (const match of blocks[a.block].source.matchAll(/\[([^\]]*)\]\(([^)]*)\)/g)) {
-      if (a.offset >= match.index! && b.offset <= match.index! + match[0].length) {
-        start = match.index!; end = start + match[0].length; text = match[1]; url = match[2]; break
-      }
-    }
+    const link = linkAround(blocks[a.block].source, a.offset, b.offset)
+    if (link) { start = link.from; end = link.to; text = link.words; url = link.href }
     host.dispatchEvent(new CustomEvent('aa-link-request', { detail: { start: offsetOf({ block: a.block, offset: start }), end: offsetOf({ block: a.block, offset: end }), text, url } }))
   }
 

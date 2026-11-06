@@ -310,6 +310,10 @@ export type Run = {
   /** `<span color="red_background">words</span>`, Notion's way of writing a colour behind words: one of `BACKGROUND_COLORS`. */
   background?: string
   href?: string
+  /** A link's title, shown when the pointer rests on it. */
+  title?: string
+  /** A link's `(address "title")` as written, where `(href)` would not say the same. */
+  linkSource?: string
   /**
    * Syntax belongs to a mark: the range of the whole mark, delimiters
    * included, shown together while the caret is in it. Prefix syntax has no
@@ -383,7 +387,7 @@ export const EQUATION = atomPattern('equation', /\$(?!\$)(?:\\.|[^$\n])+\$/)
 /** The atoms an editor reads unless it is given others. */
 export const DEFAULT_ATOMS: readonly AtomSyntax[] = [IMAGE, EQUATION]
 
-type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'href' | 'highlight' | 'color' | 'background' | 'autolink'>
+type Marks = Pick<Run, 'bold' | 'italic' | 'strike' | 'underline' | 'code' | 'href' | 'title' | 'linkSource' | 'highlight' | 'color' | 'background' | 'autolink'>
 
 /** The colours words can be written in, by Notion's names for them. */
 export const TEXT_COLORS = ['gray', 'red', 'orange', 'green', 'blue', 'purple'] as const
@@ -399,10 +403,46 @@ const BACKGROUND = /_background$/
  */
 const TAG = /<u>|<span color="([a-z_]+)">/y
 
-const LINK = /\[([^[\]]*)\]\(([^\s()]*)\)/y
+/**
+ * A link as CommonMark writes one: `[words](address)`, `[words](<an address> "title")`.
+ * The address may hold a pair of brackets, and the title may be in `"`, `'` or `()`.
+ */
+const LINK_SOURCE = String.raw`\[((?:\\.|[^[\]\\])*)\]\(\s*(<(?:\\.|[^<>\\\n])*>|(?:\\.|[^\s()\\]|\((?:\\.|[^\s()\\])*\))*)(?:\s+("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^()\\])*\)))?\s*\)`
+const LINK = new RegExp(LINK_SOURCE, 'y')
+/** What a title holds when it says nothing: Trello writes `""` with an invisible letter in it. */
+const EMPTY_TITLE = /^[\s\u200b-\u200d\u2060\ufeff]*$/u
 const AUTOLINK = /(?:https?:\/\/|www\.)[^\s<>()]*[^\s<>().,;:!?'"]/g
 /** Characters a backslash can make plain, CommonMark's ASCII punctuation. */
 const ESCAPABLE = /[!-/:-@[-`{-~]/
+const plain = (value: string) => value.replace(/\\([!-/:-@[-`{-~])/g, '$1')
+
+type LinkParts = { words: string; href: string; title?: string; linkSource?: string; close: number; end: number }
+
+/** A written link's parts, from the regular expression's match at `at`. */
+function linkParts(found: RegExpExecArray, at: number): LinkParts {
+  const [whole, words, address, written] = found
+  const title = written ? plain(written.slice(1, -1)) : ''
+  const said = !EMPTY_TITLE.test(title)
+  const href = plain(address.replace(/^<([^]*)>$/, '$1'))
+  // A title that says nothing is not kept, and an address with nothing unusual needs no writing of its own.
+  const tail = `(${address}${said ? ` ${written}` : ''})`
+  return { words, href, close: at + 1 + words.length, end: at + whole.length, ...(said ? { title } : {}), ...(tail === `(${href})` ? {} : { linkSource: tail }) }
+}
+
+/** The link the range `from`..`to` of a block's source lies in, written or a bare address. */
+export function linkAround(source: string, from: number, to: number): { from: number; to: number; words: string; href: string } | null {
+  for (const found of source.matchAll(new RegExp(LINK_SOURCE, 'g'))) {
+    const at = found.index!
+    if (from < at || to > at + found[0].length) continue
+    const parts = linkParts(found, at)
+    return { from: at, to: parts.end, words: parts.words, href: parts.href }
+  }
+  for (const found of source.matchAll(AUTOLINK)) {
+    const at = found.index!
+    if (from >= at && to <= at + found[0].length) return { from: at, to: at + found[0].length, words: found[0], href: found[0].startsWith('www.') ? `https://${found[0]}` : found[0] }
+  }
+  return null
+}
 
 const isWord = (char: string | undefined) => !!char && (/[A-Za-z0-9]/.test(char) || char > '\u007f' && /[\p{L}\p{N}]/u.test(char))
 const isSpace = (char: string | undefined) => !char || /\s/.test(char)
@@ -440,7 +480,7 @@ type Token =
   | { type: 'escape'; at: number }
   | { type: 'delimiters'; run: Delimiters }
   | { type: 'tag'; at: number; length: number; mark: 'underline' | 'color'; color?: string; closing: boolean; group: [number, number]; lone: boolean; id: number }
-  | { type: 'link'; at: number; href: string; close: number; end: number; group: [number, number] }
+  | ({ type: 'link'; at: number; group: [number, number] } & Omit<LinkParts, 'words'>)
   | { type: 'link-end'; at: number; end: number; group: [number, number] }
 
 /** How many characters a line's own prefix takes at a place: a quote's `> ` on each of its lines. */
@@ -511,7 +551,8 @@ function scan(text: string, start: number, end: number, atoms: readonly AtomSynt
       LINK.lastIndex = i
       const found = LINK.exec(text)
       if (found && i + found[0].length <= end) {
-        link = { type: 'link', at: i, href: found[2], close: i + 1 + found[1].length, end: i + found[0].length, group: [i, i + found[0].length] }
+        const { words: _words, ...parts } = linkParts(found, i)
+        link = { type: 'link', at: i, ...parts, group: [i, parts.end] }
         tokens.push(link)
         linkText = link.close; linkEnd = link.end
         i++
@@ -643,7 +684,7 @@ function inline(text: string, start: number, end: number, base: number, out: Run
   pairTags(tokens)
   const count = { bold: 0, italic: 0, strike: 0, highlight: 0, underline: 0 }
   const colors: { id: number; color: string }[] = []
-  let href: string | undefined
+  let href: string | undefined, title: string | undefined, linkSource: string | undefined
   let from = start
   const marks = (): Marks => {
     const on: Marks = {}
@@ -654,6 +695,8 @@ function inline(text: string, start: number, end: number, base: number, out: Run
     if (count.underline) on.underline = true
     for (const { color } of colors) { if (BACKGROUND.test(color)) on.background = color.replace(BACKGROUND, ''); else on.color = color }
     if (href !== undefined) on.href = href
+    if (title !== undefined) on.title = title
+    if (linkSource !== undefined) on.linkSource = linkSource
     return on
   }
   const flush = (to: number) => pushText(text, from, to, base, marks(), out)
@@ -706,12 +749,12 @@ function inline(text: string, start: number, end: number, base: number, out: Run
         break
       case 'link':
         syntax(token.at, token.at + 1, token.group)
-        href = token.href
+        ;({ href, title, linkSource } = token)
         break
       case 'link-end':
         flush(token.at)
         from = token.at
-        href = undefined
+        href = title = linkSource = undefined
         syntax(token.at, token.end, token.group)
         break
     }
