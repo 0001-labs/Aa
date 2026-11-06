@@ -1,5 +1,4 @@
-import { caretAt } from './span'
-import { sidePlacement } from './placement'
+import { caretAt, sidePlacement } from './placement'
 /**
  * Blocks are moved by hand, with nothing drawn beside them, on Drag's
  * sortable engine (`src/vendor/drag`, copied from /Users/joachim/0001/Drag

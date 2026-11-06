@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { beforeAll, afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { loadDragging } from '../src/controls'
+
+beforeAll(() => loadDragging())
 import { createEditor, type Editor, type EditorOptions } from '../src/editor'
 import { HOLD, REST } from '../src/drag'
 import { readColumns, parseBlocks, writeColumns } from '../src/markdown'

@@ -13,6 +13,7 @@
  * it then moves down into other blocks. A block lifted, the selection is
  * left alone.
  */
+import { caretAt } from './placement'
 import { offsetIn, pointAt } from './render'
 
 /** How near the window's edge a press selecting across blocks scrolls it, in pixels. */
@@ -198,12 +199,4 @@ function scrollerOf(element: HTMLElement): Element | Window {
     if ((overflow === 'auto' || overflow === 'scroll') && parent.scrollHeight > parent.clientHeight) return parent
   }
   return element.ownerDocument.defaultView!
-}
-
-/** The place in the text a point on the screen falls on, in whichever way the browser says it. */
-export function caretAt(document: Document, x: number, y: number): Point | null {
-  const position = (document as Document & { caretPositionFromPoint?(x: number, y: number): { offsetNode: Node; offset: number } | null }).caretPositionFromPoint?.(x, y)
-  if (position) return { node: position.offsetNode, offset: position.offset }
-  const range = document.caretRangeFromPoint?.(x, y)
-  return range ? { node: range.startContainer, offset: range.startOffset } : null
 }

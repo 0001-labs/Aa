@@ -1,4 +1,7 @@
-import { expect, test } from 'vite-plus/test'
+import { beforeAll, expect, test } from 'vite-plus/test'
+import { loadDragging } from '../src/controls'
+
+beforeAll(() => loadDragging())
 import { createEditor } from '../src/editor'
 
 test('editor controls stay inside their native dialog and are removed with the editor', () => {

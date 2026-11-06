@@ -15,6 +15,7 @@ export const lazyFiles = {
   resolveId(id: string) {
     if (id === "./components") return { id: "./aa-components.js", external: true };
     if (id === "./assist") return { id: "./aa-assist.js", external: true };
+    if (id === "./drag") return { id: "./aa-drag.js", external: true };
     return null;
   },
 };

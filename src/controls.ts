@@ -1,6 +1,6 @@
 import type { Editor, EditorOptions } from './editor'
 import { turnInto as turnBlocks, type TurnKind } from './document'
-import { createDragging } from './drag'
+import { lazy } from './lazy'
 import { openSheet, type SheetGroup } from './sheet'
 
 import { iconElement } from './icons'
@@ -130,6 +130,9 @@ export function selectionToolbarPosition(rect: Pick<DOMRect, 'left' | 'top' | 'w
   const gap = 0, above = rect.top - box.height
   return { left: Math.max(view.left, Math.min(rect.left + (rect.width - box.width) / 2, view.left + view.width - box.width)), top: Math.max(view.top, Math.min(above >= view.top ? above : rect.bottom + gap, view.top + view.height - box.height)) }
 }
+
+const dragging = lazy(() => import('./drag'))
+export const loadDragging = dragging.get
 
 export function createControls(editor: Editor, options: EditorOptions): () => void {
   defineAaToolbar()
@@ -567,10 +570,21 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   window.addEventListener('scroll', viewport, true)
   window.visualViewport?.addEventListener('resize', viewport)
   window.visualViewport?.addEventListener('scroll', viewport)
-  const stopDragging = createDragging(editor, options, overlayRoot)
+  // Blocks move by hand on an engine of its own: it arrives once the page is idle, or sooner if a pointer, a focus or a file reaches writing that can change.
+  let stopDragging = () => {}
+  const reached = ['pointerover', 'focusin', 'dragenter', 'touchstart'] as const
+  const startDragging = () => {
+    if (disposed || editor.readOnly || (options.menus === false && !options.onFiles)) return
+    for (const type of reached) host.removeEventListener(type, startDragging)
+    stopDragging = dragging.when(({ createDragging }) => createDragging(editor, options, overlayRoot))
+  }
+  for (const type of reached) host.addEventListener(type, startDragging, { passive: true })
+  if (dragging.here()) startDragging()
+  else (window.requestIdleCallback ?? window.setTimeout)(startDragging)
   return () => {
     clearPreview(); preview.remove()
     disposed = true; clearTimeout(timer); stopDragging()
+    for (const type of reached) host.removeEventListener(type, startDragging)
     toolbar.remove(); menu.remove(); findBar.remove(); linkBar.remove(); host.removeEventListener('aa-link-request', requestLink)
     host.removeEventListener('aa-selectionchange', selectionChanged); host.removeEventListener('aa-change', changed)
     host.removeEventListener('aa-dismiss', dismissControls)
