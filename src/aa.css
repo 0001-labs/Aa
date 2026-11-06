@@ -234,6 +234,7 @@ a.aa-link { text-decoration-line: underline; text-decoration-thickness: 1px; tex
 
 /* An atom: one thing to the caret, drawn by the product or as its own words. */
 .aa-atom { -webkit-user-modify: read-only; cursor: default; }
+.aa-atom[data-atom="person"] { color: var(--aa-person, var(--ds-accent-color, currentColor)); font-weight: var(--ds-type-weight-medium, 500); white-space: nowrap; }
 .aa-atom[data-atom="image"] { position: relative; display: inline-block; max-width: 100%; vertical-align: top; }
 .aa-atom[data-atom="image"] img { display: block; max-width: 100%; height: auto; border-radius: var(--aa-picture-radius, var(--ds-radius, calc(4px * var(--aa-sf)))); }
 /* A picture is its own size, up to sixteen squares, until it is given a width; then that many whole

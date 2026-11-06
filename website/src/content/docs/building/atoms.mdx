@@ -132,3 +132,17 @@ draw(element, source) {
 `source` in `aa-atom-change` is the whole block's Markdown, fences included: for a fenced atom that is the atom itself.
 
 [Diagrams](/diagrams/diagrams/) · [Pictures and media](/writing/media/) · [Equations](/writing/equations/)
+
+## People
+
+`personAtom(people, colour)` makes `@Name` an atom for the names `people()` gives. The document keeps the words `@Name`, so nothing changes in what is stored, and a name typed by hand becomes a tag as well.
+
+```ts
+import { createEditor, imageAtom, personAtom } from '@0001-labs/aa'
+
+const editor = createEditor(host, {
+  atoms: [imageAtom, personAtom(() => ['Ann Lund', 'Bo Ek'], name => colourOf(name))],
+})
+```
+
+One Backspace removes a tagged person, the space after them included, and Delete just before them does the same. Every atom is removed in one press; `tag: true` on an atom of your own adds the space.

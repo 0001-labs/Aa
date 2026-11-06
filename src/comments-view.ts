@@ -460,13 +460,13 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
         if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); speaking.abort(); send(key, field.value); return }
         speaking.stop()
       }
-      // Backspace just after a person named takes the whole name, as one thing.
+      // Backspace just after a person named, or the space after them, takes the whole name, as one thing.
       if (event.key === 'Backspace' && !event.isComposing && field.selectionStart === field.selectionEnd) {
         const caret = field.selectionStart ?? 0, before = field.value.slice(0, caret)
-        const person = mentionsIn(field.value, [...people.values()]).find(each => before.endsWith(`@${each.name.trim()}`))
+        const person = mentionsIn(field.value, [...people.values()]).find(each => before.endsWith(`@${each.name.trim()}`) || before.endsWith(`@${each.name.trim()} `))
         if (person) {
           event.preventDefault()
-          const start = caret - person.name.trim().length - 1
+          const start = before.lastIndexOf(`@${person.name.trim()}`)
           field.setRangeText('', start, caret, 'end')
           field.dispatchEvent(new Event('input', { bubbles: true }))
           return

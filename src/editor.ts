@@ -37,8 +37,33 @@ import { word } from './words'
  */
 export type Atom = AtomSyntax & {
   draw?(element: HTMLElement, source: string): void | (() => void)
+  /** A person tagged: Backspace takes the space written after it along with it, so one press removes the tag however it was made. */
+  tag?: true
   /** A block that starts one, offered in the toolbar and the slash menu: its name, icon and first source. */
   insert?: { label: string; icon: string; source: string; keywords?: string; preview?(element: HTMLElement, context: { input: 'pointer' | 'keyboard' }): void | (() => void) }
+}
+
+/**
+ * A person tagged by name, `@Name`: words in the document, drawn and removed as
+ * one thing. `people` says who can be tagged, read each time so it can change;
+ * the longest name that fits wins, and letters after it make it plain words.
+ */
+export function personAtom(people: () => readonly string[], colour?: (name: string) => string): Atom {
+  return {
+    name: 'person', tag: true,
+    match(line, at) {
+      if (line[at] !== '@' || (at > 0 && !/[\s([{>*_~]/.test(line[at - 1]))) return 0
+      const rest = line.slice(at + 1).toLocaleLowerCase()
+      const names = people().map(name => name.trim()).filter(Boolean).sort((a, b) => b.length - a.length)
+      const name = names.find(each => rest.startsWith(each.toLocaleLowerCase()) && !/[\p{L}\p{N}_-]/u.test(rest[each.length] ?? ''))
+      return name ? name.length + 1 : 0
+    },
+    draw(element, source) {
+      element.textContent = source
+      const color = colour?.(source.slice(1))
+      if (color) element.style.setProperty('--aa-person', color)
+    },
+  }
 }
 
 /** The narrowest a picture is sized to, in squares. */
@@ -976,6 +1001,19 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
    * or quote's prefix comes off first, then the block joins its neighbour. A
    * table cell's edge holds. True when the key is taken here.
    */
+  const deleteAtom = (selection: Selection2, direction: 'backward' | 'forward'): boolean => {
+    if (comparePos(selection.anchor, selection.focus) !== 0) return false
+    const { block: index, offset } = selection.focus, source = blocks[index].source
+    const found = blockRuns(blocks[index], atoms).find(run => {
+      if (run.kind !== 'atom' || !run.to) return false
+      if (direction === 'forward') return run.from === offset
+      return run.to === offset || (run.to === offset - 1 && source[run.to] === ' ' && atoms.find(atom => atom.name === run.atom)?.tag)
+    })
+    if (!found) return false
+    insert({ anchor: { block: index, offset: found.from }, focus: { block: index, offset: direction === 'forward' ? found.to : offset } }, '')
+    return true
+  }
+
   const deleteAtEdge = (selection: Selection2, direction: 'backward' | 'forward'): boolean => {
     const [a, b] = order(selection.anchor, selection.focus)
     if (a.block !== b.block || a.offset !== b.offset) return false
@@ -1049,12 +1087,12 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         return
       case 'deleteContentBackward': {
         if (!collapsed) { event.preventDefault(); insert(selection, ''); return }
-        if (deleteAtEdge(selection, 'backward')) event.preventDefault()
+        if (deleteAtom(selection, 'backward') || deleteAtEdge(selection, 'backward')) event.preventDefault()
         return
       }
       case 'deleteContentForward': {
         if (!collapsed) { event.preventDefault(); insert(selection, ''); return }
-        if (deleteAtEdge(selection, 'forward')) event.preventDefault()
+        if (deleteAtom(selection, 'forward') || deleteAtEdge(selection, 'forward')) event.preventDefault()
         return
       }
       case 'deleteByCut':
@@ -1294,7 +1332,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     // delete inside the block (at the start of an empty block, say), so the
     // keys that cross a block's edge are taken here too.
     if ((event.key === 'Backspace' || event.key === 'Delete') && !selected && !mod && !event.altKey && !event.shiftKey) {
-      if (deleteAtEdge(selection, event.key === 'Backspace' ? 'backward' : 'forward')) { event.preventDefault(); return }
+      const direction = event.key === 'Backspace' ? 'backward' : 'forward'
+      if (deleteAtom(selection, direction) || deleteAtEdge(selection, direction)) { event.preventDefault(); return }
     }
     // ⌘A selects words, as a word processor does: the block's (a table cell's), then all of the writing. Never the blocks themselves.
     if (mod && key === 'a' && !event.altKey) {
