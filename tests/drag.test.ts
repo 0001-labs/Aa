@@ -357,10 +357,16 @@ describe('writing without a plus', () => {
     expect(host!.children).toHaveLength(2)
   })
 
-  it('says how to reach the styles in the empty block the caret is in', async () => {
-    const e = setup('One')
+  it('says nothing over an empty block unless it is given words to say', async () => {
+    const quiet = setup('One')
+    quiet.selectRange(3); key('Enter')
+    expect(block(1).dataset.placeholder).toBeUndefined()
+    expect(host!.hasAttribute('data-block-hints')).toBe(false)
+    quiet.destroy(); host!.remove()
+    const e = setup('One', { blockPlaceholder: 'Type / for commands' })
     e.selectRange(3); key('Enter')
     expect(block(1).dataset.placeholder).toBe('Type / for commands')
+    expect(host!.hasAttribute('data-block-hints')).toBe(true)
     e.replace(5, 5, 'T')
     expect(block(1).dataset.placeholder).toBeUndefined()
     e.destroy(); host!.remove()

@@ -13,7 +13,7 @@ Nothing is drawn beside a block: `/` opens the kinds of block, and ⌘/ the comm
 
 Type `/` at the start of a block, or after a space, and the menu opens under the block. The letters typed after it narrow the commands to those whose name or keywords hold them; when none do, it says No matching commands. A command run takes the slash and its letters out of the text and does its work, one step to undo. Deleting the slash closes the menu.
 
-The menu does not open in code or in a table. An empty paragraph with the caret in it says Type / for commands, or Press space for AI or / for commands where the product answers prompts (see [Asking AI](/ai/asking/)).
+The menu does not open in code or in a table. An empty paragraph says nothing of its own; `blockPlaceholder` gives it words.
 
 | Command | Makes |
 | --- | --- |
@@ -76,7 +76,7 @@ The menu is Design system 1's Context menu, four squares wide whatever its words
 | `menus` | `true` | `false` turns off the slash menu, the block menu, the empty block's placeholder and moving blocks by hand. |
 | `commands` | None | More commands for the slash menu, after the kinds. |
 | `blockCommands` | None | More commands for the block menu. |
-| `blockPlaceholder` | Type / for commands, or Press space for AI or / for commands with `prompt` | What an empty paragraph with the caret says; `''` for nothing. |
+| `blockPlaceholder` | Nothing | What an empty paragraph with the caret says; `''` for nothing. |
 
 ```ts
 createEditor(host, {
