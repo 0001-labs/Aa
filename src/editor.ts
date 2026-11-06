@@ -44,6 +44,8 @@ export type EditorOptions = {
   blockPlaceholder?: string
   /** Called after every change the person made, and every correction, with the document as Markdown. */
   onChange?: (value: string) => void
+  /** Handle Command/Ctrl+Enter when this editor is used as a composer. */
+  onSubmit?: () => void
   /** The atoms to read and draw; a picture unless told otherwise. */
   atoms?: readonly Atom[]
   /** Inline DS1 illustrations, inserted with @button. Opt in for documentation. */
@@ -1017,6 +1019,11 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       return
     }
     const mod = isMac ? event.metaKey : event.ctrlKey
+    if (options.onSubmit && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key === 'Enter') {
+      event.preventDefault()
+      if (!event.repeat) options.onSubmit()
+      return
+    }
     if (mod && !event.altKey && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); return }
     if (mod && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return }
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dismiss(); return }
