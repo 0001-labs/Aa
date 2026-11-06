@@ -50,13 +50,11 @@ export type CommentsView = {
 /** How long moved anchors wait before they are given to the store, so a sentence typed is one move. */
 const MOVE_DELAY = 800
 
-const icon = iconElement
-
 const iconButton = (english: string, name: string, action: () => void): HTMLButtonElement => {
   const label = word(english)
   const node = document.createElement('button')
   node.type = 'button'; node.className = 'aa-comments-button'; node.dataset.tooltip = label; node.setAttribute('aria-label', label)
-  node.append(icon(name))
+  node.append(iconElement(name))
   node.addEventListener('click', event => { event.preventDefault(); action() })
   return node
 }
