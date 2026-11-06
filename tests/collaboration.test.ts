@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { beforeAll, afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { loadAssist } from '../src/editor'
+
+beforeAll(() => loadAssist())
 import * as Y from 'yjs'
 import { createEditor, type Editor } from '../src/editor'
 import { connectCollaboration, type Collaboration, type CollaborationTransport } from '../src/collaboration'

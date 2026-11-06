@@ -18,12 +18,13 @@ import { resizeColumns } from './table-resize'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
 import { holdingAcross, releaseAcross, selectAcrossBlocks, selectFromTo } from './span'
-import { createCorrection, type Corrector } from './correction'
-import { shimmer } from './shimmer'
+import type { Correction, Corrector } from './correction'
+import { glisten, PROMPT_HERE, shimmer } from './shimmer'
 import { drawStyles } from './styles'
 import { buttonPartialAtom, createPartialPicker, createTableOfContents } from './partials'
-import { changedWords, createMarks, onlyBox, type AiChange, type Marks } from './marks'
-import { openPrompt, glisten, PROMPT_HERE, type OpenPrompt, type PromptAnswer, type Prompter } from './prompt'
+import type { AiChange, Marks } from './marks'
+import type { OpenPrompt, PromptAnswer, Prompter } from './prompt'
+import { lazy } from './lazy'
 import { createCommentsView, type CommentsView } from './comments-view'
 import type { AnchoredThread, CommentStore } from './comments'
 import { word } from './words'
@@ -173,6 +174,10 @@ export function textChange(before: string, after: string, caret: number): { from
   while (head < headMost && before[head] === after[head]) head++
   return { from: head, to: before.length - tail, text: after.slice(head, after.length - tail) }
 }
+
+/** Asking AI and correction, on their own: a page that uses neither never loads them. */
+const assist = lazy(() => import('./assist'))
+export const loadAssist = assist.get
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
@@ -655,15 +660,21 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   const spellcheck = host.getAttribute('spellcheck')
   /** Correcting, the browser's own marks and suggestions are left out: the words are corrected, not underlined. */
   const markSpelling = (on: boolean) => { if (on) host.setAttribute('spellcheck', 'false'); else if (spellcheck === null) host.removeAttribute('spellcheck'); else host.setAttribute('spellcheck', spellcheck) }
-  const correction = options.correct ? createCorrection({
-    blocks: () => blocks,
-    atoms,
-    selection: readSelection,
-    busy: () => readOnly || composing || destroyed || transactionDepth > 0,
-    apply: correctBlock,
-    value: () => toMarkdown(blocks),
-  }, options.correct, options.correcting !== false) : null
-  if (correction?.enabled) markSpelling(true)
+  if (options.prompt || options.correct) void assist.get()
+  let correction = null as Correction | null
+  let correcting = !!options.correct && options.correcting !== false
+  if (correcting) markSpelling(true)
+  if (options.correct) assist.when(({ createCorrection }) => {
+    if (destroyed) return
+    correction = createCorrection({
+      blocks: () => blocks,
+      atoms,
+      selection: readSelection,
+      busy: () => readOnly || composing || destroyed || transactionDepth > 0,
+      apply: correctBlock,
+      value: () => toMarkdown(blocks),
+    }, options.correct!, correcting)
+  })
 
   // ----- events -----
 
@@ -1344,7 +1355,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const box = last.getClientRects()[0]
     return box ? new DOMRect(box.right, box.top, 0, box.height) : undefined
   }
-  const ask = (index: number, inline = false) => {
+  const ask = (index: number, inline = false) => { assist.when(({ openPrompt }) => {
     const element = elements()[index], block = blocks[index], written = block.source
     // Within a paragraph the prompt goes on from the caret, after the sentence's end, as the paragraph's
     // own words would: as wide as its writing, on its lines, the first line starting at the caret and
@@ -1390,7 +1401,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         setSelection({ block: now, offset: inline ? blocks[now].source.length : 0 })
       },
     })
-  }
+  }) }
   /**
    * The whole document as an answer has it: what changed is drawn again, the
    * rest stays the same blocks, as one change and one step to undo; the
@@ -1457,6 +1468,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
    * prompt's own empty block is not something it took away.
    */
   const changesBetween = (old: readonly Block[], next: readonly Block[]): AiChange[] => {
+    const code = assist.here()
+    if (!code) return []
     const changes: AiChange[] = []
     let from = 0
     let added: Block[] = []
@@ -1464,8 +1477,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       const before = old.slice(from, to).filter(block => block.source)
       // As many blocks put in as taken out: each is a change of its own (a box ticked, a title reworded).
       if (added.length && added.length === before.length) added.forEach((block, index) => {
-        const box = onlyBox(before[index].source, block.source)
-        changes.push({ blocks: [block], before: [before[index]], words: [box ? [] : changedWords(before[index].source.slice(before[index].prefix), block.source.slice(block.prefix)).map(([from, to]) => [from + block.prefix, to + block.prefix] as [number, number])], box })
+        const box = code.onlyBox(before[index].source, block.source)
+        changes.push({ blocks: [block], before: [before[index]], words: [box ? [] : code.changedWords(before[index].source.slice(before[index].prefix), block.source.slice(block.prefix)).map(([from, to]) => [from + block.prefix, to + block.prefix] as [number, number])], box })
       })
       else if (added.length) changes.push({ blocks: added, before, words: added.map(block => block.source.trim() ? [[block.prefix, block.source.length] as [number, number]] : []) })
       added = []
@@ -1619,7 +1632,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   host.addEventListener('compositionend', onCompositionEnd)
   document.addEventListener('selectionchange', onSelectionChange)
 
-  marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange, shown: colourChanges })
+  if (options.prompt) assist.when(({ createMarks }) => { if (!destroyed) marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange, shown: colourChanges }) })
   renderAll()
   const stopSelection = paintSelection(host)
   const stopSpanning = selectAcrossBlocks(host, () => readOnly || destroyed)
@@ -1809,8 +1822,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       } finally { stop() }
     },
     get comments() { return comments ?? undefined },
-    get correcting() { return !!correction?.enabled },
-    set correcting(value: boolean) { if (!correction || correction.enabled === value) return; correction.enabled = value; markSpelling(value) },
+    get correcting() { return correcting },
+    set correcting(value: boolean) { if (!options.correct || correcting === value) return; correcting = value; if (correction) correction.enabled = value; markSpelling(value) },
     destroy() {
       destroyed = true
       blockChanges.disconnect()

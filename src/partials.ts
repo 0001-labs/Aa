@@ -2,19 +2,12 @@ import type { Editor } from './editor'
 import type { Atom } from './atoms'
 import type { Block } from './markdown'
 import { BUTTON_PARTIAL, readButtonPartial } from './button-partial'
+import { lazy } from './lazy'
 
 /** Design system 1's components, on their own: a file beside aa.js, loaded the first time a document needs one. */
-type Components = typeof import('./components')
-let components: Components | undefined
-export const loadComponents = async () => components ??= await import('./components')
-
-/** Runs `start` as soon as the components are here: at once from the second time on, so only the first draw waits. */
-function whenLoaded(start: (loaded: Components) => (() => void) | void): () => void {
-  if (components) return start(components) ?? (() => {})
-  let stop: (() => void) | void, stopped = false
-  void loadComponents().then(loaded => { if (!stopped) stop = start(loaded) })
-  return () => { stopped = true; stop?.() }
-}
+const components = lazy(() => import('./components'))
+export const loadComponents = components.get
+const whenLoaded = components.when
 
 /** A real component used as an illustration; its label stands in until the component has loaded. */
 export const buttonPartialAtom = (canWrite: () => boolean): Atom => ({ ...BUTTON_PARTIAL, draw(element, source) {

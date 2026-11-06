@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { beforeAll, afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { loadAssist } from '../src/editor'
+
+beforeAll(() => loadAssist())
 import { createEditor, type Editor, type EditorOptions } from '../src/editor'
 import { AaEditorElement, defineAaEditor } from '../src/element'
 import { PAUSE, corrections, correctedWords, diffWords, pair, wordAround, type CorrectionContext } from '../src/correction'

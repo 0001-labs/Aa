@@ -20,11 +20,13 @@ const TABLES: Record<string, Readonly<Record<string, string>>> = { da }
 /** Where Design system 1's language module leaves its `translate()`; on `globalThis`, so every copy finds it. */
 const TRANSLATOR = Symbol.for('design-system-1.translate')
 
-let own: AaWords | null = null
+/** Where a product's own words are kept; on `globalThis`, so every file Aa is split into finds them. */
+const OWN = Symbol.for('aa.words')
+const store = globalThis as unknown as Record<symbol, AaWords | null | undefined>
 
 /** Give Aa words of the product's own, or `null` to go back to the page's language. */
 export function setAaWords(next: AaWords | null): void {
-  own = next
+  store[OWN] = next
 }
 
 /** The page's language, as its root says (`da`, `pt-br`); English without one. */
@@ -35,6 +37,7 @@ export function aaLanguage(): string {
 /** `words` in the page's language, with each `{name}` filled from `values`. */
 export function word(words: string, values?: Readonly<Record<string, string | number>>): string {
   const language = aaLanguage()
+  const own = store[OWN]
   let found = typeof own === 'function' ? own(words, language) : own?.[words]
   if (found === undefined) {
     const translate = (globalThis as unknown as Record<symbol, unknown>)[TRANSLATOR]

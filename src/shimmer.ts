@@ -68,3 +68,27 @@ export function shimmer(element: HTMLElement, ranges: readonly (readonly [number
   view.addEventListener('resize', done)
   return done
 }
+
+/** Where the prompt stands in the document sent with it. */
+export const PROMPT_HERE = '⟦here⟧'
+
+/**
+ * A light passing again and again through elements' letters while something
+ * is worked on, as Ezo's harness glistens through an item's name: a band of
+ * the accent blended onto the page, moved by transform alone. Gives back
+ * what stops it.
+ */
+export function glisten(elements: readonly Element[], _root?: Element): () => void {
+  // The band runs through the letters themselves (a gradient clipped to the
+  // text, aa.css), never over the block's box, so blank room stays as it is.
+  const marked: HTMLElement[] = []
+  for (const element of elements) {
+    if (!(element instanceof HTMLElement) || !element.isConnected) continue
+    const view = element.ownerDocument.defaultView
+    if (!view || view.matchMedia?.('(forced-colors: active)').matches) continue
+    element.setAttribute('data-aa-glisten', '')
+    element.style.setProperty('--aa-glisten-delay', `${(marked.length % 6) * 120}ms`)
+    marked.push(element)
+  }
+  return () => { for (const element of marked) { element.removeAttribute('data-aa-glisten'); element.style.removeProperty('--aa-glisten-delay') } }
+}

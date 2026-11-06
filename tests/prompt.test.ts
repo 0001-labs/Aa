@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { beforeAll, afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { loadAssist } from '../src/editor'
+
+beforeAll(() => loadAssist())
 import css from '../src/aa.css?inline'
 import { createEditor, type Editor } from '../src/editor'
 import { imageAtom } from '../src/atoms'

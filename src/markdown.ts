@@ -768,10 +768,17 @@ export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_A
   let read = readBlocks.get(block)
   if (!read) readBlocks.set(block, read = new WeakMap())
   let runs = read.get(atoms)
-  if (!runs) read.set(atoms, runs = readRuns(block, atoms))
+  if (!runs) {
+    // An edit makes the same block twice over, once to check and once to keep: the second is the first's words.
+    const same = latest && latest.atoms === atoms && latest.source === block.source && latest.kind === block.kind && latest.prefix === block.prefix
+    runs = same ? latest!.runs : readRuns(block, atoms)
+    read.set(atoms, runs)
+    latest = { atoms, source: block.source, kind: block.kind, prefix: block.prefix, runs }
+  }
   return runs
 }
 const readBlocks = new WeakMap<Block, WeakMap<readonly AtomSyntax[], readonly Run[]>>()
+let latest: { atoms: readonly AtomSyntax[]; source: string; kind: Block['kind']; prefix: number; runs: readonly Run[] } | null = null
 
 function readRuns(block: Block, atoms: readonly AtomSyntax[]): Run[] {
   const runs: Run[] = []

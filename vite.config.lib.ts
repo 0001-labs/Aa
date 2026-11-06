@@ -1,22 +1,10 @@
 import { defineConfig } from "vite-plus";
 import { resolve } from "path";
+import { lazyFiles, lazyIcons } from "./vite.chunks";
 
-// Design system 1's rarely-needed icons load on the first ask for one: a file beside aa.js, not part of it.
-const lazyIcons = {
-  name: "aa-lazy-icons",
-  enforce: "pre" as const,
-  resolveId(id: string) { return id.endsWith("generated/icons-extra") ? { id: "./aa-icons-extra.js", external: true } : null },
-};
-
-// Design system 1's components load the first time a document needs one, the same way.
-const lazyComponents = {
-  name: "aa-lazy-components",
-  enforce: "pre" as const,
-  resolveId(id: string) { return id === "./components" ? { id: "./aa-components.js", external: true } : null; },
-};
 
 export default defineConfig({
-  plugins: [lazyIcons, lazyComponents],
+  plugins: [lazyIcons, lazyFiles],
   build: {
     copyPublicDir: false,
     outDir: "dist",
