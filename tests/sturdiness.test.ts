@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vite-plus/test'
 import { blockRuns, linkAround, parseBlocks, serialize, type Block } from '../src/markdown'
 import { addressFold } from '../src/render'
@@ -175,6 +176,13 @@ describe('sturdiness', () => {
   it('copies a piece of a marked phrase with its marks', () => {
     const blocks = fromMarkdown('**one two** three')
     expect(sliceMarkdown(blocks, { block: 0, offset: 6 }, { block: 0, offset: 17 })).toBe('**two** three')
+  })
+})
+
+describe('the stylesheet', () => {
+  it('has no rule between sibling blocks, which would restyle the whole document at every Enter', () => {
+    const sheet = readFileSync('src/aa.css', 'utf8').replace(/\/\*[^]*?\*\//g, '')
+    expect(sheet).not.toMatch(/\.aa-block[^,{>]*[+~][^,{=]*\.aa-block/)
   })
 })
 
