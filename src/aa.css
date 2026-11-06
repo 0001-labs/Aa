@@ -986,7 +986,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
 @media (hover: hover) { .aa-writer-cancel:hover:not(:disabled) { background: var(--ds-fill, light-dark(#f2f2f2, #2c2c2c)); } }
 .aa-writer-foot button:disabled { opacity: 0.4; cursor: default; }
 .aa-writer-foot button:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: 2px; }
-.aa-writer-state { margin-inline-start: auto; color: var(--ds-muted-text-color, color-mix(in srgb, currentColor 60%, transparent)); white-space: nowrap; }
+.aa-writer-state { margin-inline-start: auto; color: var(--ds-text-color-muted, color-mix(in srgb, currentColor 60%, transparent)); white-space: nowrap; }
 .aa-writer[data-state="failed"] .aa-writer-state { color: var(--ds-danger, #c0392b); }
 .aa-writer[data-read-only] .aa-writer-bar, .aa-writer[data-read-only] .aa-writer-foot { display: none; }
 .aa-writer[data-read-only] .aa-writer-frame { border-color: transparent; box-shadow: none; }
