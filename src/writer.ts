@@ -89,6 +89,8 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
   let state: WriterState = restored ? 'draft' : 'saved'
   let timer: ReturnType<typeof setTimeout> | undefined
   let written = false, destroyed = false
+  /** Saved words that came in while a save was under way: its outcome says which words are the saved ones. */
+  let incoming: string | undefined
   const editor = createEditor(page, {
     ...editing, value: restored ? held! : saved, toolbar: false,
     onChange: value => { onChange?.(value); changed() },
@@ -128,10 +130,17 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
     const value = editor.value
     show('saving', 'Saving…')
     try { await onSave?.(value) }
-    catch { if (!destroyed) { show('failed', 'Not saved'); saveButton.disabled = false } return false }
+    catch {
+      if (!destroyed) {
+        if (incoming !== undefined && incoming !== value) saved = incoming
+        incoming = undefined
+        show('failed', 'Not saved'); saveButton.disabled = false
+      }
+      return false
+    }
     // Closed while it was being kept: the draft of these words has done its work.
     if (destroyed) { if (key && drafts.load(key) === value) drafts.clear(key); return true }
-    saved = value
+    saved = value; incoming = undefined
     // Words written while they were being kept are the next draft.
     if (dirty()) { state = 'draft'; show('draft', key ? 'Draft' : 'Not saved yet'); clearTimeout(timer); timer = setTimeout(writeDraft, DRAFT_DELAY) }
     else { clearTimeout(timer); timer = undefined; if (key) drafts.clear(key); written = false; show('saved', 'Saved') }
@@ -264,6 +273,7 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
     set value(value) { editor.value = value; changed() },
     get saved() { return saved },
     set saved(value) {
+      if (state === 'saving') { incoming = value; return }
       if (value === saved) return
       const untouched = !dirty()
       saved = value
