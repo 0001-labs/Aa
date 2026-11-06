@@ -369,14 +369,14 @@ export function readBlock(element: HTMLElement): string {
   let breaks = 0, hidden = ''
   const settle = () => { out += '\n'.repeat(breaks) + hidden; breaks = 0; hidden = '' }
   const walk = (node: Node) => {
-    for (const child of Array.from(node.childNodes)) {
+    for (let child = node.firstChild; child; child = child.nextSibling) {
       if (child.nodeType === Node.TEXT_NODE) {
-        const text = child.textContent ?? ''
+        const text = (child as Text).data
         if (!text) continue
         // Hidden syntax is not something standing after a break: bold's last letter gone leaves the browser's break between its stars.
         if (breaks && isHidden(child)) { hidden += text; continue }
         settle()
-        out += text.replace(/\u00a0/g, ' ')
+        out += text.includes('\u00a0') ? text.replace(/\u00a0/g, ' ') : text
         continue
       }
       if (!(isElement(child))) continue
@@ -387,7 +387,7 @@ export function readBlock(element: HTMLElement): string {
         else breaks++
         continue
       }
-      if (/^(DIV|P)$/.test(child.tagName) && out && !out.endsWith('\n')) out += '\n'
+      if ((child.tagName === 'DIV' || child.tagName === 'P') && out && !out.endsWith('\n')) out += '\n'
       walk(child)
     }
   }
@@ -433,7 +433,6 @@ export function offsetIn(element: HTMLElement, node: Node, nodeOffset: number): 
 
 /** The DOM point for an offset into a block's source, in text that is displayed. */
 export function pointAt(element: HTMLElement, offset: number): { node: Node; offset: number } {
-  const document = element.ownerDocument
   if (element.dataset.kind === 'table') {
     const cell = Array.from(element.querySelectorAll<HTMLElement>('[data-cell]')).find(cell => offset >= Number(cell.dataset.from) && offset <= Number(cell.dataset.to))
     if (cell?.lastElementChild) return pointAt(cell.lastElementChild as HTMLElement, offset - Number(cell.dataset.from))

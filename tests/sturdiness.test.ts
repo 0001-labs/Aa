@@ -178,6 +178,14 @@ describe('sturdiness', () => {
   })
 })
 
+describe('reading a block once', () => {
+  it('gives the same reading of the same block, and a reading of its own to other atoms', () => {
+    const [block] = parseBlocks('Some **bold** words')
+    expect(blockRuns(block)).toBe(blockRuns(block))
+    expect(blockRuns(block, [])).not.toBe(blockRuns(block))
+  })
+})
+
 describe('links as Markdown writes them', () => {
   const trello = 'https://thailandtours.webirium.com/rejseblog/phuket/'
   const links = (source: string) => blockRuns(parseBlocks(source)[0]).filter(run => run.kind === 'text' && run.href)

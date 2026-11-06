@@ -763,7 +763,17 @@ function inline(text: string, start: number, end: number, base: number, out: Run
 }
 
 /** Every run of a block, in order, covering its source from end to end. */
-export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): Run[] {
+export function blockRuns(block: Block, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS): readonly Run[] {
+  // A key asks several times over, for drawing, marks and edges. Blocks are replaced, never changed, so each is read once.
+  let read = readBlocks.get(block)
+  if (!read) readBlocks.set(block, read = new WeakMap())
+  let runs = read.get(atoms)
+  if (!runs) read.set(atoms, runs = readRuns(block, atoms))
+  return runs
+}
+const readBlocks = new WeakMap<Block, WeakMap<readonly AtomSyntax[], readonly Run[]>>()
+
+function readRuns(block: Block, atoms: readonly AtomSyntax[]): Run[] {
   const runs: Run[] = []
   const lines = block.source.split('\n')
   const closed = block.kind === 'code' && codeClosed(block)

@@ -754,6 +754,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
 
   /** A caption, or an atom that edits itself where it is drawn (a diagram's board), has the keys: the caret is not the editor's. */
   const ownControl = () => !!document.activeElement?.closest?.('.aa-caption, [data-aa-interactive]')
+  let lastRead: { blocks: readonly Block[]; anchorNode: Node; anchorOffset: number; focusNode: Node; focusOffset: number; read: Selection2 } | null = null
   const readSelection = (): Selection2 | null => {
     if (ownControl()) return null
     if (selected) {
@@ -762,13 +763,18 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     }
     const selection = window.getSelection()
     if (!selection || !selection.rangeCount || !selection.anchorNode || !selection.focusNode) return null
-    const a = blockIndexOf(selection.anchorNode), f = blockIndexOf(selection.focusNode)
+    // A key reads the selection many times. The same points in the same document are the same offsets.
+    const { anchorNode, anchorOffset, focusNode, focusOffset } = selection
+    if (lastRead && lastRead.blocks === blocks && lastRead.anchorNode === anchorNode && lastRead.anchorOffset === anchorOffset && lastRead.focusNode === focusNode && lastRead.focusOffset === focusOffset) return lastRead.read
+    const a = blockIndexOf(anchorNode), f = blockIndexOf(focusNode)
     if (a < 0 || f < 0) return null
     const els = elements()
-    return {
-      anchor: { block: a, offset: offsetIn(els[a], selection.anchorNode, selection.anchorOffset) },
-      focus: { block: f, offset: offsetIn(els[f], selection.focusNode, selection.focusOffset) },
+    const read = {
+      anchor: { block: a, offset: offsetIn(els[a], anchorNode, anchorOffset) },
+      focus: { block: f, offset: offsetIn(els[f], focusNode, focusOffset) },
     }
+    lastRead = { blocks, anchorNode, anchorOffset, focusNode, focusOffset, read }
+    return read
   }
 
   let settingSelection = false

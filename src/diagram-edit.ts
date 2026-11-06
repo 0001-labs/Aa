@@ -17,7 +17,6 @@ export type DiagramTarget = { group: number; box?: number } | { join: number }
 
 const PLACE = /[ \t]+@[ \t]*(\d{1,3})(?:[ \t]*,[ \t]*|[ \t]+)(\d{1,3})(?=[ \t]|$)/
 const WIDTH = /[ \t]+[wh](\d{1,2})(?=[ \t]|$)/gi
-const COLOR = new RegExp(`[ \\t]+(${DIAGRAM_COLORS.join('|')})(?=[ \\t]|$)`, 'i')
 const BOX_COLOR = new RegExp(`^(.*\\S)[ \\t]+(${DIAGRAM_COLORS.join('|')})$`, 'i')
 const JOIN_SPLIT = /[ \t]+(<->|->|<-|--)[ \t]+/
 const JOIN = /[ \t]+(?:<->|->|<-|--)[ \t]+/

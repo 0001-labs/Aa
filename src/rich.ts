@@ -103,23 +103,23 @@ const isBlank = (unit: Unit) => !!unit.breaks || /^\s+$/.test(unit.source)
  */
 function fit(units: readonly Unit[]): Unit[] {
   const out = units.map(unit => ({ ...unit }))
-  const keys = new Map<string, Mark>()
-  for (const unit of out) for (const mark of unit.marks) keys.set(mark.key, mark)
-  for (const [key, mark] of keys) {
+  // Each mark's runs found in one sweep: every link is a mark of its own, and a long paragraph has a thousand.
+  const open = new Map<string, { mark: Mark; from: number }>()
+  const settle = (key: string, mark: Mark, from: number, end: number) => {
+    open.delete(key)
     const edge = (unit: Unit) => mark.tight ? isBlank(unit) : !!unit.breaks
-    for (let i = 0; i < out.length; i++) {
-      if (!sameKeys(out[i].marks, key)) continue
-      let end = i
-      while (end + 1 < out.length && sameKeys(out[end + 1].marks, key)) end++
-      let first = i, last = end
-      while (first <= last && edge(out[first])) first++
-      while (last >= first && edge(out[last])) last--
-      // A mark on spaces alone marks nothing: `<span color="red"> </span>` is only tags to carry.
-      const empty = out.slice(first, last + 1).every(isBlank)
-      for (let at = i; at <= end; at++) if (empty || at < first || at > last) out[at].marks = out[at].marks.filter(each => each.key !== key)
-      i = end
-    }
+    let first = from, last = end
+    while (first <= last && edge(out[first])) first++
+    while (last >= first && edge(out[last])) last--
+    // A mark on spaces alone marks nothing: `<span color="red"> </span>` is only tags to carry.
+    const empty = out.slice(first, last + 1).every(isBlank)
+    for (let at = from; at <= end; at++) if (empty || at < first || at > last) out[at].marks = out[at].marks.filter(each => each.key !== key)
   }
+  out.forEach((unit, index) => {
+    for (const [key, { mark, from }] of open) if (!sameKeys(unit.marks, key)) settle(key, mark, from, index - 1)
+    for (const mark of unit.marks) if (!open.has(mark.key)) open.set(mark.key, { mark, from: index })
+  })
+  for (const [key, { mark, from }] of open) settle(key, mark, from, out.length - 1)
   return out
 }
 

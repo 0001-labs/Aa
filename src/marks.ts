@@ -87,6 +87,7 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
   let changes: AiChange[] = []
   let layer: HTMLElement | null = null
   let frame = 0
+  let boxed = new Set<HTMLElement>()
 
   const showing = () => changes.filter(change => change.blocks.every(block => options.blocks().includes(block)))
 
@@ -96,7 +97,10 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
     options.shown?.(changes)
     const elements = options.elements(), blocks = options.blocks()
     // A ticked or unticked box wears the blue too.
-    for (const element of elements) element.toggleAttribute('data-ai-box', changes.some(change => change.box && change.blocks.some(block => elements[blocks.indexOf(block)] === element)))
+    const boxes = new Set(changes.filter(change => change.box).flatMap(change => change.blocks.map(block => elements[blocks.indexOf(block)])))
+    for (const element of boxed) if (!boxes.has(element)) element.removeAttribute('data-ai-box')
+    for (const element of boxes) element?.setAttribute('data-ai-box', '')
+    boxed = boxes
     if (!changes.length) { layer?.remove(); layer = null; return }
     if (!layer) {
       const made = doc.createElement('div')

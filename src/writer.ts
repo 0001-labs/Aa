@@ -88,7 +88,7 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
 
   let state: WriterState = restored ? 'draft' : 'saved'
   let timer: ReturnType<typeof setTimeout> | undefined
-  let written = false, destroyed = false
+  let destroyed = false
   /** Saved words that came in while a save was under way: its outcome says which words are the saved ones. */
   let incoming: string | undefined
   const editor = createEditor(page, {
@@ -114,17 +114,18 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
     say(words)
     if (moved) onState?.(next)
   }
+  const dropDraft = () => { clearTimeout(timer); timer = undefined; if (key) drafts.clear(key) }
   const writeDraft = () => {
     clearTimeout(timer); timer = undefined
-    if (!key || destroyed) return
-    if (dirty()) { drafts.save(key, editor.value); written = true; show('draft', 'Draft saved') }
-    else if (written || restored) { drafts.clear(key); written = false }
+    if (!key || destroyed || !dirty()) return
+    drafts.save(key, editor.value)
+    show('draft', 'Draft saved')
   }
-  const changed = () => {
-    if (!dirty()) { clearTimeout(timer); timer = undefined; if (key) drafts.clear(key); written = false; show('saved', ''); return }
+  const holdDraft = () => {
     show('draft', key ? 'Draft' : 'Not saved yet')
     clearTimeout(timer); timer = setTimeout(writeDraft, DRAFT_DELAY)
   }
+  const changed = () => { if (dirty()) holdDraft(); else { dropDraft(); show('saved', '') } }
   const save = async () => {
     if (destroyed || state === 'saving' || !dirty() || editor.readOnly) return false
     const value = editor.value
@@ -142,15 +143,13 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
     if (destroyed) { if (key && drafts.load(key) === value) drafts.clear(key); return true }
     saved = value; incoming = undefined
     // Words written while they were being kept are the next draft.
-    if (dirty()) { state = 'draft'; show('draft', key ? 'Draft' : 'Not saved yet'); clearTimeout(timer); timer = setTimeout(writeDraft, DRAFT_DELAY) }
-    else { clearTimeout(timer); timer = undefined; if (key) drafts.clear(key); written = false; show('saved', 'Saved') }
+    if (dirty()) holdDraft()
+    else { dropDraft(); show('saved', 'Saved') }
     return true
   }
   const cancel = () => {
     if (state === 'saving') return
-    clearTimeout(timer); timer = undefined
-    if (key) drafts.clear(key)
-    written = false
+    dropDraft()
     if (dirty()) editor.value = saved
     show('saved', '')
     onCancel?.()
@@ -262,7 +261,6 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
   document.addEventListener('visibilitychange', hidden)
   window.addEventListener('pagehide', leave)
 
-  const setReadOnly = (value: boolean) => { editor.readOnly = value; element.toggleAttribute('data-read-only', value); show(state, said.textContent ? said.textContent : '') }
   element.toggleAttribute('data-read-only', !!options.readOnly)
   element.dataset.state = state
   show(state, restored ? 'Draft restored' : '')
@@ -283,7 +281,7 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
     get dirty() { return dirty() },
     get state() { return state },
     get readOnly() { return editor.readOnly },
-    set readOnly(value) { setReadOnly(value) },
+    set readOnly(value) { editor.readOnly = value; element.toggleAttribute('data-read-only', value); show(state, said.textContent ?? '') },
     save, cancel,
     destroy() {
       if (destroyed) return

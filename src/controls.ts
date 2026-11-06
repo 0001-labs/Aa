@@ -354,7 +354,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     menu.style.top = `${room || over < view.top ? Math.max(view.top, Math.min(under, view.top + view.height - height)) : over}px`
   }
   const dismissToolbar = () => { clearTimeout(timer); if (toolbar.contains(document.activeElement)) (document.activeElement as HTMLElement).blur(); toolbar.hidden = true; const selection = editor.selection(); dismissedSelection = selection ? { ...selection } : null }
-  const close = () => { delete menu.dataset.palette; clearPreview(); menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
+  const close = () => { if (menu.hidden) return; delete menu.dataset.palette; clearPreview(); menu.hidden = true; slash = null; list.replaceChildren(); menu.replaceChildren(); host.removeAttribute('aria-controls') }
   const run = (command: Command) => {
     if (editor.readOnly) return
     const query = slash
