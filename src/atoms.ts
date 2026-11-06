@@ -109,23 +109,35 @@ export function sizePicture(element: HTMLElement, source: string) {
   pictureGrip(element, alt, src)
 }
 
-/** A picture drawn as itself, as wide as its Markdown says in squares, or its own size up to sixteen. */
-export const imageAtom: Atom = {
-  ...IMAGE,
-  draw(element, source) {
-    const { alt, src } = readPicture(source)
-    const extension = src.split(/[?#]/)[0].split('.').pop()?.toLowerCase()
-    if (/^data:(audio|video)\//.test(src) || (extension && /^(mp4|webm|mov|mp3|wav|ogg|m4a)$/.test(extension))) {
-      const media = document.createElement(/^data:video\//.test(src) || /^(mp4|webm|mov)$/.test(extension ?? '') ? 'video' : 'audio')
-      media.src = src; media.controls = true; media.preload = 'metadata'
-      media.setAttribute('aria-label', alt)
-      element.append(media)
-    } else {
-      const image = document.createElement('img')
-      image.src = src; image.alt = alt; image.loading = 'lazy'; image.draggable = false
-      element.append(image)
-      sizePicture(element, source)
-    }
-    const caption = document.createElement('span'); caption.className = 'aa-caption'; caption.textContent = alt; caption.contentEditable = 'true'; caption.dataset.placeholder = word('Add a caption'); element.append(caption)
-  },
+export interface ImageAtomOptions {
+  /** Draw Markdown alt text as an editable caption. Defaults to true. */
+  caption?: boolean
 }
+
+/** A sizable picture; hiding its caption preserves the image's alt text and Markdown. */
+export function createImageAtom({ caption: showCaption = true }: ImageAtomOptions = {}): Atom {
+  return {
+    ...IMAGE,
+    draw(element, source) {
+      const { alt, src } = readPicture(source)
+      const extension = src.split(/[?#]/)[0].split('.').pop()?.toLowerCase()
+      if (/^data:(audio|video)\//.test(src) || (extension && /^(mp4|webm|mov|mp3|wav|ogg|m4a)$/.test(extension))) {
+        const media = document.createElement(/^data:video\//.test(src) || /^(mp4|webm|mov)$/.test(extension ?? '') ? 'video' : 'audio')
+        media.src = src; media.controls = true; media.preload = 'metadata'
+        media.setAttribute('aria-label', alt)
+        element.append(media)
+      } else {
+        const image = document.createElement('img')
+        image.src = src; image.alt = alt; image.loading = 'lazy'; image.draggable = false
+        element.append(image)
+        sizePicture(element, source)
+      }
+      if (showCaption) {
+        const caption = document.createElement('span'); caption.className = 'aa-caption'; caption.textContent = alt; caption.contentEditable = 'true'; caption.dataset.placeholder = word('Add a caption'); element.append(caption)
+      }
+    },
+  }
+}
+
+/** A picture with an editable caption, sized in whole squares. */
+export const imageAtom: Atom = createImageAtom()

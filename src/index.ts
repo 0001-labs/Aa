@@ -1,5 +1,5 @@
 export { createEditor, type Editor, type EditorOptions } from './editor'
-export { imageAtom, personAtom, sizePicture, type Atom } from './atoms'
+export { createImageAtom, imageAtom, personAtom, sizePicture, type Atom, type ImageAtomOptions } from './atoms'
 export { AaEditorElement, defineAaEditor } from './element'
 export { createWriter, localDrafts, type DraftStore, type Writer, type WriterOptions, type WriterState } from './writer'
 export { besideChange, parseBlocks, serialize, blockRuns, atomPattern, IMAGE, DEFAULT_ATOMS, readColumns, writeColumns, readTabs, writeTabs, type AtomSyntax, type Block, type BlockKind, type Run, type Placed, type Tab } from './markdown'
