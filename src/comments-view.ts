@@ -77,6 +77,7 @@ export const avatar = (person: CommentPerson): HTMLSpanElement => {
 }
 
 export function createCommentsView(host: HTMLElement, options: CommentsViewOptions): CommentsView {
+  const listening = new AbortController(), { signal } = listening
   const { store } = options
   const doc = host.ownerDocument, view = doc.defaultView!
   const root = options.root ?? host.closest('dialog') ?? doc.body
@@ -198,9 +199,9 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     const id = (span.getAttribute('data-comment') ?? '').split(' ').find(each => each !== 'draft')
     if (id) open(id)
   }
-  host.addEventListener('aa-selectionchange', onSelectionChange)
-  host.addEventListener('aa-change', changed)
-  host.addEventListener('click', onPress)
+  host.addEventListener('aa-selectionchange', onSelectionChange, { signal })
+  host.addEventListener('aa-change', changed, { signal })
+  host.addEventListener('click', onPress, { signal })
 
   // ----- opening and closing -----
 
@@ -746,7 +747,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     if (inside(popover) || inside(menu) || inside(picker) || onWords) return
     close()
   }
-  doc.addEventListener('pointerdown', outside, true)
+  doc.addEventListener('pointerdown', outside, { capture: true, signal })
 
   // The threads come with the first `receive`; the text is marked then.
   const stop = store.subscribe(receive)
@@ -755,15 +756,12 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     open, start, close, changed,
     get threads() { return placed },
     destroy() {
+      listening.abort()
       destroyed = true
       stop()
       clearTimeout(moveTimer)
       if (frame) view.cancelAnimationFrame(frame)
       stopWatching()
-      doc.removeEventListener('pointerdown', outside, true)
-      host.removeEventListener('aa-selectionchange', onSelectionChange)
-      host.removeEventListener('aa-change', changed)
-      host.removeEventListener('click', onPress)
       hideMenu(); hidePicker()
       if (panel) { panel.replaceChildren(); panel.classList.remove('aa-comments') } else popover?.remove()
       popover = null

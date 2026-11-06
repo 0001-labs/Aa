@@ -188,6 +188,7 @@ export function createEditor(host: HTMLElement, options: EditorOptions = {}): Ed
 }
 
 function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Editor {
+  const listening = new AbortController(), { signal } = listening
   const document = host.ownerDocument, window = document.defaultView!
   let blocks: Block[] = fromMarkdown(options.value ?? '')
   let readOnly = !!options.readOnly
@@ -1615,22 +1616,22 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     options.onFiles(files)
   }
 
-  host.addEventListener('beforeinput', onBeforeInput)
-  host.addEventListener('input', onInput)
-  host.addEventListener('keydown', onKeyDown)
-  host.addEventListener('copy', onCopy)
-  host.addEventListener('cut', onCopy)
-  host.addEventListener('click', onClick)
-  host.addEventListener('pointerdown', onPointerDown)
-  host.addEventListener('drop', onDrop)
-  host.addEventListener('paste', onPaste)
-  host.addEventListener('aa-atom-change', onAtomChange)
-  host.addEventListener('aa-atom-source', onAtomSource)
-  host.addEventListener('aa-atom-leave', onAtomLeave)
-  host.addEventListener('aa-atom-prompt', onAtomPrompt)
-  host.addEventListener('compositionstart', onCompositionStart)
-  host.addEventListener('compositionend', onCompositionEnd)
-  document.addEventListener('selectionchange', onSelectionChange)
+  host.addEventListener('beforeinput', onBeforeInput, { signal })
+  host.addEventListener('input', onInput, { signal })
+  host.addEventListener('keydown', onKeyDown, { signal })
+  host.addEventListener('copy', onCopy, { signal })
+  host.addEventListener('cut', onCopy, { signal })
+  host.addEventListener('click', onClick, { signal })
+  host.addEventListener('pointerdown', onPointerDown, { signal })
+  host.addEventListener('drop', onDrop, { signal })
+  host.addEventListener('paste', onPaste, { signal })
+  host.addEventListener('aa-atom-change', onAtomChange, { signal })
+  host.addEventListener('aa-atom-source', onAtomSource, { signal })
+  host.addEventListener('aa-atom-leave', onAtomLeave, { signal })
+  host.addEventListener('aa-atom-prompt', onAtomPrompt, { signal })
+  host.addEventListener('compositionstart', onCompositionStart, { signal })
+  host.addEventListener('compositionend', onCompositionEnd, { signal })
+  document.addEventListener('selectionchange', onSelectionChange, { signal })
 
   if (options.prompt) assist.when(({ createMarks }) => { if (!destroyed) marks = createMarks(host, { blocks: () => blocks, elements, revert: revertChange, shown: colourChanges }) })
   renderAll()
@@ -1825,6 +1826,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     get correcting() { return correcting },
     set correcting(value: boolean) { if (!options.correct || correcting === value) return; correcting = value; if (correction) correction.enabled = value; markSpelling(value) },
     destroy() {
+      listening.abort()
       destroyed = true
       blockChanges.disconnect()
       releaseAcross(host)
@@ -1836,25 +1838,9 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       stopColumns()
       stopControls()
       stopPartials()
-      host.removeEventListener('beforeinput', onBeforeInput)
-      host.removeEventListener('input', onInput)
-      host.removeEventListener('keydown', onKeyDown)
-      host.removeEventListener('copy', onCopy)
-      host.removeEventListener('cut', onCopy)
-      host.removeEventListener('click', onClick)
-      host.removeEventListener('pointerdown', onPointerDown)
-      host.removeEventListener('drop', onDrop)
-      host.removeEventListener('paste', onPaste)
-      host.removeEventListener('aa-atom-change', onAtomChange)
-      host.removeEventListener('aa-atom-source', onAtomSource)
-      host.removeEventListener('aa-atom-leave', onAtomLeave)
-      host.removeEventListener('aa-atom-prompt', onAtomPrompt)
       asking?.close()
       marks?.destroy()
       comments?.destroy()
-      host.removeEventListener('compositionstart', onCompositionStart)
-      host.removeEventListener('compositionend', onCompositionEnd)
-      document.removeEventListener('selectionchange', onSelectionChange)
       sweep(true)
     },
   }

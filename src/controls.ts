@@ -135,6 +135,7 @@ const dragging = lazy(() => import('./drag'))
 export const loadDragging = dragging.get
 
 export function createControls(editor: Editor, options: EditorOptions): () => void {
+  const listening = new AbortController(), { signal } = listening
   defineAaToolbar()
   initTooltips()
   const inserts = (options.atoms ?? []).map(inserting).filter((command): command is Command => !!command)
@@ -298,7 +299,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   })
   cancelLink.addEventListener('click', finishLink)
   linkBar.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); finishLink() } })
-  host.addEventListener('aa-link-request', requestLink)
+  host.addEventListener('aa-link-request', requestLink, { signal })
 
   // ----- a callout's icon -----
   // A press on a box's icon square (editor.ts) opens the choice right under it: the
@@ -558,18 +559,18 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     }
   }
   const freshSelection = () => { dismissedSelection = null }
-  host.addEventListener('pointerdown', freshSelection)
-  host.addEventListener('aa-dismiss', dismissControls)
-  document.addEventListener('keydown', escapeControls, true)
-  host.addEventListener('aa-selectionchange', selectionChanged)
-  host.addEventListener('aa-change', changed)
-  host.addEventListener('contextmenu', contextMenu)
-  host.addEventListener('keydown', keyboard, true)
-  document.addEventListener('pointerdown', outside)
-  window.addEventListener('resize', viewport)
-  window.addEventListener('scroll', viewport, true)
-  window.visualViewport?.addEventListener('resize', viewport)
-  window.visualViewport?.addEventListener('scroll', viewport)
+  host.addEventListener('pointerdown', freshSelection, { signal })
+  host.addEventListener('aa-dismiss', dismissControls, { signal })
+  document.addEventListener('keydown', escapeControls, { capture: true, signal })
+  host.addEventListener('aa-selectionchange', selectionChanged, { signal })
+  host.addEventListener('aa-change', changed, { signal })
+  host.addEventListener('contextmenu', contextMenu, { signal })
+  host.addEventListener('keydown', keyboard, { capture: true, signal })
+  document.addEventListener('pointerdown', outside, { signal })
+  window.addEventListener('resize', viewport, { signal })
+  window.addEventListener('scroll', viewport, { capture: true, signal })
+  window.visualViewport?.addEventListener('resize', viewport, { signal })
+  window.visualViewport?.addEventListener('scroll', viewport, { signal })
   // Blocks move by hand on an engine of its own: it arrives once the page is idle, or sooner if a pointer, a focus or a file reaches writing that can change.
   let stopDragging = () => {}
   const reached = ['pointerover', 'focusin', 'dragenter', 'touchstart'] as const
@@ -578,19 +579,13 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     for (const type of reached) host.removeEventListener(type, startDragging)
     stopDragging = dragging.when(({ createDragging }) => createDragging(editor, options, overlayRoot))
   }
-  for (const type of reached) host.addEventListener(type, startDragging, { passive: true })
+  for (const type of reached) host.addEventListener(type, startDragging, { passive: true, signal })
   if (dragging.here()) startDragging()
   else (window.requestIdleCallback ?? window.setTimeout)(startDragging)
   return () => {
+    listening.abort()
     clearPreview(); preview.remove()
     disposed = true; clearTimeout(timer); stopDragging()
-    for (const type of reached) host.removeEventListener(type, startDragging)
-    toolbar.remove(); menu.remove(); findBar.remove(); linkBar.remove(); host.removeEventListener('aa-link-request', requestLink)
-    host.removeEventListener('aa-selectionchange', selectionChanged); host.removeEventListener('aa-change', changed)
-    host.removeEventListener('aa-dismiss', dismissControls)
-    host.removeEventListener('keydown', keyboard, true)
-    host.removeEventListener('contextmenu', contextMenu)
-    host.removeEventListener('pointerdown', freshSelection); document.removeEventListener('keydown', escapeControls, true); document.removeEventListener('pointerdown', outside); window.removeEventListener('resize', viewport); window.removeEventListener('scroll', viewport, true)
-    window.visualViewport?.removeEventListener('resize', viewport); window.visualViewport?.removeEventListener('scroll', viewport)
+    toolbar.remove(); menu.remove(); findBar.remove(); linkBar.remove()
   }
 }

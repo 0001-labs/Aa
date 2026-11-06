@@ -115,41 +115,30 @@ export function paintSelection(host: HTMLElement): () => void {
   resize.observe(host)
   const changes = new (view.MutationObserver ?? MutationObserver)(schedule)
   changes.observe(host, { childList: true, subtree: true, characterData: true })
-  doc.addEventListener('selectionchange', schedule)
-  doc.addEventListener('scroll', schedule, true)
-  view.addEventListener('resize', schedule)
-  host.addEventListener('compositionstart', startComposition)
-  host.addEventListener('compositionend', endComposition)
-  host.addEventListener('load', schedule, true)
-  doc.fonts?.addEventListener('loadingdone', schedule)
-  forcedColors.addEventListener?.('change', schedule)
+  const listening = new AbortController(), { signal } = listening
+  doc.addEventListener('selectionchange', schedule, { signal })
+  doc.addEventListener('scroll', schedule, { capture: true, signal })
+  view.addEventListener('resize', schedule, { signal })
+  host.addEventListener('compositionstart', startComposition, { signal })
+  host.addEventListener('compositionend', endComposition, { signal })
+  host.addEventListener('load', schedule, { capture: true, signal })
+  doc.fonts?.addEventListener('loadingdone', schedule, { signal })
+  forcedColors.addEventListener?.('change', schedule, { signal })
   return () => {
     stopped = true
     view.cancelAnimationFrame(frame)
     clear()
-    resize.disconnect(); changes.disconnect()
-    doc.removeEventListener('selectionchange', schedule)
-    doc.removeEventListener('scroll', schedule, true)
-    view.removeEventListener('resize', schedule)
-    host.removeEventListener('compositionstart', startComposition)
-    host.removeEventListener('compositionend', endComposition)
-    host.removeEventListener('load', schedule, true)
-    doc.fonts?.removeEventListener('loadingdone', schedule)
-    forcedColors.removeEventListener?.('change', schedule)
+    resize.disconnect(); changes.disconnect(); listening.abort()
   }
 }
 
 /** `schedule` called whenever what is drawn over `host` may have moved; what it returns stops that. */
 export function watchLayout(view: Window, host: Element, schedule: () => void): () => void {
+  const listening = new AbortController(), { signal } = listening
   const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
   resize?.observe(host)
-  view.addEventListener('scroll', schedule, true)
-  view.addEventListener('resize', schedule)
-  view.visualViewport?.addEventListener('resize', schedule)
-  return () => {
-    resize?.disconnect()
-    view.removeEventListener('scroll', schedule, true)
-    view.removeEventListener('resize', schedule)
-    view.visualViewport?.removeEventListener('resize', schedule)
-  }
+  view.addEventListener('scroll', schedule, { capture: true, signal })
+  view.addEventListener('resize', schedule, { signal })
+  view.visualViewport?.addEventListener('resize', schedule, { signal })
+  return () => { resize?.disconnect(); listening.abort() }
 }

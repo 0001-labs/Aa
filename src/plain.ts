@@ -19,6 +19,7 @@ export type PlainEditorOptions = {
 
 /** A single plain-text block, with native editing and Aa's rounded selection. */
 export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions = {}) {
+  const listening = new AbortController(), { signal } = listening
   // Made in the host's own document, so the editor works in a frame too.
   const doc = host.ownerDocument
   drawStyles(host)
@@ -92,10 +93,10 @@ export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions
   const blur = () => speaking?.stop()
   const focus = () => block.focus({ preventScroll: true })
   const click = (event: MouseEvent) => { if (event.target === host) focus() }
-  block.addEventListener('input', input)
-  block.addEventListener('keydown', keydown)
-  block.addEventListener('blur', blur)
-  host.addEventListener('click', click)
+  block.addEventListener('input', input, { signal })
+  block.addEventListener('keydown', keydown, { signal })
+  block.addEventListener('blur', blur, { signal })
+  host.addEventListener('click', click, { signal })
   const stopSelection = paintSelection(host)
   return {
     element: host,
@@ -110,12 +111,9 @@ export function createPlainEditor(host: HTMLElement, options: PlainEditorOptions
     get listening() { return !!speaking },
     focus,
     destroy() {
+      listening.abort()
       speaking?.abort()
       stopSelection()
-      block.removeEventListener('input', input)
-      block.removeEventListener('keydown', keydown)
-      block.removeEventListener('blur', blur)
-      host.removeEventListener('click', click)
     },
   }
 }

@@ -45,6 +45,7 @@ const ownPress = (target: Element | null, block: HTMLElement) => { const own = t
 const CARRIED = ['--aa-unit', '--aa-sf', '--aa-rule-color', '--aa-gap', '--aa-indent']
 
 export function createDragging(editor: Editor, options: EditorOptions, root: Element): () => void {
+  const listening = new AbortController(), { signal } = listening
   const host = editor.element
   const document = host.ownerDocument, window = document.defaultView!
   const line = document.createElement('div'); line.className = 'aa-drop-line'; line.hidden = true
@@ -97,10 +98,10 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       sideTargets = children().map(element => element.getBoundingClientRect())
       liftedScroll = { x: window.scrollX, y: window.scrollY }
       carried = { caret: group.length ? null : editor.selection(), group, from: start.source.index }
-      document.addEventListener('pointermove', besides, true)
+      document.addEventListener('pointermove', besides, { capture: true, signal })
       for (const element of group) if (element !== block) element.setAttribute('data-ghost', '')
       host.setAttribute('data-dragging', '')
-      document.addEventListener('selectionchange', keepClear)
+      document.addEventListener('selectionchange', keepClear, { signal })
       keepClear()
     },
     prepareDrop: result => {
@@ -293,7 +294,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     // The press is the block's, not the browser's selecting: the selected, the one in hand, and a picture.
     if ((selected.length || grabbed || wordless(block)) && press.mouse && press.plain && !press.own && !press.inSelection && movable()) event.preventDefault()
   }
-  window.addEventListener('pointerdown', down, true)
+  window.addEventListener('pointerdown', down, { capture: true, signal })
 
   // Each block is an item while it is on the page; the editor draws blocks again as they change.
   let count = 0
@@ -326,9 +327,9 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     if (!(pressed?.selected.length || pressed?.grabbed) || pressed.inSelection || sortable.isDragging() || carried || !movable() || event.type !== 'pointerup') return
     if (Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) < 5) placeCaret(event.clientX, event.clientY)
   }
-  host.addEventListener('mousedown', many, true)
-  window.addEventListener('pointerup', up, true)
-  window.addEventListener('pointercancel', up, true)
+  host.addEventListener('mousedown', many, { capture: true, signal })
+  window.addEventListener('pointerup', up, { capture: true, signal })
+  window.addEventListener('pointercancel', up, { capture: true, signal })
 
   // A pointer resting on a block takes it in hand; moving on, typing or leaving lets it go.
   let resting: { block: HTMLElement; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null = null
@@ -353,9 +354,9 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     }, REST)
     resting = { block, x: event.clientX, y: event.clientY, timer }
   }
-  host.addEventListener('pointermove', hover)
-  host.addEventListener('pointerleave', stopResting)
-  host.addEventListener('keydown', stopResting)
+  host.addEventListener('pointermove', hover, { signal })
+  host.addEventListener('pointerleave', stopResting, { signal })
+  host.addEventListener('keydown', stopResting, { signal })
 
   // Files from outside land between blocks: the caret goes to the start of
   // the block they land before, or the end of the last, for the product.
@@ -397,26 +398,19 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     side = null; across = null; sideLine.hidden = true; line.hidden = true; fileDestination = -1
     host.toggleAttribute('data-movable', movable())
   }
-  host.addEventListener('aa-movement-change', movementChanged)
-  host.addEventListener('dragover', dragOver)
-  host.addEventListener('dragleave', dragLeave)
-  host.addEventListener('drop', drop, true)
+  host.addEventListener('aa-movement-change', movementChanged, { signal })
+  host.addEventListener('dragover', dragOver, { signal })
+  host.addEventListener('dragleave', dragLeave, { signal })
+  host.addEventListener('drop', drop, { capture: true, signal })
 
   return () => {
+    listening.abort()
     observer.disconnect()
     sortable.destroy()
     registered.clear()
     carried = null; press = null
-    document.removeEventListener('selectionchange', keepClear)
     line.remove(); sideLine.remove()
-    document.removeEventListener('pointermove', besides, true)
     host.removeAttribute('data-movable'); host.removeAttribute('data-dragging')
-    window.removeEventListener('pointerdown', down, true)
-    host.removeEventListener('mousedown', many, true)
-    window.removeEventListener('pointerup', up, true); window.removeEventListener('pointercancel', up, true)
     stopResting()
-    host.removeEventListener('pointermove', hover); host.removeEventListener('pointerleave', stopResting); host.removeEventListener('keydown', stopResting)
-    host.removeEventListener('aa-movement-change', movementChanged)
-    host.removeEventListener('dragover', dragOver); host.removeEventListener('dragleave', dragLeave); host.removeEventListener('drop', drop, true)
   }
 }

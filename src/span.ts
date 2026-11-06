@@ -53,6 +53,7 @@ export function selectFromTo(host: HTMLElement, selection: Selection, a: Point, 
 type Place = { block: HTMLElement; offset: number }
 
 export function selectAcrossBlocks(host: HTMLElement, readOnly: () => boolean): () => void {
+  const listening = new AbortController(), { signal } = listening
   const document = host.ownerDocument, window = document.defaultView!
   const blocks = () => (Array.from(host.children) as HTMLElement[]).filter(element => element.classList.contains('aa-block'))
   const blockOf = (node: Node | null) => {
@@ -171,24 +172,17 @@ export function selectAcrossBlocks(host: HTMLElement, readOnly: () => boolean): 
   }
   const up = (event: PointerEvent) => { if (press && event.pointerId === press.pointer) end() }
 
-  window.addEventListener('pointerdown', down, true)
-  window.addEventListener('pointermove', move, true)
-  window.addEventListener('pointerup', up, true)
-  window.addEventListener('pointercancel', up, true)
-  window.addEventListener('mousemove', mouse, true)
-  window.addEventListener('mousedown', many, true)
-  document.addEventListener('selectstart', selectStart, true)
-  document.addEventListener('selectionchange', kept)
+  window.addEventListener('pointerdown', down, { capture: true, signal })
+  window.addEventListener('pointermove', move, { capture: true, signal })
+  window.addEventListener('pointerup', up, { capture: true, signal })
+  window.addEventListener('pointercancel', up, { capture: true, signal })
+  window.addEventListener('mousemove', mouse, { capture: true, signal })
+  window.addEventListener('mousedown', many, { capture: true, signal })
+  document.addEventListener('selectstart', selectStart, { capture: true, signal })
+  document.addEventListener('selectionchange', kept, { signal })
   return () => {
+    listening.abort()
     end()
-    window.removeEventListener('pointerdown', down, true)
-    window.removeEventListener('pointermove', move, true)
-    window.removeEventListener('pointerup', up, true)
-    window.removeEventListener('pointercancel', up, true)
-    window.removeEventListener('mousemove', mouse, true)
-    window.removeEventListener('mousedown', many, true)
-    document.removeEventListener('selectstart', selectStart, true)
-    document.removeEventListener('selectionchange', kept)
   }
 }
 

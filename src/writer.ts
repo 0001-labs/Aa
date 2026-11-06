@@ -66,6 +66,7 @@ const DRAFT_DELAY = 400
 type Row = { id: string; label: string; icon: string; run(): void }
 
 export function createWriter(host: HTMLElement, options: WriterOptions = {}): Writer {
+  const listening = new AbortController(), { signal } = listening
   const { draft: key, drafts = localDrafts, onSave, onCancel, onState, actions = [], onChange, ...editing } = options
   const document = host.ownerDocument, window = document.defaultView!
   let saved = options.value ?? ''
@@ -247,12 +248,12 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
   }
   const leave = () => { if (timer !== undefined) writeDraft() }
   const hidden = () => { if (document.visibilityState === 'hidden') leave() }
-  page.addEventListener('aa-selectionchange', refreshBar)
-  page.addEventListener('aa-change', refreshBar)
-  element.addEventListener('keydown', keys, true)
-  document.addEventListener('pointerdown', outside)
-  document.addEventListener('visibilitychange', hidden)
-  window.addEventListener('pagehide', leave)
+  page.addEventListener('aa-selectionchange', refreshBar, { signal })
+  page.addEventListener('aa-change', refreshBar, { signal })
+  element.addEventListener('keydown', keys, { capture: true, signal })
+  document.addEventListener('pointerdown', outside, { signal })
+  document.addEventListener('visibilitychange', hidden, { signal })
+  window.addEventListener('pagehide', leave, { signal })
 
   element.toggleAttribute('data-read-only', !!options.readOnly)
   element.dataset.state = state
@@ -277,13 +278,10 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
     set readOnly(value) { editor.readOnly = value; element.toggleAttribute('data-read-only', value); show(state, said.textContent ?? '') },
     save, cancel,
     destroy() {
+      listening.abort()
       if (destroyed) return
       leave()
       destroyed = true; clearTimeout(timer); closeMenu()
-      page.removeEventListener('aa-selectionchange', refreshBar); page.removeEventListener('aa-change', refreshBar)
-      element.removeEventListener('keydown', keys, true)
-      document.removeEventListener('pointerdown', outside); document.removeEventListener('visibilitychange', hidden)
-      window.removeEventListener('pagehide', leave)
       editor.destroy(); element.remove()
     },
   }
