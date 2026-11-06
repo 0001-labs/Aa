@@ -330,7 +330,7 @@ export function turnInto(blocks: readonly Block[], selection: BlockSelection, ki
     else if (block.kind === 'divider') text = ''
     const prefix = { paragraph: '', h1: '# ', h2: '## ', h3: '### ', todo: '- [ ] ', bullet: '- ', numbered: `${index - first + 1}. `, quote: '> ', code: '', divider: '', callout: '> [!💡] ', toggle: '> [!note]- ', 'toggle-h1': '> [!note]- # ', 'toggle-h2': '> [!note]- ## ', 'toggle-h3': '> [!note]- ### ', table: '', equation: '' }[kind]
     const fence = '`'.repeat(Math.max(3, ...Array.from(text.matchAll(/`+/g), match => match[0].length + 1)))
-    const source = kind === 'code' ? `${fence}\n${text}\n${fence}` : kind === 'divider' ? '---' : kind === 'equation' ? `$$\n${text}\n$$` : kind === 'table' ? '| **Column 1** | **Column 2** |\n| --- | --- |\n|  |  |' : kind === 'callout' || kind.startsWith('toggle') ? prefix + text.split('\n').join('\n> ') : text.split('\n').map(line => prefix + line).join('\n')
+    const source = kind === 'code' ? `${fence}\n${text}\n${fence}` : kind === 'divider' ? '---' : kind === 'equation' ? `$$\n${text}\n$$` : kind === 'table' ? '|  |  |\n| --- | --- |\n|  |  |' : kind === 'callout' || kind.startsWith('toggle') ? prefix + text.split('\n').join('\n> ') : text.split('\n').map(line => prefix + line).join('\n')
     return parseBlocks(source).map(({ start: _start, ...converted }) => converted)
   })
   return { blocks: next, caret: { block: first, offset: next[first].prefix } }

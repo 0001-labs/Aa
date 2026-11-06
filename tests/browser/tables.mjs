@@ -18,6 +18,11 @@ for (const name of engines) {
   const firstCell = () => page.evaluate(() => { const r = document.querySelector('.aa-table-cell').getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } })
   const grip = at => page.evaluate(at => { const r = document.querySelectorAll('.ds-table-column-resize')[at].getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } }, at)
 
+  await open('|  |  |\n| --- | --- |\n|  |  |')
+  check('empty headers show Header without saving it', await page.evaluate(() => document.querySelector('[data-table-placeholder]')?.dataset.tablePlaceholder === 'Header' && !window.editor.value.includes('Header')))
+  await page.locator('.aa-table-cell').first().click()
+  await page.keyboard.type('Title')
+  check('typing replaces the header placeholder', await page.evaluate(() => !document.querySelector('.aa-table-cell')?.querySelector('[data-table-placeholder]') && window.editor.value.includes('Title')))
   await open()
   check('editor resize styles leave sibling native-table handles alone', await page.evaluate(() => {
     const handle = document.createElement('span'); handle.className = 'ds-table-column-resize';

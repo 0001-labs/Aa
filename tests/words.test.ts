@@ -55,3 +55,24 @@ test('tells times and counts in the page’s language', () => {
 test('every Danish word keeps the placeholders of its English key', () => {
  for (const [english, danish] of Object.entries(da)) expect(danish.match(/\{\w+\}/g)?.sort(), english).toEqual(english.match(/\{\w+\}/g)?.sort())
 })
+
+
+test('empty table headers use translated placeholders without changing Markdown', () => {
+ const source = '|  | Name |\n| --- | --- |\n|  |  |'
+ document.documentElement.lang = 'da'
+ const host = document.createElement('div'); document.body.append(host)
+ const editor = createEditor(host, { value: source })
+ try {
+  expect([...host.querySelectorAll('[data-table-placeholder]')].map(node => node.getAttribute('data-table-placeholder'))).toEqual(['Overskrift'])
+  expect(editor.value).toBe(source)
+  editor.value = '| Title | Name |\n| --- | --- |\n|  |  |'
+  expect(host.querySelector('[data-table-placeholder]')).toBeNull()
+ } finally { editor.destroy() }
+ setAaWords({ Header: '見出し' })
+ const translated = createEditor(host, { value: source })
+ try { expect(host.querySelector('[data-table-placeholder]')?.getAttribute('data-table-placeholder')).toBe('見出し') }
+ finally { translated.destroy() }
+ const readonly = createEditor(host, { value: source, readOnly: true })
+ try { expect(host.querySelector('[data-table-placeholder]')).toBeNull() }
+ finally { readonly.destroy() }
+})

@@ -325,6 +325,7 @@ function renderTable(element: HTMLElement, block: Block, reveal: Reveal, decorat
       leading.textContent = block.source.slice(offset, cell.from)
       // A cell's words are Markdown as any writing is; only a pipe of its own is not read as a cell's edge.
       const content = document.createElement('span')
+      if (row === 0 && !cell.text && element.dataset.readonly !== 'true') content.dataset.tablePlaceholder = word('Header')
       for (const run of blockRuns({ kind: 'paragraph', source: cell.text, prefix: 0 }, atoms)) {
         const text = cell.text.slice(run.from, run.to)
         if (!text) continue

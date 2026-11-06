@@ -204,3 +204,8 @@ it('keeps selected code whitespace inside literal code', () => {
   const blocks = fromMarkdown(' a ');
   expect(toMarkdown(wrapSelection(blocks, {block:0,offset:0}, {block:0,offset:3}, '`')!.blocks)).toBe('` a `');
 });
+
+
+it('new tables keep headers empty instead of storing default labels', () => {
+ expect(toMarkdown(turnInto(fromMarkdown(''), { anchor: 0, focus: 0 }, 'table').blocks)).toBe('|  |  |\n| --- | --- |\n|  |  |')
+})
