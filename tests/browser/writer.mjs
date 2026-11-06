@@ -37,13 +37,14 @@ for (const name of ['chromium', 'webkit']) {
   await page.locator('[data-action=bold]').click()
   check('the bar works on words never touched', await page.evaluate(() => !!window.writer.editor.selection()))
 
-  await page.evaluate(() => window.open_('## \n\nOrd\n\n## '))
+  // A writer closing keeps its draft, so each fresh start clears what the last one left.
+  await page.evaluate(() => { window.writer.destroy(); localStorage.clear(); window.open_('## \n\nOrd\n\n## ') })
   await page.locator('.aa-block').nth(1).click()
   await page.keyboard.press('End')
   await page.keyboard.press('Enter')
   await page.evaluate(() => new Promise(requestAnimationFrame))
   check('empty blocks and headings say nothing', await page.evaluate(() => [...document.querySelectorAll('.aa-block')].every(block => getComputedStyle(block, '::before').content === 'none' && !block.dataset.placeholder)))
-  await page.evaluate(() => { localStorage.clear(); window.open_('Første linje\n\nAnden linje') })
+  await page.evaluate(() => { window.writer.destroy(); localStorage.clear(); window.open_('Første linje\n\nAnden linje') })
 
   await page.locator('.aa-block').first().click()
   await page.keyboard.press('End')
