@@ -37,7 +37,7 @@ for (const name of ['chromium', 'webkit']) {
   // Typing a mark of a kind turns the block in place; the one after it follows.
   await page.evaluate(() => window.make('Words\n\n- One'))
   await page.locator('#host .aa-block').first().click()
-  await page.keyboard.press('Home')
+  await page.evaluate(() => window.editor.selectRange(0))
   await page.keyboard.type('- ')
   await same('a block typed into a bullet draws the next bullet to it', '0 0')
 
