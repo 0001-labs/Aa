@@ -56,7 +56,10 @@ Rows copied from a spreadsheet arrive as text with tabs between the cells. Paste
 | Enter | A new paragraph under the table |
 | Left at a cell's start, Right at its end | The cell before or after |
 | Up, Down | The cell above or below |
-| Backspace at a cell's start | Nothing: a cell's edge holds |
+| Backspace in an empty row | Removes the row, the caret going to the row above |
+| Backspace in an empty table | Removes the table |
+| Backspace with every cell selected | Removes the table |
+| Backspace at the start of a cell in a row with words | Nothing: a cell's edge holds |
 | ⌘A | The cell's words, then all of the writing |
 | ⌘/ | The block's commands, with the rows and columns |
 
