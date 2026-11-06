@@ -534,6 +534,13 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
 
   const snapshot = (anchor: Pos, focus: Pos): Snapshot => ({ blocks, anchor, focus })
 
+  /** A change kept for undo and told to the product. */
+  const recorded = (anchor: Pos, focus: Pos, kind: ChangeKind) => {
+    history.record(snapshot(anchor, focus), kind)
+    options.onChange?.(toMarkdown(blocks))
+    host.dispatchEvent(new Event('aa-change'))
+  }
+
   const commit = (next: Block[], anchor: Pos, focus: Pos, kind: ChangeKind) => {
     const before = blocks, focused = host.contains(document.activeElement)
     clearBlocks()
@@ -548,9 +555,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     showPlaceholder({ anchor, focus })
     if (drawn) keepCaretInView(focused)
     if (!transactionDepth) {
-      history.record(snapshot(anchor, focus), kind)
-      options.onChange?.(toMarkdown(blocks))
-      host.dispatchEvent(new Event('aa-change'))
+      recorded(anchor, focus, kind)
       correction?.written(before, kind !== 'edit')
     }
   }
@@ -794,14 +799,11 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       case 'insertFromDrop':
         event.preventDefault()
         return
-      case 'deleteContentBackward': {
-        if (!collapsed) { event.preventDefault(); if (!deleteTable(selection)) insert(selection, ''); return }
-        if (deleteAtom(selection, 'backward') || deleteAtEdge(selection, 'backward')) event.preventDefault()
-        return
-      }
+      case 'deleteContentBackward':
       case 'deleteContentForward': {
         if (!collapsed) { event.preventDefault(); if (!deleteTable(selection)) insert(selection, ''); return }
-        if (deleteAtom(selection, 'forward') || deleteAtEdge(selection, 'forward')) event.preventDefault()
+        const direction = type === 'deleteContentBackward' ? 'backward' : 'forward'
+        if (deleteAtom(selection, direction) || deleteAtEdge(selection, direction)) event.preventDefault()
         return
       }
       case 'deleteByCut':
@@ -1289,9 +1291,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const clamp = (pos: Pos): Pos => ({ block: Math.min(pos.block, blocks.length - 1), offset: Math.min(pos.offset, blocks[Math.min(pos.block, blocks.length - 1)].source.length) })
     if (kept) { setSelection(clamp(kept.anchor), clamp(kept.focus)); applyReveal({ anchor: clamp(kept.anchor), focus: clamp(kept.focus) }) }
     const at = kept ? clamp(kept.focus) : { block: Math.min(index, blocks.length - 1), offset: 0 }
-    history.record(snapshot(at, at), 'edit')
-    options.onChange?.(toMarkdown(blocks))
-    host.dispatchEvent(new Event('aa-change'))
+    recorded(at, at, 'edit')
   }
   /** A picture sized on its grip: its own source within its block written again, as one step of undo. */
   const onAtomSource = (event: Event) => {
@@ -1313,9 +1313,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     clearBlocks()
     syncDom(renumber(drawn))
     const at = { block: index, offset: 0 }
-    history.record(snapshot(at, at), 'edit')
-    options.onChange?.(toMarkdown(blocks))
-    host.dispatchEvent(new Event('aa-change'))
+    recorded(at, at, 'edit')
   }
   /** An atom that had the keys gives them back: the caret goes on to the start of the block after it, or back to the end of the one before. */
   const onAtomLeave = (event: Event) => {
@@ -1650,9 +1648,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       clearBlocks()
       syncDom(renumber(next))
       const at = { block: index, offset: 0 }
-      history.record(snapshot(at, at), 'edit')
-      options.onChange?.(toMarkdown(blocks))
-      host.dispatchEvent(new Event('aa-change'))
+      recorded(at, at, 'edit')
       return elements()[index] ?? null
     },
   })
