@@ -224,11 +224,11 @@ describe('links as Markdown writes them', () => {
     expect(linkAround(source, 0, 2)).toBeNull()
   })
   it('folds an address to what reads, never a link of words', () => {
-    const fold = (text: string, href = text) => { const found = addressFold({ kind: 'text', from: 0, to: text.length, href }, text); return found && text.slice(found.shown, found.end) + (found.more ? '…' : '') }
+    const fold = (text: string, href = text) => { const found = addressFold({ kind: 'text', from: 0, to: text.length, href }, text); return found && text.slice(found.shown, found.end) + (found.more ? ' (cut)' : '') }
     expect(fold('https://github.com/Pankado-kk/thailandtours/pull/143')).toBe('github.com/Pankado-kk/thailandtours/pull/143')
     expect(fold('https://www.example.com/')).toBe('example.com')
     expect(fold('www.example.com')).toBe('example.com')
-    expect(fold('https://thailandtours.webirium.com/rejseblog/phuket-eller-krabi-hvilken-destination-er-den-rigtige-for-dig/')).toBe('thailandtours.webirium.com/rejseblog/phuket-eller-krabi…')
+    expect(fold('https://thailandtours.webirium.com/rejseblog/phuket-eller-krabi-hvilken-destination-er-den-rigtige-for-dig/')).toBe('thailandtours.webirium.com/rejseblog/phuket-eller-krabi (cut)')
     expect(fold('Our words', 'https://a.dk')).toBeNull()
     expect(addressFold({ kind: 'text', from: 0, to: 12, href: 'https://a.dk', code: true }, 'https://a.dk')).toBeNull()
   })

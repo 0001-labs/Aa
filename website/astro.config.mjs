@@ -80,6 +80,7 @@ export default defineConfig({
           label: "Editing",
           items: [
             { label: "Toolbar", slug: "editing/toolbar" },
+            { label: "Writer mode", slug: "editing/writer" },
             { label: "Menus", slug: "editing/menus" },
             { label: "Selecting", slug: "editing/selecting" },
             { label: "Undo", slug: "editing/undo" },

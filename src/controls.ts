@@ -13,7 +13,7 @@ export type ToolbarAction = { id: string; label: string; icon: string; shortcut?
 /** `ink`: one of the text colours its row's mark is drawn in. */
 /** `swatch`: a callout fill its row's mark is drawn as, a filled square. */
 export type Command = ToolbarAction & { keywords?: string; ink?: string; swatch?: CalloutColor; enabled?(editor: Editor): boolean; preview?(element: HTMLElement, context: { input: 'pointer' | 'keyboard' }): void | (() => void) }
-const kinds: { kind: TurnKind; label: string; icon: string }[] = [
+export const kinds: { kind: TurnKind; label: string; icon: string }[] = [
   { kind: 'paragraph', label: 'Text', icon: 'text' }, { kind: 'h1', label: 'Heading 1', icon: 'h1' },
   { kind: 'h2', label: 'Heading 2', icon: 'h2' }, { kind: 'h3', label: 'Heading 3', icon: 'h3' },
   { kind: 'todo', label: 'To-do', icon: 'todo' }, { kind: 'bullet', label: 'Bulleted list', icon: 'bullet' },
@@ -25,7 +25,7 @@ const kinds: { kind: TurnKind; label: string; icon: string }[] = [
 ]
 /** The Markdown that writes a kind, shown at its row's end in a sheet. */
 const keys: Partial<Record<TurnKind, string>> = { h1: '#', h2: '##', h3: '###', todo: '[ ]', bullet: '-', numbered: '1.', quote: '>', code: '```', divider: '---', callout: '> [!', table: '|', equation: '$$' }
-function button(english: string, icon: string, action: () => void, text = false, shortcut?: string): HTMLButtonElement {
+export function button(english: string, icon: string, action: (event: MouseEvent) => void, text = false, shortcut?: string): HTMLButtonElement {
   const label = word(english)
   const node = document.createElement('button')
   node.type = 'button'; node.setAttribute('aria-label', label)
@@ -70,7 +70,7 @@ export function defineAaToolbar() { if (!customElements.get('aa-toolbar')) custo
  * empty block, or after the one the caret is in, the caret on its first line
  * of words so they show for writing.
  */
-function inserting(atom: NonNullable<EditorOptions['atoms']>[number]): Command | null {
+export function inserting(atom: NonNullable<EditorOptions['atoms']>[number]): Command | null {
   const insert = atom.insert
   if (!insert) return null
   return { id: `insert-${atom.name}`, label: insert.label, icon: insert.icon, keywords: insert.keywords, preview: insert.preview, run: editor => {
@@ -84,13 +84,25 @@ function inserting(atom: NonNullable<EditorOptions['atoms']>[number]): Command |
   } }
 }
 
+/** A new block of a kind: in place of the empty paragraph the caret is in, or after the block it is in, written as the kind writes an empty block. */
+export function insertBlock(editor: Editor, kind: TurnKind) {
+  const block = editor.activeBlock()
+  if (!block || (block.block.kind === 'paragraph' && !block.block.source.trim())) { editor.turnInto(kind); return }
+  const made = turnBlocks([{ kind: 'paragraph', source: '', prefix: 0 }], { anchor: 0, focus: 0 }, kind)
+  const source = made.blocks.map(each => each.source).join('\n\n')
+  if (source) { editor.replace(block.end, block.end, `\n\n${source}`); editor.selectRange(block.end + 2 + made.caret.offset); return }
+  // An empty paragraph has no Markdown of its own to insert: Enter at the block's end starts one, as the key does.
+  editor.selectRange(block.end)
+  editor.element.children[block.index]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+}
+
 /** The part of the page in view: the visual viewport, which a phone's keyboard shortens and a pinch moves, or the window. */
 function viewportOf(window: Window) {
   const view = window.visualViewport
   return { top: view?.offsetTop ?? 0, left: view?.offsetLeft ?? 0, width: view?.width ?? window.innerWidth, height: view?.height ?? window.innerHeight }
 }
 /** Whether the page is worked by touch: a phone or a tablet, with no fine pointer. */
-const isCoarse = (window: Window) => !!window.matchMedia?.('(pointer: coarse)').matches
+export const isCoarse = (window: Window) => !!window.matchMedia?.('(pointer: coarse)').matches
 /** The editor's scale, read as its stylesheet reads it: Design system 1's --ds-sf, or the page's --sf. */
 function scaleOf(host: HTMLElement): number {
   const style = getComputedStyle(host)
@@ -140,17 +152,7 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
   // On touch the kinds are a sheet from the foot of the screen (sheet.ts), a row each with the Markdown that writes it.
   const kindRows = (run: (kind: TurnKind) => void) => kinds.map(kind => ({ id: kind.kind, label: kind.label, icon: kind.icon, key: keys[kind.kind], run: () => { restore(); run(kind.kind) } }))
   const sheet = (title: string, groups: SheetGroup[]) => { toolbar.hidden = true; openSheet({ title, groups, root: overlayRoot, nonModal: options.nonModalSheets, onClose: chosen => { if (!chosen) { const end = saved?.end ?? editor.selection()?.end; saved = null; if (end !== undefined) { dismissedSelection = { start: end, end }; editor.selectRange(end) } toolbar.hidden = true } } }) }
-  /** A new block of a kind: in place of the empty paragraph the caret is in, or after the block it is in, written as the kind writes an empty block. */
-  const insertKind = (kind: TurnKind) => {
-    const block = editor.activeBlock()
-    if (!block || (block.block.kind === 'paragraph' && !block.block.source.trim())) { editor.turnInto(kind); return }
-    const made = turnBlocks([{ kind: 'paragraph', source: '', prefix: 0 }], { anchor: 0, focus: 0 }, kind)
-    const source = made.blocks.map(each => each.source).join('\n\n')
-    if (source) { editor.replace(block.end, block.end, `\n\n${source}`); editor.selectRange(block.end + 2 + made.caret.offset); return }
-    // An empty paragraph has no Markdown of its own to insert: Enter at the block's end starts one, as the key does.
-    editor.selectRange(block.end)
-    host.children[block.index]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
-  }
+  const insertKind = (kind: TurnKind) => insertBlock(editor, kind)
   // Over selected words, with a pointer, the bar is as simple as it can be, a grid five squares wide as Notion's:
   // the colour and the marks, then Comment. The kinds, what the product inserts and a picture are the slash
   // menu's; touch, with no keys for them, keeps them on its bar with the rest.

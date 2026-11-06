@@ -46,10 +46,13 @@ const touches = (reveal: Reveal, from: number, to: number) => !!reveal && reveal
 
 /** How much of an address reads before the rest is folded away. */
 const ADDRESS_LENGTH = 56
+/** How many of its last letters a cut address fades over. */
+const ADDRESS_FADE = 6
 
 /**
  * How a link whose words are its own address reads: without `https://`,
- * `www.` or a closing slash, and cut short at a word near `ADDRESS_LENGTH`.
+ * `www.` or a closing slash, and cut short at a word near `ADDRESS_LENGTH`,
+ * fading out there.
  * The letters stay in the page and in the document; the caret entering the
  * link brings them all back, so nothing is out of reach of editing.
  */
@@ -106,9 +109,11 @@ function wordsOf(document: Document, run: Run, text: string, decorations: readon
   decorateNode(node, base + run.from, decorations)
   // Words a layer has marked keep all their letters, so the mark stays on what it was put on.
   if (fold && node.childNodes.length === 1 && node.firstChild!.nodeType === 3) {
-    node.replaceChildren(hiddenSyntax(document, text.slice(0, fold.shown)), text.slice(fold.shown, fold.end))
+    // Cut words fade over their last letters, as Design system 1 cuts them.
+    const fade = fold.more ? fold.end - ADDRESS_FADE : fold.end
+    node.replaceChildren(hiddenSyntax(document, text.slice(0, fold.shown)), text.slice(fold.shown, fade))
+    if (fold.more) { const end = document.createElement('span'); end.className = 'aa-link-fade'; end.textContent = text.slice(fade, fold.end); node.append(end) }
     if (fold.end < text.length) node.append(hiddenSyntax(document, text.slice(fold.end)))
-    node.toggleAttribute('data-more', fold.more)
   }
   return node
 }

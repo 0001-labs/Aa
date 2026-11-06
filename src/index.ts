@@ -1,5 +1,6 @@
 export { createEditor, imageAtom, sizePicture, type Atom, type Editor, type EditorOptions } from './editor'
 export { AaEditorElement, defineAaEditor } from './element'
+export { createWriter, localDrafts, type DraftStore, type Writer, type WriterOptions, type WriterState } from './writer'
 export { parseBlocks, serialize, blockRuns, atomPattern, IMAGE, DEFAULT_ATOMS, readColumns, writeColumns, readTabs, writeTabs, type AtomSyntax, type Block, type BlockKind, type Run, type Placed, type Tab } from './markdown'
 export { atomElement } from './render'
 export { fromMarkdown, toMarkdown, replaceRange, splitAt, liftPrefix, joinWithPrevious, joinWithNext, wrapSelection, toggleBox, sliceMarkdown, type Pos, type Change } from './document'
