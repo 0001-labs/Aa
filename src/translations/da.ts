@@ -41,7 +41,7 @@ export const da: Readonly<Record<string, string>> = {
   "Button: {label}, {state}": "Knap: {label}, {state}",
   "Callout": "Fremhævet boks",
   "Callout icon": "Ikon til boksen",
-  "Cancel": "Annullér",
+  "Cancel": "Annuller",
   "chart": "diagram",
   "Close": "Luk",
   "Close find": "Luk søgning",
