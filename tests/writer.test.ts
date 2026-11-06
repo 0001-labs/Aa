@@ -87,6 +87,17 @@ describe('writer mode', () => {
     vi.advanceTimersByTime(500)
     expect(drafts.kept.get('card')).toBe('First and second')
   })
+  it('drops the draft when a save finishes after the writer closed', async () => {
+    const drafts = memory()
+    let finish = () => {}
+    writer = createWriter(host, { value: 'Saved', draft: 'card', drafts, onSave: () => new Promise<void>(done => { finish = done }) })
+    writer.value = 'Kept'
+    const saving = writer.save()
+    writer.destroy()
+    expect(drafts.kept.get('card')).toBe('Kept')
+    finish(); await saving
+    expect(drafts.kept.has('card')).toBe(false)
+  })
   it('cancels back to the saved words and drops the draft', () => {
     const drafts = memory({ card: 'My draft' }), cancelled = vi.fn()
     writer = createWriter(host, { value: 'Saved', draft: 'card', drafts, onCancel: cancelled })

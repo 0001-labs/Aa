@@ -129,7 +129,8 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
     show('saving', 'Saving…')
     try { await onSave?.(value) }
     catch { if (!destroyed) { show('failed', 'Not saved'); saveButton.disabled = false } return false }
-    if (destroyed) return true
+    // Closed while it was being kept: the draft of these words has done its work.
+    if (destroyed) { if (key && drafts.load(key) === value) drafts.clear(key); return true }
     saved = value
     // Words written while they were being kept are the next draft.
     if (dirty()) { state = 'draft'; show('draft', key ? 'Draft' : 'Not saved yet'); clearTimeout(timer); timer = setTimeout(writeDraft, DRAFT_DELAY) }
