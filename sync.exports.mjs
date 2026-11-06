@@ -6,10 +6,30 @@
  * A diagram brings its language (diagram-language.js, which a page or a
  * server can read alone) and its marker drawing (marker.js) with it.
  */
+import ts from 'typescript'
+
+// Rolldown labels a resolved dependency through the physical checkout when node_modules
+// is a symlink. Stabilize only those generated leading comments, never source strings.
+function dependencyRegions(text) {
+  if (!text.includes('//#region ../')) return text
+  const source = ts.createSourceFile('export.js', text, ts.ScriptTarget.Latest, false, ts.ScriptKind.JS)
+  const edits = []
+  for (const statement of source.statements) {
+    for (const range of ts.getLeadingCommentRanges(text, statement.pos) ?? []) {
+      if (range.kind !== ts.SyntaxKind.SingleLineCommentTrivia) continue
+      const before = text.slice(range.pos, range.end)
+      const after = before.replace(/^\/\/#region (?:\.\.\/)+(?:[^\r\n]*?\/)?node_modules\//, '//#region node_modules/')
+      if (before !== after) edits.push({ ...range, after })
+    }
+  }
+  for (const { pos, end, after } of edits.reverse()) text = text.slice(0, pos) + after + text.slice(end)
+  return text
+}
+
 const optional = ['react', 'collaboration', 'convex', 'diagram', 'diagram-language', 'marker', 'partial-reader', 'comments-markdown', 'parse']
 // The maps are not copied, so the lines pointing at them go too, and the
 // optional entries import the core from beside them rather than the package.
-const script = text => text.toString().replace(/\n?\/\/# sourceMappingURL=\S*\s*$/, '\n').replace(/from\s*["']@0001(?:-labs)?\/aa["']/g, 'from "./aa.js"')
+const script = text => dependencyRegions(text.toString()).replace(/\n?\/\/# sourceMappingURL=\S*\s*$/, '\n').replace(/from\s*["']@0001(?:-labs)?\/aa["']/g, 'from "./aa.js"')
 const types = text => text.toString().replace(/from\s*["']@0001(?:-labs)?\/aa["']/g, 'from "./index"')
 
 export default {
