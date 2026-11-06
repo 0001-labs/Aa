@@ -25,6 +25,7 @@ export default {
         const files = new Map([
           ['aa.js', script(read('dist/aa.js'))],
           ['aa-icons-extra.js', script(read('dist/aa-icons-extra.js'))],
+          ['aa-components.js', script(read('dist/aa-components.js'))],
           ['aa.css', read('src/aa.css')],
           ['fonts/aa-mono.woff2', read('src/fonts/aa-mono.woff2')],
           ['fonts/inter-arrows.woff2', read('src/fonts/inter-arrows.woff2')],

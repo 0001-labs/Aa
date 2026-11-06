@@ -12,7 +12,7 @@ import { createEditor, type Editor, type EditorOptions } from './editor'
 import { button, inserting, insertBlock, isCoarse, kinds, type Command, type ToolbarAction } from './controls'
 import { blockRuns } from './markdown'
 import type { TurnKind } from './document'
-import { icons } from './icons'
+import { iconElement } from './icons'
 import { openSheet } from './sheet'
 import { word } from './words'
 
@@ -64,13 +64,6 @@ export type Writer = {
 const DRAFT_DELAY = 400
 
 type Row = { id: string; label: string; icon: string; run(): void }
-
-const chevron = (document: Document) => {
-  const picture = document.createElement('span')
-  picture.className = 'aa-icon aa-writer-chevron'
-  picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent((icons['./icons/chevron-down.svg'] ?? '').replace(/currentColor/g, 'black'))}")`
-  return picture
-}
 
 export function createWriter(host: HTMLElement, options: WriterOptions = {}): Writer {
   const { draft: key, drafts = localDrafts, onSave, onCancel, onState, actions = [], onChange, ...editing } = options
@@ -192,7 +185,7 @@ export function createWriter(host: HTMLElement, options: WriterOptions = {}): Wr
   const opening = (id: string, label: string, icon: string, rows: () => readonly Row[]) => {
     const node: HTMLButtonElement = button(label, icon, event => menu(node, label, rows(), event.detail === 0))
     node.dataset.action = id; node.classList.add('aa-writer-opens'); node.setAttribute('aria-haspopup', 'menu'); node.setAttribute('aria-expanded', 'false')
-    node.append(chevron(document))
+    node.append(iconElement('chevron-down', document))
     return node
   }
   const pressing = (id: string, label: string, icon: string, run: () => void, shortcut?: string) => {

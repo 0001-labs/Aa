@@ -3,7 +3,7 @@ import { turnInto as turnBlocks, type TurnKind } from './document'
 import { createDragging } from './drag'
 import { openSheet, type SheetGroup } from './sheet'
 
-import { icons } from './icons'
+import { iconElement } from './icons'
 import { BACKGROUND_COLORS, CALLOUT_COLORS, TEXT_COLORS, type CalloutColor } from './markdown'
 import { REACTION_EMOJIS } from './comments'
 import { initTooltips } from './ds1/0-face/tooltips'
@@ -31,11 +31,7 @@ export function button(english: string, icon: string, action: (event: MouseEvent
   node.type = 'button'; node.setAttribute('aria-label', label)
   // An icon alone is named by Design system 1's tooltip, with its shortcut; a row with words needs none.
   if (!text) node.dataset.tooltip = shortcut ? `${label} ${shortcut}` : label
-  const picture = document.createElement('span')
-  picture.className = 'aa-icon'
-  const svg = icons[`./icons/${icon}.svg`]
-  if (svg) picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/currentColor/g, 'black'))}")`
-  node.append(picture)
+  node.append(iconElement(icon))
   if (text) { const name = document.createElement('span'); name.textContent = label; node.append(name) }
   node.addEventListener('pointerdown', event => event.preventDefault())
   node.addEventListener('click', action)

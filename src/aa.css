@@ -967,7 +967,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
   background: none; color: inherit; cursor: pointer;
 }
 .aa-writer-bar button.aa-writer-opens { width: calc(1.75 * var(--aa-square)); }
-.aa-writer-chevron { width: calc(10px * var(--aa-sf)); height: calc(10px * var(--aa-sf)); }
+.aa-writer-opens .aa-icon:last-child { width: calc(10px * var(--aa-sf)); height: calc(10px * var(--aa-sf)); }
 .aa-writer-bar button[aria-pressed="true"], .aa-writer-bar button[aria-expanded="true"] { background: var(--ds-fill, light-dark(#f2f2f2, #2c2c2c)); }
 @media (hover: hover) { .aa-writer-bar button:hover { background: var(--ds-fill, light-dark(#f2f2f2, #2c2c2c)); } }
 .aa-writer-bar button:focus-visible { outline: 2px solid var(--ds-focus-ring, currentColor); outline-offset: -2px; }

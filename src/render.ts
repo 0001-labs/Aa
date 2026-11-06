@@ -8,7 +8,7 @@
 import { blockRuns, fencedAtom, DEFAULT_ATOMS, type AtomSyntax, type Block, type Run } from './markdown'
 import { tableAlignments, tableRows, tableWidths } from './table'
 import { word } from './words'
-import { icons } from './icons'
+import { iconMask } from './icons'
 import { initialOf } from './comments'
 
 /** A run of a block's words drawn with a class (and a title, and attributes a layer reads back, `data-comment` say); `from === to` is a caret. */
@@ -86,7 +86,6 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
   return groups.length || body ? `on:${groups.join(',')}${body ? ':body' : ''}` : ''
 }
 
-const pictureOf = (name: string) => `url("data:image/svg+xml,${encodeURIComponent((icons[`./icons/${name}.svg`] ?? '').replace(/currentColor/g, 'black'))}")`
 
 /** What a run's element looks like, kept beside it to tell a word typed from a look changed. */
 const lookOf = (run: Run) => `${run.href ?? ''}|${run.title ?? ''}|${run.bold ? 'b' : ''}${run.italic ? 'i' : ''}${run.strike ? 's' : ''}${run.underline ? 'u' : ''}${run.code ? 'c' : ''}${run.highlight ? 'h' : ''}|${run.color ?? ''}|${run.background ?? ''}`
@@ -194,8 +193,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     else delete element.dataset.fill
     if (block.box) element.style.removeProperty('--aa-callout-icon')
     else {
-      const icon = icons[`./icons/${block.folded ? 'toggle' : block.callout === 'tip' ? 'check' : block.callout === 'warning' || block.callout === 'caution' ? 'callout' : 'note'}.svg`]
-      element.style.setProperty('--aa-callout-icon', `url("data:image/svg+xml,${encodeURIComponent(icon.replace(/currentColor/g, 'black'))}")`)
+      element.style.setProperty('--aa-callout-icon', iconMask(block.folded ? 'toggle' : block.callout === 'tip' ? 'check' : block.callout === 'warning' || block.callout === 'caution' ? 'callout' : 'note'))
     }
     element.dataset.callout = block.callout
     element.toggleAttribute('data-folded', !!block.folded)
@@ -219,8 +217,8 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
   else delete element.dataset.fence
   // A code block's copy button is drawn by the sheet in its first square, so the text in the block stays the text alone.
   if (block.kind === 'code' && !fenced) {
-    element.style.setProperty('--aa-copy-icon', pictureOf('copy'))
-    element.style.setProperty('--aa-copied-icon', pictureOf('check'))
+    element.style.setProperty('--aa-copy-icon', iconMask('copy'))
+    element.style.setProperty('--aa-copied-icon', iconMask('check'))
   } else {
     element.style.removeProperty('--aa-copy-icon')
     element.style.removeProperty('--aa-copied-icon')

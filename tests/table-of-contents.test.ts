@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { beforeAll, afterEach, describe, expect, it, vi } from 'vite-plus/test'
+import { loadComponents } from '../src/partials'
+
+beforeAll(() => loadComponents())
 import { createEditor, type Editor } from '../src/editor'
 import { blockRuns, parseBlocks, serialize } from '../src/markdown'
 import { readBlock } from '../src/render'

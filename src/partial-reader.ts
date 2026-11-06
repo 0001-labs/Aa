@@ -1,5 +1,6 @@
 /** Small read-only entry for public guides. No editor, menus, app actions or data access. */
 import { BUTTON_PARTIAL, readButtonPartial, paintButton } from './button-partial'
+import './vendor/ds1/2-core/ds-button'
 import { configureI18n } from './vendor/ds1/0-face/i18n'
 import { word } from './words'
 export { BUTTON_STATES, readButtonPartial, writeButtonPartial, type ButtonState, type ButtonPartial } from './button-partial'

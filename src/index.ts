@@ -1,4 +1,5 @@
-export { createEditor, imageAtom, personAtom, sizePicture, type Atom, type Editor, type EditorOptions } from './editor'
+export { createEditor, type Editor, type EditorOptions } from './editor'
+export { imageAtom, personAtom, sizePicture, type Atom } from './atoms'
 export { AaEditorElement, defineAaEditor } from './element'
 export { createWriter, localDrafts, type DraftStore, type Writer, type WriterOptions, type WriterState } from './writer'
 export { parseBlocks, serialize, blockRuns, atomPattern, IMAGE, DEFAULT_ATOMS, readColumns, writeColumns, readTabs, writeTabs, type AtomSyntax, type Block, type BlockKind, type Run, type Placed, type Tab } from './markdown'
@@ -19,7 +20,7 @@ export { memoryCommentStore, type MemoryCommentStore } from './comments-memory'
 export { createCommentsView, type CommentsView, type CommentsViewOptions } from './comments-view'
 export type { EditorComments } from './editor'
 
-export { BUTTON_STATES, BUTTON_PARTIAL, readButtonPartial, writeButtonPartial, type ButtonState, type ButtonPartial } from './partials'
+export { BUTTON_STATES, BUTTON_PARTIAL, readButtonPartial, writeButtonPartial, type ButtonState, type ButtonPartial } from './button-partial'
 
 export { readCommentSource, writeCommentSource, changeCommentSource, exportMarkdown, type CommentDocument, type SourceThread, type SourceComment, type CommentAction } from './comments-markdown'
 export type { SourceCommentsOptions } from './comments-editor'

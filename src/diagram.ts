@@ -28,7 +28,7 @@
  */
 
 import { layoutDiagram, type Diagram, type DiagramChart, type DiagramDay, type DiagramSegment } from './diagram-language'
-import type { Atom } from './editor'
+import type { Atom } from './atoms'
 import { defineAaDiagramBoard, type AaDiagramBoardElement } from './diagram-board'
 import styles from './diagram.css?inline'
 import { word } from './words'

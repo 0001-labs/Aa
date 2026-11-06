@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import css from '../src/aa.css?inline'
-import { createEditor, imageAtom, type Editor } from '../src/editor'
+import { createEditor, type Editor } from '../src/editor'
+import { imageAtom } from '../src/atoms'
 import { diagramAtom, type AaDiagramBoardElement } from '../src/diagram'
 import type { PromptContext, Prompter } from '../src/prompt'
 

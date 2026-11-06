@@ -1,5 +1,4 @@
 import { atomPattern } from './markdown'
-import './vendor/ds1/2-core/ds-button'
 
 export const BUTTON_STATES = ['default', 'primary', 'secondary', 'active', 'disabled', 'danger'] as const
 export type ButtonState = typeof BUTTON_STATES[number]

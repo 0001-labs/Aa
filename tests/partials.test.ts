@@ -1,6 +1,9 @@
-import { afterEach, describe, expect, it } from 'vite-plus/test'
+import { beforeAll, afterEach, describe, expect, it } from 'vite-plus/test'
+import { loadComponents } from '../src/partials'
+
+beforeAll(() => loadComponents())
 import { createEditor, type Editor } from '../src/editor'
-import { BUTTON_PARTIAL, BUTTON_STATES, readButtonPartial, writeButtonPartial } from '../src/partials'
+import { BUTTON_PARTIAL, BUTTON_STATES, readButtonPartial, writeButtonPartial } from '../src/button-partial'
 import { blockRuns, parseBlocks } from '../src/markdown'
 import { readBlock } from '../src/render'
 import { renderPartials } from '../src/partial-reader'

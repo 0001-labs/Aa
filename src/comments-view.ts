@@ -14,7 +14,7 @@
 import { anchorThreads, applyEdit, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 import type { Decoration } from './render'
 import { breatheDot, canDictate, dictate, type Prompter } from './prompt'
-import { icons } from './icons'
+import { iconElement } from './icons'
 import { aaLanguage, word } from './words'
 
 export type CommentsViewOptions = {
@@ -48,13 +48,7 @@ export type CommentsView = {
 /** How long moved anchors wait before they are given to the store, so a sentence typed is one move. */
 const MOVE_DELAY = 800
 
-const icon = (name: string): HTMLSpanElement => {
-  const picture = document.createElement('span')
-  picture.className = 'aa-icon'
-  const svg = icons[`./icons/${name}.svg`]
-  if (svg) picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/currentColor/g, 'black'))}")`
-  return picture
-}
+const icon = iconElement
 
 const iconButton = (english: string, name: string, action: () => void): HTMLButtonElement => {
   const label = word(english)

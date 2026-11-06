@@ -11,7 +11,7 @@
  * runs once it is away, so the editor has its focus back by then.
  */
 import { bindOverlaySwipe } from './ds1/0-face/overlay-swipe'
-import { icons } from './icons'
+import { iconElement } from './icons'
 import { word } from './words'
 
 export type SheetRow = { id: string; label: string; icon?: string; key?: string; run(): void }
@@ -49,9 +49,7 @@ export function openSheet(options: SheetOptions): () => void {
     }
     for (const row of group.rows) {
       const button = doc.createElement('button'); button.type = 'button'; button.className = 'aa-sheet-row'; button.dataset.command = row.id
-      const picture = doc.createElement('span'); picture.className = 'aa-icon'
-      const svg = row.icon ? icons[`./icons/${row.icon}.svg`] : undefined
-      if (svg) picture.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(svg.replace(/currentColor/g, 'black'))}")`
+      const picture = iconElement(row.icon ?? '', doc)
       const words = doc.createElement('span'); words.className = 'aa-sheet-words'; words.textContent = word(row.label)
       button.append(picture, words)
       if (row.key) { const key = doc.createElement('span'); key.className = 'aa-sheet-key'; key.setAttribute('aria-hidden', 'true'); key.textContent = row.key; button.append(key) }
