@@ -29,11 +29,12 @@ export function connectCollaboration(editor: Editor, transport: CollaborationTra
   editor.readOnly = true
   const fail = (error: unknown) => options.onError?.(error)
   const persist = () => { try { transport.savePending?.(updates) } catch (error) { fail(error) } }
-  const syncEditor = () => {
-    if (!initialized || stopped) return
+  /** The shared text put in the editor, after `change`, with the selection staying on the same words. */
+  const showText = (change?: () => void) => {
     const selection = editor.selection()
     const anchor = selection ? Y.createRelativePositionFromTypeIndex(text, Math.min(selection.start, text.length)) : null
     const focus = selection ? Y.createRelativePositionFromTypeIndex(text, Math.min(selection.end, text.length)) : null
+    change?.()
     applying = true
     try {
       editor.value = text.toString()
@@ -43,6 +44,7 @@ export function connectCollaboration(editor: Editor, transport: CollaborationTra
       }
     } finally { applying = false }
   }
+  const syncEditor = () => { if (initialized && !stopped) showText() }
   const flush = async () => {
     if (sending) return sending
     sending = (async () => {
@@ -62,19 +64,7 @@ export function connectCollaboration(editor: Editor, transport: CollaborationTra
   const receive = (state: Uint8Array) => {
     if (stopped) return
     if (!initialized) { waiting.push(state); return }
-    // Capture relative positions before applying remote edits.
-    const selection = editor.selection()
-    const anchor = selection ? Y.createRelativePositionFromTypeIndex(text, Math.min(selection.start, text.length)) : null
-    const focus = selection ? Y.createRelativePositionFromTypeIndex(text, Math.min(selection.end, text.length)) : null
-    try {
-      Y.applyUpdate(doc, state, REMOTE)
-      applying = true
-      editor.value = text.toString()
-      if (anchor && focus) {
-        const a = Y.createAbsolutePositionFromRelativePosition(anchor, doc), b = Y.createAbsolutePositionFromRelativePosition(focus, doc)
-        if (a && b) editor.selectRange(a.index, b.index)
-      }
-    } catch (error) { fail(error) } finally { applying = false }
+    try { showText(() => Y.applyUpdate(doc, state, REMOTE)) } catch (error) { fail(error) }
   }
   const stop = transport.subscribe(receive)
   const local = (event: Event) => {

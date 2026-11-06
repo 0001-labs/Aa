@@ -11,9 +11,11 @@
  * opacity alone.
  */
 
+import { watchLayout } from './selection'
 import { anchorThreads, applyEdit, countThreads, initialOf, mapRange, mentionQuery, mentionsIn, movedThreads, personColour, REACTION_EMOJIS, relativeTime, relocate, sortThreads, textChange, threadsAt, type AnchoredThread, type Comment, type CommentMove, type CommentPerson, type CommentRange, type CommentStore, type CommentThread } from './comments'
 import type { Decoration } from './render'
-import { breatheDot, canDictate, dictate, type Prompter } from './prompt'
+import { breatheDot, canDictate, dictate } from './dictation'
+import type { Prompter } from './prompt'
 import { iconElement } from './icons'
 import { aaLanguage, word } from './words'
 
@@ -734,10 +736,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
     popover.style.top = `${Math.max(square / 2, Math.min(top, view.innerHeight - height - square / 2))}px`
   }
   const schedule = () => { if (!frame && popover && !panel) frame = view.requestAnimationFrame(place) }
-  const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
-  resize?.observe(host)
-  view.addEventListener('scroll', schedule, true)
-  view.addEventListener('resize', schedule)
+  const stopWatching = watchLayout(view, host, schedule)
   /** A press anywhere but the popover, the menu or the commented words puts the popover away. */
   const outside = (event: Event) => {
     if (!popover || panel || !(event.target instanceof Node)) return
@@ -762,9 +761,7 @@ export function createCommentsView(host: HTMLElement, options: CommentsViewOptio
       stop()
       clearTimeout(moveTimer)
       if (frame) view.cancelAnimationFrame(frame)
-      resize?.disconnect()
-      view.removeEventListener('scroll', schedule, true)
-      view.removeEventListener('resize', schedule)
+      stopWatching()
       doc.removeEventListener('pointerdown', outside, true)
       host.removeEventListener('aa-selectionchange', onSelectionChange)
       host.removeEventListener('aa-change', changed)

@@ -58,12 +58,6 @@ export function selectAcrossBlocks(host: HTMLElement, readOnly: () => boolean): 
     const block = (node?.nodeType === 1 ? node as Element : node?.parentElement)?.closest('.aa-block') as HTMLElement | null
     return block && block.parentElement === host ? block : null
   }
-  const caretAt = (x: number, y: number): Point | null => {
-    const position = (document as Document & { caretPositionFromPoint?(x: number, y: number): { offsetNode: Node; offset: number } | null }).caretPositionFromPoint?.(x, y)
-    if (position) return { node: position.offsetNode, offset: position.offset }
-    const range = document.caretRangeFromPoint?.(x, y)
-    return range ? { node: range.startContainer, offset: range.startOffset } : null
-  }
   /** Where the pointer is in the writing: the block level with it, or the nearest, and the place in it nearest the pointer. */
   const placeAt = (x: number, y: number): Place | null => {
     const all = blocks()
@@ -76,7 +70,7 @@ export function selectAcrossBlocks(host: HTMLElement, readOnly: () => boolean): 
     const block = all[index], rect = rects[index]
     if (y < rect.top) return { block, offset: 0 }
     if (y >= rect.bottom) return { block, offset: sourceLength(block) }
-    const point = caretAt(Math.min(Math.max(x, rect.left + 1), rect.right - 1), y)
+    const point = caretAt(document, Math.min(Math.max(x, rect.left + 1), rect.right - 1), y)
     if (!point || blockOf(point.node) !== block) return { block, offset: x < rect.left + rect.width / 2 ? 0 : sourceLength(block) }
     return { block, offset: offsetIn(block, point.node, point.offset) }
   }
@@ -204,4 +198,12 @@ function scrollerOf(element: HTMLElement): Element | Window {
     if ((overflow === 'auto' || overflow === 'scroll') && parent.scrollHeight > parent.clientHeight) return parent
   }
   return element.ownerDocument.defaultView!
+}
+
+/** The place in the text a point on the screen falls on, in whichever way the browser says it. */
+export function caretAt(document: Document, x: number, y: number): Point | null {
+  const position = (document as Document & { caretPositionFromPoint?(x: number, y: number): { offsetNode: Node; offset: number } | null }).caretPositionFromPoint?.(x, y)
+  if (position) return { node: position.offsetNode, offset: position.offset }
+  const range = document.caretRangeFromPoint?.(x, y)
+  return range ? { node: range.startContainer, offset: range.startOffset } : null
 }

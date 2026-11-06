@@ -14,6 +14,7 @@
  */
 
 import type { Block } from './markdown'
+import { watchLayout } from './selection'
 import { word } from './words'
 
 /**
@@ -158,11 +159,7 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
     const reduced = view.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     setTimeout(() => { host.removeAttribute('data-ai-fading'); changes = []; draw() }, reduced ? 0 : 400)
   }
-  const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
-  resize?.observe(host)
-  view.addEventListener('scroll', schedule, true)
-  view.addEventListener('resize', schedule)
-  view.visualViewport?.addEventListener('resize', schedule)
+  const stopWatching = watchLayout(view, host, schedule)
 
   return {
     set(next) { changes = next.filter(change => change.blocks.length); draw() },
@@ -171,10 +168,7 @@ export function createMarks(host: HTMLElement, options: MarksOptions): Marks {
     draw: schedule,
     destroy() {
       if (frame) view.cancelAnimationFrame(frame)
-      resize?.disconnect()
-      view.removeEventListener('scroll', schedule, true)
-      view.removeEventListener('resize', schedule)
-      view.visualViewport?.removeEventListener('resize', schedule)
+      stopWatching()
       layer?.remove()
     },
   }

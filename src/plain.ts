@@ -1,4 +1,4 @@
-import { breatheDot, canDictate, dictate } from './prompt'
+import { breatheDot, canDictate, dictate } from './dictation'
 import { paintSelection } from './selection'
 import { drawStyles } from './styles'
 import { word } from './words'

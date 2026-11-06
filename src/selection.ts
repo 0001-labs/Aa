@@ -138,3 +138,18 @@ export function paintSelection(host: HTMLElement): () => void {
     forcedColors.removeEventListener?.('change', schedule)
   }
 }
+
+/** `schedule` called whenever what is drawn over `host` may have moved; what it returns stops that. */
+export function watchLayout(view: Window, host: Element, schedule: () => void): () => void {
+  const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(schedule)
+  resize?.observe(host)
+  view.addEventListener('scroll', schedule, true)
+  view.addEventListener('resize', schedule)
+  view.visualViewport?.addEventListener('resize', schedule)
+  return () => {
+    resize?.disconnect()
+    view.removeEventListener('scroll', schedule, true)
+    view.removeEventListener('resize', schedule)
+    view.visualViewport?.removeEventListener('resize', schedule)
+  }
+}

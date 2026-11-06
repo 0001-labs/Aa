@@ -1,3 +1,4 @@
+import { caretAt } from './span'
 import { sidePlacement } from './placement'
 /**
  * Blocks are moved by hand, with nothing drawn beside them, on Drag's
@@ -70,15 +71,9 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     if (!selection?.rangeCount || selection.isCollapsed) return false
     return Array.from(selection.getRangeAt(0).getClientRects()).some(rect => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)
   }
-  const caretAt = (x: number, y: number) => {
-    const position = (document as Document & { caretPositionFromPoint?(x: number, y: number): { offsetNode: Node; offset: number } | null }).caretPositionFromPoint?.(x, y)
-    if (position) return { node: position.offsetNode, offset: position.offset }
-    const range = document.caretRangeFromPoint?.(x, y)
-    return range ? { node: range.startContainer, offset: range.startOffset } : null
-  }
   /** What a click would have done where a press on a selected block was let go: the caret there. */
   const placeCaret = (x: number, y: number) => {
-    const point = caretAt(x, y)
+    const point = caretAt(document, x, y)
     const block = (point?.node.nodeType === 1 ? point.node as Element : point?.node.parentElement)?.closest('.aa-block') as HTMLElement | null
     if (!point || !block || block.parentElement !== host) return
     block.focus({ preventScroll: true })

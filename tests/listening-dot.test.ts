@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
-import { SETTLE, breatheDot, dotOpacity } from '../src/prompt'
+import { SETTLE, breatheDot, dotOpacity } from '../src/dictation'
 
 /** Frames run by hand: each call gives the next one its moment. */
 function frames() {

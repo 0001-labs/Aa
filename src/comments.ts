@@ -234,23 +234,6 @@ export function mentionQuery(text: string, caret: number): { start: number; quer
  */
 export function relativeTime(at: number, now = Date.now(), locale?: string): string {
   const language = locale ?? aaLanguage()
-  if (!language.startsWith('en')) return relativeIn(language, at, now)
-  const seconds = Math.round((now - at) / 1000)
-  if (seconds < 45) return 'now'
-  const minutes = Math.round(seconds / 60)
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
-  const hours = Math.round(minutes / 60)
-  const then = new Date(at), today = new Date(now)
-  const day = (date: Date) => Math.floor((date.getTime() - date.getTimezoneOffset() * 60000) / 86400000)
-  const days = day(today) - day(then)
-  if (hours < 24 && days === 0) return `${hours} hour${hours === 1 ? '' : 's'} ago`
-  if (days === 1) return 'yesterday'
-  if (days < 7) return `${days} days ago`
-  return then.toLocaleDateString(locale, { day: 'numeric', month: 'short', ...(then.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }) })
-}
-
-/** The same steps in another language, worded by the browser's `Intl.RelativeTimeFormat` ("for 3 minutter siden", "i går"). */
-function relativeIn(language: string, at: number, now: number): string {
   const words = new Intl.RelativeTimeFormat(language, { numeric: 'auto' })
   const seconds = Math.round((now - at) / 1000)
   if (seconds < 45) return words.format(0, 'second')
@@ -262,7 +245,7 @@ function relativeIn(language: string, at: number, now: number): string {
   const days = day(today) - day(then)
   if (hours < 24 && days === 0) return words.format(-hours, 'hour')
   if (days < 7) return words.format(-days, 'day')
-  return then.toLocaleDateString(language, { day: 'numeric', month: 'short', ...(then.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }) })
+  return then.toLocaleDateString(language.startsWith('en') ? locale : language, { day: 'numeric', month: 'short', ...(then.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }) })
 }
 
 /** Kanji and kana: a name written in them is a Japanese (or Chinese) one. */
