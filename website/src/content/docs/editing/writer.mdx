@@ -1,0 +1,45 @@
+---
+title: Writer mode
+description: The editor with its formatting always showing, Save and Cancel under the words, and a draft of whatever is not saved yet.
+---
+
+import Example from "../../../components/Example.astro";
+
+Writer mode is for a page where words are written and then kept or dropped, such as a card's description. The formatting stands in a bar over the words rather than over a selection, Save and Cancel stand under them, and what is not saved yet is held as a draft.
+
+<Example name="writer" />
+
+## Try it
+
+Write something and reload the page: your words are still here, as a draft. Save keeps them, ⌘Enter or ⌘S does the same, and Cancel goes back to the saved words and drops the draft. Closing the page is not Cancel: the draft waits for the next visit.
+
+The bar has the text style, bold, italic and the other marks, lists, a link, a picture or file where the product takes files, and the blocks to insert. On a phone its lists open from the foot of the screen. The slash menu and every key work as they do anywhere in Aa.
+
+## Using it
+
+```ts
+import { createWriter } from '@0001-labs/aa'
+
+const writer = createWriter(host, {
+  value: card.description,
+  draft: `card:${card.id}`,
+  onSave: markdown => api.saveCard(card.id, { description: markdown }),
+  onCancel: () => closeEditing(),
+  onFiles: files => upload(files),
+})
+```
+
+It takes every option of [`createEditor`](/building/options/) but `toolbar`, and these:
+
+| Option | What it does |
+| --- | --- |
+| `draft` | The key this document's draft is kept under. Without one, words not saved go with the page |
+| `drafts` | Where drafts are kept: `load`, `save` and `clear`. This browser's own storage if left out |
+| `onSave(value)` | Keeps the words. If it throws or rejects, the words and the draft stay, and Save can be pressed again |
+| `onCancel()` | Cancel was pressed, after the words went back and the draft went |
+| `onState(state)` | `saved`, `draft`, `saving` or `failed`, as it changes |
+| `actions` | A product's own buttons, at the end of the bar |
+
+`createWriter` gives back `writer.editor`, the [editor](/building/methods/), and `writer.save()`, `writer.cancel()`, `writer.dirty`, `writer.state`, `writer.readOnly` and `writer.destroy()`.
+
+The saved words are the product's. When they change elsewhere, set `writer.saved`: words being written stay and stay a draft, and an untouched editor shows the new words. Words written while a save is under way are the next draft, so typing never waits for the network.

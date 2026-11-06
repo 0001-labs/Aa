@@ -1,4 +1,4 @@
-import { createEditor, imageAtom, memoryCommentStore, type Atom, type EditorOptions } from '../../../src/index';
+import { createEditor, createWriter, imageAtom, memoryCommentStore, type Atom, type EditorOptions } from '../../../src/index';
 import { correct, prompt } from '../../../playground-ai';
 import type { ExampleSpec } from './example';
 
@@ -59,7 +59,8 @@ async function mount(figure: HTMLElement) {
     if (spec.commentsPanel && panel) { panel.hidden = false; comments.panel = panel; }
   }
   let editor: ReturnType<typeof createEditor> | undefined;
-  editor = createEditor(host, {
+  const start = spec.writer ? (options: EditorOptions) => createWriter(host, { ...options, draft: 'docs-writer', onSave: () => new Promise(done => setTimeout(done, 300)) }).editor : (options: EditorOptions) => createEditor(host, options);
+  editor = start({
     partials: true,
     value: spec.markdown,
     toolbar: spec.toolbar ?? true,

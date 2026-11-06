@@ -12,6 +12,8 @@ export interface ExampleSpec {
   markdown: string;
   /** The toolbar over selected words; on by default. */
   toolbar?: boolean;
+  /** Writer mode: the bar always showing, Save, Cancel and a draft. */
+  writer?: boolean;
   /** Show the Markdown it stores beside it; on by default. */
   source?: boolean;
   /** Draw diagrams (the diagram atom). */

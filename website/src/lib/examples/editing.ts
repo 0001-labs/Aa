@@ -1,6 +1,13 @@
 import type { ExampleSpec } from '../example';
 
 export default {
+  writer: {
+    title: 'Writer mode',
+    hint: 'Write something and reload the page: the draft is still here. Save keeps it, Cancel goes back.',
+    markdown: 'Nemprint melder, at ordrer **til afhentning** ikke længere skifter status.\n\nGiv det et kig!',
+    writer: true,
+    source: false,
+  },
   'toolbar-bar': {
     title: 'The bar over selected words',
     hint: 'Select a few words: the bar stands over them. Rest the pointer on a cell for its name and shortcut.',

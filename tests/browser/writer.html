@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Aa writer</title>
+<link rel="stylesheet" href="/src/aa.css">
+<style>body{margin:40px;font:14px/20px system-ui} #host{max-width:560px}</style></head>
+<body><div id="host"></div>
+<script type="module">
+  import { createWriter } from '/dist/aa.js'
+  window.saves = []; window.cancels = 0; window.failing = false
+  window.open_ = value => {
+    window.writer?.destroy()
+    window.writer = createWriter(document.getElementById('host'), {
+      value, draft: 'test', onFiles() {},
+      onSave: async words => { if (window.failing) throw new Error('offline'); window.saves.push(words) },
+      onCancel() { window.cancels++ },
+    })
+  }
+</script>
+</body></html>
