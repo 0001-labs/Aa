@@ -15,6 +15,12 @@ for (const name of ['chromium', 'webkit']) {
   await page.evaluate(() => { localStorage.clear(); window.open_('Første linje\n\nAnden linje') })
 
   await page.locator('.aa-block').first().click()
+  check('the focus ring stays inside the frame when its parent clips', await page.evaluate(() => {
+    const frame = document.querySelector('.aa-writer-frame')
+    frame.parentElement.style.overflow = 'hidden'
+    const style = getComputedStyle(frame)
+    return style.outlineStyle === 'solid' && parseFloat(style.outlineWidth) === 2 && parseFloat(style.outlineOffset) === -2 && style.boxShadow === 'none'
+  }))
   await page.evaluate(() => window.writer.editor.selectRange(0, 6))
   await page.evaluate(() => new Promise(requestAnimationFrame))
   await page.locator('[data-action=bold]').click()

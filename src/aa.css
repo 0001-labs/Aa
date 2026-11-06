@@ -950,7 +950,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
   display: flex; flex-direction: column; gap: calc(var(--aa-square) / 2); min-width: 0;
 }
 .aa-writer-frame { border: 1px solid var(--aa-writer-line); border-radius: calc(4px * var(--aa-sf)); background: var(--ds-paper, Canvas); min-width: 0; }
-.aa-writer-frame:focus-within { border-color: var(--ds-focus-ring, Highlight); box-shadow: 0 0 0 1px var(--ds-focus-ring, Highlight); }
+.aa-writer-frame:focus-within { border-color: var(--ds-focus-ring, Highlight); outline: 2px solid var(--ds-focus-ring, Highlight); outline-offset: -2px; }
 .aa-writer-bar {
   position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: calc(var(--aa-square) / 2);
   box-sizing: border-box; height: calc(1.5 * var(--aa-square)); padding-inline: calc(var(--aa-square) / 4);
