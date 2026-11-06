@@ -63,11 +63,13 @@
   overflow-wrap: anywhere;
   -webkit-user-modify: read-write-plaintext-only;
 }
-/* One square between two blocks, two before a heading, as prose.css. */
-.aa-block + .aa-block { margin-top: var(--aa-gap, var(--aa-unit)); }
+/* One square between two blocks, two before a heading, as prose.css. A block's
+   data-after names the kind before it: a sibling rule on blocks has the browser
+   restyle the whole document each time one is added or taken away. */
+.aa-block:not(:first-child) { margin-top: var(--aa-gap, var(--aa-unit)); }
 /* Two before a heading, or what --aa-heading-gap says; weighing no more than
    the rule above, so a product's own heading rule still wins. */
-:where(.aa-block:not([data-kind="heading"])) + .aa-block[data-kind="heading"] { margin-top: var(--aa-heading-gap, calc(2 * var(--aa-gap, var(--aa-unit)))); }
+.aa-block[data-kind="heading"]:where(:not(:first-child, [data-after="heading"])) { margin-top: var(--aa-heading-gap, calc(2 * var(--aa-gap, var(--aa-unit)))); }
 /* A selected or lifted block wears the same grey as selected words, never the accent. */
 .aa-block[data-selected], .aa-block[data-lifted] { background: var(--aa-selection, var(--aa-text-selection, color-mix(in srgb, currentColor 15%, transparent))); }
 .aa-block[data-selected], .aa-block[data-lifted] { border-radius: calc(2px * var(--aa-sf)); }
@@ -100,7 +102,7 @@
   .aa-block[data-aa-selection]::selection,
   .aa-block[data-aa-selection] ::selection { background: Highlight; color: HighlightText; }
 }
-.aa-block[data-kind="bullet"] + .aa-block[data-kind="bullet"] { margin-top: 0; }
+.aa-block[data-kind="bullet"][data-after="bullet"] { margin-top: 0; }
 
 /* Markdown stays in the DOM for lossless storage, and none of it shows while
    writing: a heading is its size, a bullet its marker, never its # or -. */
@@ -191,7 +193,7 @@ a.aa-link { text-decoration-line: underline; text-decoration-thickness: 1px; tex
 
 /* A divider takes no room, as prose.css's rule: a hairline under the square
    above it, so the writing around it stands two squares apart. */
-.aa-block + .aa-block[data-kind="divider"] { margin-top: 0; }
+.aa-block[data-kind="divider"]:not(:first-child) { margin-top: 0; }
 .aa-block[data-kind="divider"] { min-height: 1lh; }
 .aa-block[data-kind="divider"]::before {
   content: "";

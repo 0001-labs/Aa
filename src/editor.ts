@@ -337,9 +337,18 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (hinted) hinted.dataset.hint = word('Press space for AI')
   }
 
+  /** Each block from `from` to `to` told what stands before it, which is what its spacing depends on. */
+  const spaceBlocks = (from: number, to: number) => {
+    const els = elements()
+    for (let index = from; index <= to && index < els.length; index++) {
+      const after = blocks[index - 1]?.kind ?? ''
+      if (els[index].dataset.after !== after) els[index].dataset.after = after
+    }
+  }
   const renderAll = () => {
     host.replaceChildren(...blocks.map(block => makeElement(block)))
     children = null
+    spaceBlocks(0, blocks.length - 1)
     updateContents()
     showPlaceholder()
     sweep()
@@ -384,6 +393,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       for (const element of fresh) host.insertBefore(element, anchor)
       children = null
     }
+    spaceBlocks(start, endNew)
     if (saved && host.contains(saved.focused) && document.activeElement !== saved.focused) {
       saved.focused.focus({ preventScroll: true })
       if (saved.anchorNode && saved.focusNode && saved.focused.contains(saved.focusNode)) {
