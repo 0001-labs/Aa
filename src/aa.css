@@ -203,11 +203,11 @@ a.aa-link { text-decoration-line: underline; text-decoration-thickness: 1px; tex
   background: var(--aa-rule-color);
 }
 
-/* What to write, until something is; a heading with no words yet names its
-   level, since its # is never shown. */
+/* What to write, until something is; where a product asks for that, a heading
+   with no words yet names its level, since its # is never shown. */
 .aa-block[data-placeholder]::before { content: attr(data-placeholder); }
 /* "Heading 2" in the page's language: the editor sets --aa-heading-word from its words (words.ts). */
-.aa-block[data-kind="heading"][data-empty]::before { content: var(--aa-heading-word, "Heading") " " attr(data-level); }
+.aa[data-block-hints] .aa-block[data-kind="heading"][data-empty]::before { content: var(--aa-heading-word, "Heading") " " attr(data-level); }
 /* At a sentence's end, the AI offered in the placeholder's grey, after the caret. */
 .aa-block[data-hint]::after {
   content: attr(data-hint);
@@ -223,7 +223,7 @@ a.aa-link { text-decoration-line: underline; text-decoration-thickness: 1px; tex
   top: 0;
 }
 .aa-block[data-placeholder]::before,
-.aa-block[data-kind="heading"][data-empty]::before {
+.aa[data-block-hints] .aa-block[data-kind="heading"][data-empty]::before {
   position: absolute;
   left: 0;
   top: 0;
@@ -980,7 +980,7 @@ button.aa-thread-head:focus-visible { outline: 2px solid var(--ds-focus-ring, #5
   height: var(--aa-square); min-width: calc(3 * var(--aa-square)); margin: 0; padding-inline: calc(var(--aa-square) / 2);
   border: 0; border-radius: calc(4px * var(--aa-sf)); font: inherit; cursor: pointer;
 }
-.aa-writer-save { background: var(--ds-accent-color, var(--accent-color, Highlight)); color: var(--ds-on-accent, var(--ds-white, #ffffff)); }
+.aa-writer-save { background: var(--ds-accent-color, var(--accent-color, Highlight)); color: var(--ds-button-text-color-on-accent, var(--ds-black, #2a2a2a)); }
 .aa-writer-cancel { background: none; color: inherit; }
 @media (hover: hover) { .aa-writer-cancel:hover:not(:disabled) { background: var(--ds-fill, light-dark(#f2f2f2, #2c2c2c)); } }
 .aa-writer-foot button:disabled { opacity: 0.4; cursor: default; }

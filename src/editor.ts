@@ -163,9 +163,10 @@ export type EditorOptions = {
   readOnly?: boolean
   placeholder?: string
   /**
-   * What an empty block shows while the caret is in it, so the slash menu is
-   * found without a button beside the block: "Press space for AI or / for commands" where the product answers prompts, "Type / for commands" otherwise, unless set,
-   * nothing for ''. Never without menus or in a read-only editor.
+   * What an empty block shows while the caret is in it, such as "Type / for
+   * commands". Nothing unless it is given: an editor says nothing of its own over
+   * empty blocks. Given, an empty heading names its level too. Never without menus
+   * or in a read-only editor.
    */
   blockPlaceholder?: string
   /** Called after every change the person made, and every correction, with the document as Markdown. */
@@ -315,8 +316,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   let readOnly = !!options.readOnly
   let reordering = options.reordering !== false, placing = options.placing !== false
   let placeholder = options.placeholder ?? ''
-  // As Notion says it: Space asks AI where the product answers, / opens the commands.
-  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? word(options.prompt ? 'Press space for AI or / for commands' : 'Type / for commands')
+  const blockPlaceholder = options.menus === false ? '' : options.blockPlaceholder ?? ''
   let composing = false
   let destroyed = false
   let selected: BlockSelection | null = null
@@ -601,6 +601,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   const history = new History({ blocks, anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } })
 
   host.classList.add('aa')
+  host.toggleAttribute('data-block-hints', !!blockPlaceholder)
   // An empty heading's "Heading 2" is drawn by aa.css; its word follows the page's language.
   if (word('Heading') !== 'Heading') host.style.setProperty('--aa-heading-word', JSON.stringify(word('Heading')))
   host.setAttribute('role', 'textbox')
@@ -666,7 +667,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
   let saying: HTMLElement | null = null, hinting: HTMLElement | null = null
   const showPlaceholder = (selection?: Selection2 | null) => {
     if (selection === undefined) selection = readSelection()
-    const sentence = atSentence(selection) ? selection!.focus.block : -1
+    const sentence = blockPlaceholder && atSentence(selection) ? selection!.focus.block : -1
     const caret = selection && !selected && !readOnly && comparePos(selection.anchor, selection.focus) === 0 ? selection.focus.block : -1
     const index = blocks.length === 1 ? 0 : caret
     const block = blocks[index]

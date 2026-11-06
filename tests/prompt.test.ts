@@ -9,7 +9,7 @@ afterEach(() => { editor?.destroy(); host?.remove(); editor = undefined; host = 
 
 function setup(value: string, prompt?: Prompter) {
   host = document.createElement('div'); document.body.append(host)
-  editor = createEditor(host, { value, prompt, atoms: [imageAtom, diagramAtom] })
+  editor = createEditor(host, { value, prompt, atoms: [imageAtom, diagramAtom], ...(prompt ? { blockPlaceholder: 'Write' } : {}) })
   return editor
 }
 const key = (target: Element, key: string) => target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true }))
@@ -183,6 +183,15 @@ describe('asking AI', () => {
     expect(e.value).toBe('- One\n- ')
   })
 
+  it('offers nothing at a sentence\'s end unless the product asks for hints', () => {
+    host = document.createElement('div'); document.body.append(host)
+    editor = createEditor(host, { value: 'Hello. ', prompt: async () => 'x' })
+    editor.selectRange(7)
+    document.dispatchEvent(new Event('selectionchange'))
+    expect((host.children[0] as HTMLElement).dataset.hint).toBeUndefined()
+    editor.destroy(); host.remove()
+  })
+
   it('offers nothing mid-sentence, after two spaces, or without a product to ask', () => {
     for (const [value, prompt] of [['Hello. I am', true], ['Hello.  ', true], ['Hello. ', false]] as const) {
       const e = setup(value, prompt ? async () => 'x' : undefined)
@@ -293,14 +302,14 @@ describe('asking AI', () => {
     const e = setup('')
     e.selectRange(0)
     document.dispatchEvent(new Event('selectionchange'))
-    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBe('Type / for commands')
+    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBeUndefined()
     expect(key(host!.children[0], ' ')).toBe(true)
     expect(field()).toBeNull()
     editor!.destroy(); host!.remove()
     const f = setup('', async () => 'never')
     f.selectRange(0)
     document.dispatchEvent(new Event('selectionchange'))
-    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBe('Press space for AI or / for commands')
+    expect((host!.children[0] as HTMLElement).dataset.placeholder).toBe('Write')
     key(host!.children[0], ' ')
     key(field()!, 'Escape')
     expect(field()).toBeNull()
