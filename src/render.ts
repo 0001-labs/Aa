@@ -42,6 +42,27 @@ const isAtom = (node: Node): boolean => isElement(node) && node.classList.contai
 /** Which part of a block the selection is in, in its own offsets; null when the selection is elsewhere. */
 export type Reveal = { from: number; to: number } | null
 
+const touches = (reveal: Reveal, from: number, to: number) => !!reveal && reveal.from <= to && reveal.to >= from
+
+/** How much of an address reads before the rest is folded away. */
+const ADDRESS_LENGTH = 56
+
+/**
+ * How a link whose words are its own address reads: without `https://`,
+ * `www.` or a closing slash, and cut short at a word near `ADDRESS_LENGTH`.
+ * The letters stay in the page and in the document; the caret entering the
+ * link brings them all back, so nothing is out of reach of editing.
+ */
+export function addressFold(run: Run, text: string): { shown: number; end: number; more: boolean } | null {
+  if (!run.href || run.code || /\s/.test(text)) return null
+  const lead = /^(?:https?:\/\/(?:www\.)?|www\.)/.exec(text)?.[0].length ?? 0
+  if (!lead || lead === text.length) return null
+  const last = text.endsWith('/') ? text.length - 1 : text.length
+  if (last - lead <= ADDRESS_LENGTH) return { shown: lead, end: last, more: false }
+  const near = text.slice(lead, lead + ADDRESS_LENGTH).search(/[-_/.?&=#][^-_/.?&=#]*$/)
+  return { shown: lead, end: lead + (near > ADDRESS_LENGTH / 2 ? near : ADDRESS_LENGTH), more: true }
+}
+
 /**
  * The key of what a reveal changes in a block's drawing: which atoms show their
  * source, and whether the caret is in a callout's body. Same key, same drawing:
@@ -51,7 +72,10 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
   // A block an atom draws whole (a diagram) is drawn the same wherever the caret is.
   if (!reveal || fencedAtom(block, atoms)) return ''
   const groups: string[] = []
+  let addresses = 0
   for (const run of blockRuns(block, atoms)) {
+    // Counted, not placed, so typing in an address does not count as a new one.
+    if (run.kind === 'text' && addressFold(run, block.source.slice(run.from, run.to)) && ++addresses && touches(reveal, run.from, run.to)) groups.push(`address ${addresses}`)
     if (run.kind !== 'atom' || !run.group) continue
     if (reveal.from <= run.group[1] && reveal.to >= run.group[0]) groups.push(`${run.group[0]}-${run.group[1]}`)
   }
@@ -62,13 +86,13 @@ export function revealKey(block: Block, reveal: Reveal, atoms: readonly AtomSynt
 const pictureOf = (name: string) => `url("data:image/svg+xml,${encodeURIComponent((icons[`./icons/${name}.svg`] ?? '').replace(/currentColor/g, 'black'))}")`
 
 /** What a run's element looks like, kept beside it to tell a word typed from a look changed. */
-const lookOf = (run: Run) => `${run.href ?? ''}|${run.bold ? 'b' : ''}${run.italic ? 'i' : ''}${run.strike ? 's' : ''}${run.underline ? 'u' : ''}${run.code ? 'c' : ''}${run.highlight ? 'h' : ''}|${run.color ?? ''}|${run.background ?? ''}`
+const lookOf = (run: Run) => `${run.href ?? ''}|${run.title ?? ''}|${run.bold ? 'b' : ''}${run.italic ? 'i' : ''}${run.strike ? 's' : ''}${run.underline ? 'u' : ''}${run.code ? 'c' : ''}${run.highlight ? 'h' : ''}|${run.color ?? ''}|${run.background ?? ''}`
 const looks = new WeakMap<Node, string>()
 
 /** A run of words as its element, decorated. */
-function wordsOf(document: Document, run: Run, text: string, decorations: readonly Decoration[], base = 0): HTMLElement {
+function wordsOf(document: Document, run: Run, text: string, decorations: readonly Decoration[], base = 0, fold: ReturnType<typeof addressFold> = null): HTMLElement {
   const node = run.href ? document.createElement('a') : document.createElement('span')
-  if (run.href) { (node as HTMLAnchorElement).href = run.href; node.className = 'aa-link'; (node as HTMLAnchorElement).rel = 'noopener' }
+  if (run.href) { (node as HTMLAnchorElement).href = run.href; node.className = 'aa-link'; (node as HTMLAnchorElement).rel = 'noopener'; node.title = run.title ?? run.href }
   if (run.bold) node.classList.add('aa-b')
   if (run.italic) node.classList.add('aa-i')
   if (run.strike) node.classList.add('aa-s')
@@ -80,6 +104,12 @@ function wordsOf(document: Document, run: Run, text: string, decorations: readon
   node.textContent = text
   looks.set(node, lookOf(run))
   decorateNode(node, base + run.from, decorations)
+  // Words a layer has marked keep all their letters, so the mark stays on what it was put on.
+  if (fold && node.childNodes.length === 1 && node.firstChild!.nodeType === 3) {
+    node.replaceChildren(hiddenSyntax(document, text.slice(0, fold.shown)), text.slice(fold.shown, fold.end))
+    if (fold.end < text.length) node.append(hiddenSyntax(document, text.slice(fold.end)))
+    node.toggleAttribute('data-more', fold.more)
+  }
   return node
 }
 
@@ -114,7 +144,9 @@ export function stillShows(element: HTMLElement, was: Block, block: Block, atoms
     const text = block.source.slice(run.from, run.to)
     if (!text) continue
     if (run.kind === 'text') visible = true
-    if (!child || child.childNodes.length !== 1 || child.firstChild!.nodeType !== 3 || (child.firstChild as Text).data !== text) return false
+    // A folded address is drawn in parts, and stands as it is while the words beside it are typed.
+    const folded = run.kind === 'text' && !!(child as HTMLElement | null)?.querySelector?.(':scope > .aa-syntax')
+    if (!child || (folded ? child.textContent !== text : child.childNodes.length !== 1 || child.firstChild!.nodeType !== 3 || (child.firstChild as Text).data !== text)) return false
     if (run.kind === 'syntax' ? !(child as HTMLElement).classList?.contains('aa-syntax') : looks.get(child) !== lookOf(run)) return false
     child = child.nextSibling
   }
@@ -173,7 +205,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     element.removeAttribute('data-folded')
     element.removeAttribute('data-body-active')
   }
-  if (block.kind === 'table') { renderTable(element, block, decorations, atoms); renderCarets(element, decorations); return }
+  if (block.kind === 'table') { renderTable(element, block, reveal, decorations, atoms); renderCarets(element, decorations); return }
   // A fenced block an atom draws (a diagram) is that drawing, the caret in it
   // or not: its words are never shown, and it is changed where it is drawn.
   const fenced = fencedAtom(block, atoms)
@@ -217,7 +249,7 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     }
     if (run.kind === 'syntax') { destination.append(hiddenSyntax(document, text)); continue }
     visible = true
-    destination.append(wordsOf(document, run, text, decorations))
+    destination.append(wordsOf(document, run, text, decorations, 0, touches(reveal, run.from, run.to) ? null : addressFold(run, text)))
   }
   // A block with no line to stand on gets one: an empty block, one ending on
   // a line break, or one whose every character is hidden syntax.
@@ -260,7 +292,7 @@ function renderCarets(element: HTMLElement, decorations: readonly Decoration[]) 
   }
 }
 
-function renderTable(element: HTMLElement, block: Block, decorations: readonly Decoration[], atoms: readonly AtomSyntax[]) {
+function renderTable(element: HTMLElement, block: Block, reveal: Reveal, decorations: readonly Decoration[], atoms: readonly AtomSyntax[]) {
   const document = element.ownerDocument
   element.contentEditable = 'false'
   const rows = tableRows(block.source), alignments = tableAlignments(block.source), widths = tableWidths(block.source)
@@ -294,7 +326,7 @@ function renderTable(element: HTMLElement, block: Block, decorations: readonly D
         const text = cell.text.slice(run.from, run.to)
         if (!text) continue
         if (run.kind === 'syntax') content.append(hiddenSyntax(document, text))
-        else if (run.kind === 'text') content.append(wordsOf(document, run, text, decorations, cell.from))
+        else if (run.kind === 'text') content.append(wordsOf(document, run, text, decorations, cell.from, touches(reveal, cell.from + run.from, cell.from + run.to) ? null : addressFold(run, text)))
         else content.append(document.createTextNode(text))
       }
       if (!cell.text) { const br = document.createElement('br'); br.dataset.filler = ''; content.append(br) }

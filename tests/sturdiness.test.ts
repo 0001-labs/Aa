@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { blockRuns, parseBlocks, serialize, type Block } from '../src/markdown'
+import { blockRuns, linkAround, parseBlocks, serialize, type Block } from '../src/markdown'
+import { addressFold } from '../src/render'
 import { colorSelection, fromMarkdown, joinWithPrevious, replaceRange, sliceMarkdown, splitAt, wrapSelection, type Pos } from '../src/document'
 
 /**
@@ -174,6 +175,62 @@ describe('sturdiness', () => {
   it('copies a piece of a marked phrase with its marks', () => {
     const blocks = fromMarkdown('**one two** three')
     expect(sliceMarkdown(blocks, { block: 0, offset: 6 }, { block: 0, offset: 17 })).toBe('**two** three')
+  })
+})
+
+describe('links as Markdown writes them', () => {
+  const trello = 'https://thailandtours.webirium.com/rejseblog/phuket/'
+  const links = (source: string) => blockRuns(parseBlocks(source)[0]).filter(run => run.kind === 'text' && run.href)
+  const shown = (source: string) => blockRuns(parseBlocks(source)[0]).filter(run => run.kind === 'text').map(run => source.slice(run.from, run.to)).join('')
+  const typed = (source: string, at: number, text: string) => serialize(replaceRange(fromMarkdown(source), { block: 0, offset: at }, { block: 0, offset: at }, text).blocks)
+
+  it.each([
+    ['an empty title', `[${trello}](${trello} "")`, trello, undefined],
+    ['the invisible title Trello writes', `[${trello}](${trello} "‌")`, trello, undefined],
+    ['a title', '[words](https://a.dk "Read this")', 'https://a.dk', 'Read this'],
+    ['a title in single quotes', "[words](https://a.dk 'Read this')", 'https://a.dk', 'Read this'],
+    ['a title in brackets', '[words](https://a.dk (Read this))', 'https://a.dk', 'Read this'],
+    ['an address in angle brackets', '[words](<https://a.dk/two words>)', 'https://a.dk/two words', undefined],
+    ['a pair of brackets in the address', '[words](https://a.dk/x_(y))', 'https://a.dk/x_(y)', undefined],
+    ['spaces inside the brackets', '[words]( https://a.dk )', 'https://a.dk', undefined],
+    ['an escaped bracket in the words', '[wo\\]rds](https://a.dk)', 'https://a.dk', undefined],
+  ])('reads %s as one link', (_name, source, href, title) => {
+    const [link] = links(source)
+    expect(link.href).toBe(href)
+    expect(link.title).toBe(title)
+    expect(shown(source)).not.toMatch(/\]\(|""/)
+  })
+
+  it('leaves what is not a link as it is written', () => {
+    expect(links('[words] (https://a.dk "x")')[0]?.title).toBeUndefined()
+    expect(shown('[words](not an address)')).toBe('[words](not an address)')
+    expect(shown('[words](https://a.dk "open')).toContain('"open')
+  })
+  const bolded = (source: string, words: string) => { const at = source.indexOf(words); return serialize(wrapSelection(fromMarkdown(source), { block: 0, offset: at }, { block: 0, offset: at + words.length }, '**')!.blocks) }
+  it('keeps a title while the words change and while they are marked', () => {
+    expect(typed('[words](https://a.dk "Read this")', 1, 'my ')).toBe('[my words](https://a.dk "Read this")')
+    expect(bolded('[two words](https://a.dk "Read this")', 'words')).toBe('[two **words**](https://a.dk "Read this")')
+  })
+  it('keeps an address in angle brackets while the words are marked', () => {
+    expect(bolded('[two words](<https://a.dk/two words>)', 'words')).toBe('[two **words**](<https://a.dk/two words>)')
+  })
+  it('lets a title that says nothing go when the words are marked', () => {
+    expect(bolded('[two words](https://a.dk "")', 'words')).toBe('[two **words**](https://a.dk)')
+  })
+  it('finds the link around the caret, written or bare', () => {
+    const source = 'See [words](https://a.dk "Read this") or https://b.dk now'
+    expect(linkAround(source, 6, 6)).toEqual({ from: 4, to: 37, words: 'words', href: 'https://a.dk' })
+    expect(linkAround(source, 45, 45)).toEqual({ from: 41, to: 53, words: 'https://b.dk', href: 'https://b.dk' })
+    expect(linkAround(source, 0, 2)).toBeNull()
+  })
+  it('folds an address to what reads, never a link of words', () => {
+    const fold = (text: string, href = text) => { const found = addressFold({ kind: 'text', from: 0, to: text.length, href }, text); return found && text.slice(found.shown, found.end) + (found.more ? '…' : '') }
+    expect(fold('https://github.com/Pankado-kk/thailandtours/pull/143')).toBe('github.com/Pankado-kk/thailandtours/pull/143')
+    expect(fold('https://www.example.com/')).toBe('example.com')
+    expect(fold('www.example.com')).toBe('example.com')
+    expect(fold('https://thailandtours.webirium.com/rejseblog/phuket-eller-krabi-hvilken-destination-er-den-rigtige-for-dig/')).toBe('thailandtours.webirium.com/rejseblog/phuket-eller-krabi…')
+    expect(fold('Our words', 'https://a.dk')).toBeNull()
+    expect(addressFold({ kind: 'text', from: 0, to: 12, href: 'https://a.dk', code: true }, 'https://a.dk')).toBeNull()
   })
 })
 
