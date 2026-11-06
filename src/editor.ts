@@ -1001,6 +1001,21 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
    * or quote's prefix comes off first, then the block joins its neighbour. A
    * table cell's edge holds. True when the key is taken here.
    */
+  const removeTable = (index: number) => {
+    const pos = { block: index, offset: 0 }
+    commit([...blocks.slice(0, index), { kind: 'paragraph' as const, source: '', prefix: 0 }, ...blocks.slice(index + 1)], pos, pos, 'edit')
+  }
+
+  /** Every cell of a table selected: pressing Backspace or Delete takes the table rather than emptying it. */
+  const deleteTable = (selection: Selection2): boolean => {
+    const [a, b] = order(selection.anchor, selection.focus)
+    if (a.block !== b.block || blocks[a.block].kind !== 'table') return false
+    const cells = tableRows(blocks[a.block].source).flat()
+    if (!cells.length || a.offset > cells[0].from || b.offset < cells.at(-1)!.to) return false
+    removeTable(a.block)
+    return true
+  }
+
   const deleteAtom = (selection: Selection2, direction: 'backward' | 'forward'): boolean => {
     if (comparePos(selection.anchor, selection.focus) !== 0) return false
     const { block: index, offset } = selection.focus, source = blocks[index].source
@@ -1019,8 +1034,19 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (a.block !== b.block || a.offset !== b.offset) return false
     const block = blocks[a.block]
     if (block.kind === 'table') {
-      const cell = tableRows(block.source).flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
-      return !!cell && (direction === 'backward' ? a.offset === cell.from : a.offset === cell.to)
+      const rows = tableRows(block.source), cell = rows.flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
+      if (!cell || a.offset !== (direction === 'backward' ? cell.from : cell.to)) return false
+      // A row with nothing in it goes, and a table with nothing in it goes whole. A cell's edge holds otherwise.
+      const blank = (row: readonly { text: string }[]) => row.every(each => !each.text.trim())
+      const row = rows.findIndex(each => each.includes(cell))
+      if (rows.every(blank)) removeTable(a.block)
+      else if (row > 0 && blank(rows[row])) {
+        const source = editTable(block, 'delete-row', row, 0)
+        const change = replaceRange(blocks, { block: a.block, offset: 0 }, { block: a.block, offset: block.source.length }, source)
+        const pos = { block: a.block, offset: tableRows(source)[row - 1].at(-1)!.to }
+        commit(change.blocks, pos, pos, 'edit')
+      }
+      return true
     }
     // A block's edge is where its words end: a caret against bold at the start of a line stands after hidden stars, and Backspace there must still work.
     const edges = isWritten(block) ? wordEdges(block, atoms) : { start: 0, end: block.source.length }
@@ -1086,12 +1112,12 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         event.preventDefault()
         return
       case 'deleteContentBackward': {
-        if (!collapsed) { event.preventDefault(); insert(selection, ''); return }
+        if (!collapsed) { event.preventDefault(); if (!deleteTable(selection)) insert(selection, ''); return }
         if (deleteAtom(selection, 'backward') || deleteAtEdge(selection, 'backward')) event.preventDefault()
         return
       }
       case 'deleteContentForward': {
-        if (!collapsed) { event.preventDefault(); insert(selection, ''); return }
+        if (!collapsed) { event.preventDefault(); if (!deleteTable(selection)) insert(selection, ''); return }
         if (deleteAtom(selection, 'forward') || deleteAtEdge(selection, 'forward')) event.preventDefault()
         return
       }
