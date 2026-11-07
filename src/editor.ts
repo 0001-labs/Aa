@@ -13,7 +13,7 @@ import { History, type ChangeKind, type Snapshot } from './history'
 import { isWritten, markOf, wordEdges, wornAt, editBlock, type Carry } from './rich'
 import { renderBlock, readBlock, offsetIn, pointAt, revealKey, stillShows, atomElement, type Reveal, type Decoration } from './render'
 import { indentBlocks, renumber, toggleCallout, setCallout } from './document'
-import { editTable, fromTSV, inOneCell, setTableWidths, tableAlignments, tableRows, tableWidths, writeTable, type TableAction } from './table'
+import { cellAt, editTable, fromTSV, inOneCell, setTableWidths, tableAlignments, tableRows, tableWidths, writeTable, type TableAction } from './table'
 import { resizeColumns } from './table-resize'
 import { createControls, type Command, type ToolbarAction } from './controls'
 import { paintSelection } from './selection'
@@ -733,7 +733,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (a.block !== b.block || a.offset !== b.offset) return false
     const block = blocks[a.block]
     if (block.kind === 'table') {
-      const rows = tableRows(block.source), cell = rows.flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
+      const rows = tableRows(block.source), cell = rows.flat().find(each => a.offset >= each.from && a.offset <= each.to)
       if (!cell || a.offset !== (direction === 'backward' ? cell.from : cell.to)) return false
       // A row with nothing in it goes, and a table with nothing in it goes whole. A cell's edge holds otherwise.
       const blank = (row: readonly { text: string }[]) => row.every(each => !each.text.trim())
@@ -779,12 +779,9 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const collapsed = !spanning && a.offset === b.offset
     const block = blocks[a.block]
     // A phone's keyboard may say the Space in beforeinput alone, its keydown unnamed: it asks AI as the key does.
-    if (type === 'insertText' && (event.data === ' ' || event.data === '\u00a0') && options.prompt && collapsed) {
-      if (block.kind === 'paragraph' && !block.source) { event.preventDefault(); ask(a.block); return }
-      if (atSentence(selection)) { event.preventDefault(); ask(a.block, true); return }
-    }
+    if (type === 'insertText' && (event.data === ' ' || event.data === '\u00a0') && options.prompt && collapsed && askFromSpace(selection)) { event.preventDefault(); return }
     if (block.kind === 'table') {
-      const cell = tableRows(block.source).flat().find(cell => a.offset >= cell.from && a.offset <= cell.to)
+      const cell = cellAt(block.source, a.offset)
       if (cell && collapsed && ((type === 'deleteContentBackward' && a.offset === cell.from) || (type === 'deleteContentForward' && a.offset === cell.to))) { event.preventDefault(); return }
       // Typed over several cells, the browser would take the cells it crosses with it.
       if (!collapsed && !spanning && type === 'insertText' && !inOneCell(block.source, a.offset, b.offset)) { event.preventDefault(); insert(selection, event.data ?? ''); return }
@@ -1049,11 +1046,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     }
     if (mod && event.shiftKey && key === 'v') { plainPaste = true; return }
     if (mod && event.shiftKey && !event.altKey && key === 'm' && comments) { event.preventDefault(); comments.start(); return }
-    if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0) {
-      const block = blocks[selection.focus.block]
-      if (block.kind === 'paragraph' && !block.source) { event.preventDefault(); ask(selection.focus.block); return }
-      if (atSentence(selection)) { event.preventDefault(); ask(selection.focus.block, true); return }
-    }
+    if (event.key === ' ' && options.prompt && !mod && !event.altKey && !event.shiftKey && !selected && comparePos(selection.anchor, selection.focus) === 0 && askFromSpace(selection)) { event.preventDefault(); return }
     // Safari sends no beforeinput for Backspace or Delete with nothing to
     // delete inside the block (at the start of an empty block, say), so the
     // keys that cross a block's edge are taken here too.
@@ -1065,7 +1058,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (mod && key === 'a' && !event.altKey) {
       event.preventDefault()
       const index = selection.focus.block, block = blocks[index]
-      const cell = block.kind === 'table' && !selected ? tableRows(block.source).flat().find(cell => selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) : null
+      const cell = block.kind === 'table' && !selected ? cellAt(block.source, selection.focus.offset) : null
       const from = cell ? cell.from : startOf(index), to = cell ? cell.to : block.source.length
       const [a, b] = order(selection.anchor, selection.focus)
       const whole = a.block === index && b.block === index && a.offset <= from && b.offset >= to
@@ -1360,6 +1353,14 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const box = last.getClientRects()[0]
     return box ? new DOMRect(box.right, box.top, 0, box.height) : undefined
   }
+  /** Space in an empty paragraph, or after a sentence, asks AI. */
+  const askFromSpace = (selection: Selection2): boolean => {
+    const { block: index } = selection.focus, block = blocks[index]
+    const empty = block.kind === 'paragraph' && !block.source
+    if (!empty && !atSentence(selection)) return false
+    ask(index, !empty)
+    return true
+  }
   const ask = (index: number, inline = false) => { assist.when(({ openPrompt }) => {
     const element = elements()[index], block = blocks[index], written = block.source
     // Within a paragraph the prompt goes on from the caret, after the sentence's end, as the paragraph's
@@ -1460,8 +1461,12 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const key = JSON.stringify(ranges)
     if (key === aiShown) return
     aiShown = key
+    setLayer('ai', ranges)
+  }
+  /** A layer of decorations drawn. A block is not drawn again under a composition, which would end it; it is drawn once the composition is done. */
+  const setLayer = (layer: string, ranges: readonly Decoration[]) => {
     const before = pendingDecorations ?? shownDecorations()
-    if (ranges.length) decorationLayers.set('ai', ranges); else decorationLayers.delete('ai')
+    if (ranges.length) decorationLayers.set(layer, [...ranges]); else decorationLayers.delete(layer)
     decorations = [...decorationLayers.values()].flat()
     if (composing) { pendingDecorations = before; return }
     redecorate(before)
@@ -1771,14 +1776,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     },
     table(action) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const index = selection.focus.block, block = blocks[index]; if (block.kind !== 'table') return; const rows = tableRows(block.source); let row = 0, column = 0; rows.forEach((cells, r) => cells.forEach((cell, c) => { if (selection.focus.offset >= cell.from && selection.focus.offset <= cell.to) { row = r; column = c } })); const source = editTable(block, action, row, column); const change = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: block.source.length }, source); const pos = { block: index, offset: tableRows(source)[Math.min(row, tableRows(source).length - 1)][Math.min(column, tableRows(source)[0].length - 1)].from }; commit(change.blocks, pos, pos, 'edit') },
     insertFile(file) { if (!readOnly && !destroyed) options.onFiles?.([file]) },
-    decorate(ranges, layer = 'external') {
-      const before = pendingDecorations ?? shownDecorations()
-      decorationLayers.set(layer, ranges.map(range => ({ ...range })))
-      decorations = [...decorationLayers.values()].flat()
-      // A block is not drawn again under a composition, which would end it; it is drawn once the composition is done.
-      if (composing) { pendingDecorations = before; return }
-      redecorate(before)
-    },
+    decorate(ranges, layer = 'external') { setLayer(layer, ranges.map(range => ({ ...range }))) },
     stats() { const text = blocks.flatMap(block => block.kind === 'code' ? [] : [block.source.slice(block.prefix)]).join(' ').replace(/[*_~`#>|=$\[\]()]/g, ' '); const words = typeof Intl.Segmenter === 'function' ? [...new Intl.Segmenter(undefined, { granularity: 'word' }).segment(text)].filter(part => part.isWordLike).length : (text.match(/\S+/g)?.length ?? 0); return { words, characters: [...toMarkdown(blocks)].length, blocks: blocks.length } },
     find(query, caseSensitive = false) { if (!query) return []; const text = caseSensitive ? toMarkdown(blocks) : toMarkdown(blocks).toLocaleLowerCase(); const needle = caseSensitive ? query : query.toLocaleLowerCase(); const matches: { start: number; end: number }[] = []; for (let start = text.indexOf(needle); start >= 0; start = text.indexOf(needle, start + needle.length)) matches.push({ start, end: start + query.length }); return matches },
     rangeOf(start, end) {

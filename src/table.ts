@@ -31,6 +31,9 @@ export function tableRows(source: string): Cell[][] {
   })
 }
 /** Whether a range stands inside one cell. */
+/** The cell a place in a table's source stands in. */
+export const cellAt = (source: string, offset: number) => tableRows(source).flat().find(cell => offset >= cell.from && offset <= cell.to)
+
 export const inOneCell = (source: string, from: number, to: number) => tableRows(source).flat().some(cell => from >= cell.from && to <= cell.to)
 /** A column's alignment, from the delimiter row: `:---` start, `:---:` centre, `---:` end. */
 export type Alignment = 'start' | 'center' | 'end' | null
