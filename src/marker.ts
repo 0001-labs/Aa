@@ -19,28 +19,17 @@
  */
 
 /** The filters, in user units of a twenty-to-the-square drawing: marker ink and the faint rule. */
-export const MARKER_FILTERS = `
-  <filter id="aa-marker" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" seed="7" result="grain"/>
+const markerFilter = (id: string, inset: number, grain: number, ink: number, warp: number, scale: number, seeds = [7, 11], tall = inset) => `
+  <filter id="${id}" x="-${inset}%" y="-${tall}%" width="${100 + 2 * inset}%" height="${100 + 2 * tall}%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="${grain}" numOctaves="2" seed="${seeds[0]}" result="grain"/>
     <feColorMatrix in="grain" type="luminanceToAlpha" result="ga"/>
-    <feComposite in="SourceGraphic" in2="ga" operator="arithmetic" k1="0" k2="1" k3="-0.3" k4="0" result="inked"/>
-    <feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="11" result="warp"/>
-    <feDisplacementMap in="inked" in2="warp" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-  <filter id="aa-marker-fine" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" result="grain"/>
-    <feColorMatrix in="grain" type="luminanceToAlpha" result="ga"/>
-    <feComposite in="SourceGraphic" in2="ga" operator="arithmetic" k1="0" k2="1" k3="-0.3" k4="0" result="inked"/>
-    <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="11" result="warp"/>
-    <feDisplacementMap in="inked" in2="warp" scale="1.3" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-  <filter id="aa-marker-rule" x="-8%" y="-50%" width="116%" height="200%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="2" seed="5" result="grain"/>
-    <feColorMatrix in="grain" type="luminanceToAlpha" result="ga"/>
-    <feComposite in="SourceGraphic" in2="ga" operator="arithmetic" k1="0" k2="1" k3="-0.12" k4="0" result="inked"/>
-    <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="3" result="warp"/>
-    <feDisplacementMap in="inked" in2="warp" scale="0.6" xChannelSelector="R" yChannelSelector="G"/>
+    <feComposite in="SourceGraphic" in2="ga" operator="arithmetic" k1="0" k2="1" k3="${ink}" k4="0" result="inked"/>
+    <feTurbulence type="fractalNoise" baseFrequency="${warp}" numOctaves="2" seed="${seeds[1]}" result="warp"/>
+    <feDisplacementMap in="inked" in2="warp" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/>
   </filter>`
+export const MARKER_FILTERS = markerFilter('aa-marker', 8, 0.55, -0.3, 0.11, 2.6)
+  + markerFilter('aa-marker-fine', 12, 1.1, -0.3, 0.22, 1.3)
+  + markerFilter('aa-marker-rule', 8, 0.72, -0.12, 0.07, 0.6, [5, 3], 50)
 
 type Point = { x: number; y: number }
 
