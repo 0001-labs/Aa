@@ -59,6 +59,14 @@ export class AaToolbarElement extends (typeof HTMLElement === 'undefined' ? clas
     if (this.below) this.append(this.below)
   }
 }
+/** A cell of a small menu: a press leaves the caret where it is. */
+export function menuCell(document: Document, label: string, text: string, run: () => void): HTMLButtonElement {
+  const cell = document.createElement('button')
+  cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = text; cell.setAttribute('aria-label', label)
+  cell.addEventListener('pointerdown', event => event.preventDefault())
+  cell.addEventListener('click', event => { event.preventDefault(); run() })
+  return cell
+}
 export function defineAaToolbar() { if (!customElements.get('aa-toolbar')) customElements.define('aa-toolbar', AaToolbarElement) }
 
 /**
@@ -314,17 +322,9 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     picker.className = 'aa-controls aa-menu aa-reaction-picker aa-callout-icons'
     picker.setAttribute('role', 'menu'); picker.setAttribute('aria-label', word('Callout icon'))
     const choose = (icon: string | null) => { hideIconPicker(); editor.callout({ icon }, index); editor.focus() }
-    for (const emoji of REACTION_EMOJIS) {
-      const cell = document.createElement('button')
-      cell.type = 'button'; cell.setAttribute('role', 'menuitem'); cell.textContent = emoji; cell.setAttribute('aria-label', word('Icon {emoji}', { emoji }))
-      cell.addEventListener('pointerdown', event => event.preventDefault())
-      cell.addEventListener('click', event => { event.preventDefault(); choose(emoji) })
-      picker.append(cell)
-    }
-    const none = document.createElement('button')
-    none.type = 'button'; none.setAttribute('role', 'menuitem'); none.className = 'aa-callout-icons-none'; none.textContent = word('No icon')
-    none.addEventListener('pointerdown', event => event.preventDefault())
-    none.addEventListener('click', event => { event.preventDefault(); choose(null) })
+    picker.append(...REACTION_EMOJIS.map(emoji => menuCell(document, word('Icon {emoji}', { emoji }), emoji, () => choose(emoji))))
+    const none = menuCell(document, word('No icon'), word('No icon'), () => choose(null))
+    none.className = 'aa-callout-icons-none'
     picker.append(none)
     picker.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); hideIconPicker(); editor.focus() } })
     overlayRoot.append(picker)

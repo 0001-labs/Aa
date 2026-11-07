@@ -52,6 +52,10 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
   root.append(line)
   const sideLine = document.createElement('div'); sideLine.className = 'aa-drop-line aa-drop-side'; sideLine.hidden = true
   root.append(sideLine)
+  const showSideLine = (left: number, top: number, height: number, width = '') => {
+    Object.assign(sideLine.style, { left: `${left}px`, top: `${top}px`, height: `${height}px`, width })
+    sideLine.hidden = false
+  }
   /** The block's side the carried block would stand at, while it is over one. */
   let side: { index: number; at: 'start' | 'end' } | null = null
   /** In columns: where among the columns the carried block would stand as a column of its own, or the column it would trade places with. */
@@ -192,11 +196,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     if (!at || !rect) { side = null; sideLine.hidden = true; return }
     sideLine.removeAttribute('data-swap')
     side = { index, at }
-    sideLine.style.left = `${at === 'start' ? rect.left : rect.right}px`
-    sideLine.style.top = `${rect.top}px`
-    sideLine.style.height = `${rect.height}px`
-    sideLine.style.width = ''
-    sideLine.hidden = false
+    showSideLine(at === 'start' ? rect.left : rect.right, rect.top, rect.height)
   }
 
   /**
@@ -229,11 +229,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
       across = { swap: over }
       side = null
       sideLine.setAttribute('data-swap', '')
-      sideLine.style.left = `${rect.left}px`
-      sideLine.style.top = `${rect.top}px`
-      sideLine.style.height = `${rect.height}px`
-      sideLine.style.width = `${rect.width}px`
-      sideLine.hidden = false
+      showSideLine(rect.left, rect.top, rect.height, `${rect.width}px`)
       return true
     }
     const rects = others.map(column => column.getBoundingClientRect())
@@ -245,11 +241,7 @@ export function createDragging(editor: Editor, options: EditorOptions, root: Ele
     const gap = rects.length > 1 ? rects[1].left - rects[0].right : 2 * unit
     const x = slot === 0 ? rects[0].left - gap / 2 : slot === rects.length ? rects[rects.length - 1].right + gap / 2 : (rects[slot - 1].right + rects[slot].left) / 2
     side = null
-    sideLine.style.left = `${x}px`
-    sideLine.style.top = `${box.top}px`
-    sideLine.style.height = `${box.height}px`
-    sideLine.style.width = ''
-    sideLine.hidden = false
+    showSideLine(x, box.top, box.height)
     return true
   }
 

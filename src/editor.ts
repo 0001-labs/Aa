@@ -543,6 +543,14 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     host.dispatchEvent(new Event('aa-change'))
   }
 
+  /** A block changed from where it is drawn: the caret stays out of it, and it is a step of its own to undo. */
+  const writeBlock = (index: number, next: Block[]) => {
+    clearBlocks()
+    syncDom(renumber(next))
+    const at = { block: index, offset: 0 }
+    recorded(at, at, 'edit')
+  }
+  const apply = (change: { blocks: Block[]; caret: Pos } | null | undefined) => { if (change) commit(change.blocks, change.caret, change.caret, 'edit') }
   const commit = (next: Block[], anchor: Pos, focus: Pos, kind: ChangeKind) => {
     const before = blocks, focused = host.contains(document.activeElement)
     clearBlocks()
@@ -746,13 +754,11 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         if (change) { commit(change.blocks, change.caret, change.caret, 'edit'); return true }
       }
       if (a.offset > edges.start) return false
-      const change = joinWithPrevious(blocks, a.block, atoms)
-      if (change) commit(change.blocks, change.caret, change.caret, 'edit')
+      apply(joinWithPrevious(blocks, a.block, atoms))
       return true
     }
     if (a.offset < edges.end) return false
-    const change = joinWithNext(blocks, a.block, atoms)
-    if (change) commit(change.blocks, change.caret, change.caret, 'edit')
+    apply(joinWithNext(blocks, a.block, atoms))
     return true
   }
 
@@ -838,8 +844,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       blocks = next
       updateContents()
       const pos = { block: index, offset: offsetIn(blockElement, atom, 1) }
-      history.record(snapshot(pos, pos), 'type')
-      options.onChange?.(toMarkdown(blocks)); host.dispatchEvent(new Event('aa-change'))
+      recorded(pos, pos, 'type')
       return
     }
     const element = (event.target as HTMLElement | null)?.closest?.('.aa-block') as HTMLElement | null
@@ -885,6 +890,11 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (wrapped) commit(wrapped.blocks, wrapped.anchor, wrapped.focus, 'edit')
   }
 
+  const format = (selection: Selection2, mark: Parameters<Editor['format']>[0]) => {
+    if (mark === 'link') insertLink(selection)
+    else if (mark === 'underline') wrap(selection, '<u>', '</u>')
+    else wrap(selection, { bold: '**', italic: '*', strike: '~~', code: '`', equation: '$', highlight: '==' }[mark])
+  }
   const insertLink = (selection: Selection2) => {
     const [a, b] = order(selection.anchor, selection.focus)
     if (a.block !== b.block || blocks[a.block].kind === 'table' && !inOneCell(blocks[a.block].source, a.offset, b.offset)) return
@@ -1096,7 +1106,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         else if (!event.shiftKey) enter(selection)
         return
       }
-      if (block.kind === 'bullet') { event.preventDefault(); const change = indentBlocks(blocks, range, event.shiftKey ? -1 : 1); if (change) commit(change.blocks, change.caret, change.caret, 'edit'); return }
+      if (block.kind === 'bullet') { event.preventDefault(); const change = indentBlocks(blocks, range, event.shiftKey ? -1 : 1); apply(change); return }
     }
     if (mod && event.altKey && key === 't') {
       event.preventDefault()
@@ -1115,8 +1125,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     }
     if (mod && event.key === 'Enter') {
       event.preventDefault()
-      const change = toggleBox(blocks, selection.focus.block) ?? toggleCallout(blocks, selection.focus.block)
-      if (change) commit(change.blocks, change.caret, change.caret, 'edit')
+      apply(toggleBox(blocks, selection.focus.block) ?? toggleCallout(blocks, selection.focus.block))
       return
     }
     if (selected) {
@@ -1144,11 +1153,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     if (event.key === 'Enter' && !mod && !event.altKey) { event.preventDefault(); enter(selection, event.shiftKey); return }
     if (mod && !event.altKey) {
       const key = event.key.toLowerCase()
-      if (key === 'b' && !event.shiftKey) { event.preventDefault(); wrap(selection, '**'); return }
-      if (key === 'i' && !event.shiftKey) { event.preventDefault(); wrap(selection, '*'); return }
-      if (key === 'e' && !event.shiftKey) { event.preventDefault(); wrap(selection, '`'); return }
-      if (key === 'u' && !event.shiftKey) { event.preventDefault(); wrap(selection, '<u>', '</u>'); return }
-      if ((key === 'x' || key === 's') && event.shiftKey) { event.preventDefault(); wrap(selection, '~~'); return }
+      const mark = event.shiftKey ? (key === 'x' || key === 's' ? 'strike' : undefined) : ({ b: 'bold', i: 'italic', e: 'code', u: 'underline' } as const)[key as 'b']
+      if (mark) { event.preventDefault(); format(selection, mark); return }
       if (key === 'k' && !event.shiftKey) {
         event.preventDefault()
         insertLink(selection)
@@ -1230,7 +1236,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         }
         return
       }
-      if (x < padding) { event.preventDefault(); const change = toggleCallout(blocks, index); if (change) commit(change.blocks, change.caret, change.caret, 'edit') }
+      if (x < padding) { event.preventDefault(); const change = toggleCallout(blocks, index); apply(change) }
       return
     }
     if (block.kind !== 'bullet' || block.checked === undefined) return
@@ -1238,8 +1244,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const box = parseFloat(getComputedStyle(element).paddingLeft)
     if (event.clientX - rect.left > box) return
     event.preventDefault()
-    const change = toggleBox(blocks, index)
-    if (change) commit(change.blocks, change.caret, change.caret, 'edit')
+    apply(toggleBox(blocks, index))
   }
 
   /** Each block's decorations in its own offsets, only those that reach it, in one pass. */
@@ -1316,11 +1321,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const { width } = readPicture(source)
     if (width) { atom.dataset.width = String(width); atom.style.setProperty('--aa-picture-width', String(width)) }
     else { delete atom.dataset.width; atom.style.removeProperty('--aa-picture-width') }
-    const { blocks: drawn } = replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, next[index].source)
-    clearBlocks()
-    syncDom(renumber(drawn))
-    const at = { block: index, offset: 0 }
-    recorded(at, at, 'edit')
+    writeBlock(index, replaceRange(blocks, { block: index, offset: 0 }, { block: index, offset: blocks[index].source.length }, next[index].source).blocks)
   }
   /** An atom that had the keys gives them back: the caret goes on to the start of the block after it, or back to the end of the one before. */
   const onAtomLeave = (event: Event) => {
@@ -1651,11 +1652,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       if (index < 0) return null
       const source = setTableWidths(blocks[index].source, widths)
       if (source === blocks[index].source) return element
-      const { blocks: next } = setSource(blocks, index, source)
-      clearBlocks()
-      syncDom(renumber(next))
-      const at = { block: index, offset: 0 }
-      recorded(at, at, 'edit')
+      writeBlock(index, setSource(blocks, index, source).blocks)
       return elements()[index] ?? null
     },
   })
@@ -1744,7 +1741,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     redo,
     activeBlock() { const selection = readSelection(); if (!selection) return null; const index = selection.focus.block; return { index, block: blocks[index], start: offsetOf({ block: index, offset: 0 }), end: offsetOf({ block: index, offset: blocks[index].source.length }) } },
     selectBlocks,
-    format(mark) { if (readOnly) return; const selection = readSelection(); if (!selection) return; if (mark === 'link') { insertLink(selection); return }; if (mark === 'underline') { wrap(selection, '<u>', '</u>'); return }; const delimiters = { bold: '**', italic: '*', strike: '~~', code: '`', link: '[', equation: '$', highlight: '==' }; wrap(selection, delimiters[mark]) },
+    format(mark) { if (readOnly) return; const selection = readSelection(); if (selection) format(selection, mark) },
     background(color) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const painted = backgroundSelection(blocks, selection.anchor, selection.focus, color, atoms); if (painted) commit(painted.blocks, painted.anchor, painted.focus, 'edit') },
     color(color) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const colored = colorSelection(blocks, selection.anchor, selection.focus, color, atoms); if (colored) commit(colored.blocks, colored.anchor, colored.focus, 'edit') },
     turnInto(kind) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = turnInto(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), kind); commit(change.blocks, change.caret, change.caret, 'edit') },
@@ -1759,8 +1756,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
       elements()[to].focus({ preventScroll: true })
       selectBlocks(to, to + count - 1)
     },
-    indent(direction) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = indentBlocks(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), direction); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
-    toggle(open) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = toggleCallout(blocks, selection.focus.block, open) ?? toggleBox(blocks, selection.focus.block); if (change) commit(change.blocks, change.caret, change.caret, 'edit') },
+    indent(direction) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = indentBlocks(blocks, selected ?? select(blocks, selection.anchor.block, selection.focus.block), direction); apply(change) },
+    toggle(open) { if (readOnly) return; const selection = readSelection(); if (!selection) return; const change = toggleCallout(blocks, selection.focus.block, open) ?? toggleBox(blocks, selection.focus.block); apply(change) },
     callout(head, index) {
       if (readOnly) return
       const at = index ?? readSelection()?.focus.block ?? -1
@@ -1801,8 +1798,7 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
         transactionDepth--
         if (!transactionDepth && toMarkdown(blocks) !== before) {
           const selection = readSelection() ?? { anchor: { block: 0, offset: 0 }, focus: { block: 0, offset: 0 } }
-          history.record(snapshot(selection.anchor, selection.focus), 'edit')
-          options.onChange?.(toMarkdown(blocks)); host.dispatchEvent(new Event('aa-change'))
+          recorded(selection.anchor, selection.focus, 'edit')
         }
       }
     },
