@@ -20,13 +20,6 @@ export type Decoration = { from: number; to: number; className: string; label?: 
  */
 export type AtomDrawer = (name: string, source: string) => HTMLElement
 
-/** The atom as its own words, for an editor given nothing better. */
-export const drawAtomAsText: AtomDrawer = (name, source) => {
-  const element = atomElement(name, source)
-  element.textContent = source
-  return element
-}
-
 export function atomElement(name: string, source: string, document: Document = globalThis.document): HTMLElement {
   const element = document.createElement('span')
   element.className = 'aa-atom'
@@ -117,6 +110,16 @@ function wordsOf(document: Document, run: Run, text: string, decorations: readon
   return node
 }
 
+/** A data attribute or a style property set to a value, or taken away with none. */
+function data(element: HTMLElement, name: string, value: string | undefined) {
+  if (value === undefined) delete element.dataset[name]
+  else element.dataset[name] = value
+}
+function property(element: HTMLElement, name: string, value: string | undefined) {
+  if (value === undefined) element.style.removeProperty(name)
+  else element.style.setProperty(name, value)
+}
+
 function hiddenSyntax(document: Document, text: string): HTMLElement {
   const span = document.createElement('span')
   span.className = 'aa-syntax'
@@ -158,9 +161,9 @@ export function stillShows(element: HTMLElement, was: Block, block: Block, atoms
   return !child
 }
 
-export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS, draw: AtomDrawer = drawAtomAsText, decorations: readonly Decoration[] = []) {
+export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, atoms: readonly AtomSyntax[] = DEFAULT_ATOMS, draw?: AtomDrawer, decorations: readonly Decoration[] = []) {
   const document = element.ownerDocument
-  if (draw === drawAtomAsText) draw = (name, source) => { const atom = atomElement(name, source, document); atom.textContent = source; return atom }
+  draw ??= (name, source) => { const atom = atomElement(name, source, document); atom.textContent = source; return atom }
   element.className = 'aa-block'
   element.dataset.kind = block.kind
   // Code is not words: no spelling marks, and no phone capitalising or correcting it.
@@ -168,53 +171,33 @@ export function renderBlock(element: HTMLElement, block: Block, reveal: Reveal, 
     if (block.kind === 'code') element.setAttribute(name, name === 'spellcheck' ? 'false' : 'off')
     else element.removeAttribute(name)
   }
-  if (block.level) element.dataset.level = String(block.level)
-  else delete element.dataset.level
-  if (block.checked === undefined) delete element.dataset.checked
-  else element.dataset.checked = block.checked ? 'true' : 'false'
+  data(element, 'level', block.level ? String(block.level) : undefined)
+  data(element, 'checked', block.checked === undefined ? undefined : String(block.checked))
   element.toggleAttribute('data-active', !!reveal)
   element.toggleAttribute('data-empty', block.kind === 'heading' && !block.source.slice(block.prefix).trim())
   element.dataset.reveal = revealKey(block, reveal, atoms)
   element.style.setProperty('--aa-depth', String(block.depth ?? 0))
-  if (block.number !== undefined) element.dataset.number = String(block.number)
-  else delete element.dataset.number
-  if (block.kind === 'callout') {
-    // Notion's box: its emoji drawn before the words by the sheet (`data-icon`), a
-    // picture from `--aa-callout-picture`, its fill from `data-fill`. A type word
-    // alone is a Markdown alert, with the type's icon from the library.
-    const picture = block.box && block.icon && /^https?:\/\//i.test(block.icon) ? block.icon : undefined
-    element.toggleAttribute('data-box', !!block.box)
-    if (block.box && block.icon && !picture) element.dataset.icon = block.icon
-    else delete element.dataset.icon
-    element.toggleAttribute('data-picture', !!picture)
-    if (picture) element.style.setProperty('--aa-callout-picture', `url("${picture.replace(/["\\\s]/g, char => encodeURIComponent(char))}")`)
-    else element.style.removeProperty('--aa-callout-picture')
-    if (block.box && block.color) element.dataset.fill = block.color
-    else delete element.dataset.fill
-    if (block.box) element.style.removeProperty('--aa-callout-icon')
-    else {
-      element.style.setProperty('--aa-callout-icon', iconMask(block.folded ? 'toggle' : block.callout === 'tip' ? 'check' : block.callout === 'warning' || block.callout === 'caution' ? 'callout' : 'note'))
-    }
-    element.dataset.callout = block.callout
-    element.toggleAttribute('data-folded', !!block.folded)
-    element.toggleAttribute('data-body-active', !!reveal && reveal.to > block.source.indexOf('\n') && block.source.includes('\n'))
-  } else {
-    delete element.dataset.callout
-    delete element.dataset.icon
-    delete element.dataset.fill
-    element.removeAttribute('data-box')
-    element.removeAttribute('data-picture')
-    element.style.removeProperty('--aa-callout-picture')
-    element.removeAttribute('data-folded')
-    element.removeAttribute('data-body-active')
-  }
+  data(element, 'number', block.number === undefined ? undefined : String(block.number))
+  // Notion's box: its emoji drawn before the words by the sheet (`data-icon`), a
+  // picture from `--aa-callout-picture`, its fill from `data-fill`. A type word
+  // alone is a Markdown alert, with the type's icon from the library.
+  const callout = block.kind === 'callout', box = callout && !!block.box
+  const picture = box && block.icon && /^https?:\/\//i.test(block.icon) ? block.icon : undefined
+  element.toggleAttribute('data-box', box)
+  data(element, 'icon', box && !picture ? block.icon : undefined)
+  element.toggleAttribute('data-picture', !!picture)
+  property(element, '--aa-callout-picture', picture && `url("${picture.replace(/["\\\s]/g, char => encodeURIComponent(char))}")`)
+  data(element, 'fill', box ? block.color : undefined)
+  property(element, '--aa-callout-icon', callout && !box ? iconMask(block.folded ? 'toggle' : block.callout === 'tip' ? 'check' : block.callout === 'warning' || block.callout === 'caution' ? 'callout' : 'note') : undefined)
+  data(element, 'callout', callout ? block.callout : undefined)
+  element.toggleAttribute('data-folded', callout && !!block.folded)
+  element.toggleAttribute('data-body-active', callout && !!reveal && reveal.to > block.source.indexOf('\n') && block.source.includes('\n'))
   if (block.kind === 'table') { renderTable(element, block, reveal, decorations, atoms); renderCarets(element, decorations); return }
   // A fenced block an atom draws (a diagram) is that drawing, the caret in it
   // or not: its words are never shown, and it is changed where it is drawn.
   const fenced = fencedAtom(block, atoms)
   element.toggleAttribute('data-drawn', !!fenced || block.kind === 'columns' || block.kind === 'tabs' || block.kind === 'toc')
-  if (fenced) element.dataset.fence = fenced.name
-  else delete element.dataset.fence
+  data(element, 'fence', fenced?.name)
   // A code block's copy button is drawn by the sheet in its first square, so the text in the block stays the text alone.
   if (block.kind === 'code' && !fenced) {
     element.style.setProperty('--aa-copy-icon', iconMask('copy'))
@@ -319,10 +302,7 @@ function renderTable(element: HTMLElement, block: Block, reveal: Reveal, decorat
       node.dataset.from = String(cell.from)
       node.dataset.to = String(cell.to)
       node.contentEditable = element.dataset.readonly === 'true' ? 'false' : 'true'
-      const leading = document.createElement('span')
-      leading.className = 'aa-syntax'
-      leading.dataset.hidden = ''
-      leading.textContent = block.source.slice(offset, cell.from)
+      const leading = hiddenSyntax(document, block.source.slice(offset, cell.from))
       // A cell's words are Markdown as any writing is; only a pipe of its own is not read as a cell's edge.
       const content = document.createElement('span')
       if (row === 0 && !cell.text && element.dataset.readonly !== 'true') content.dataset.tablePlaceholder = word('Header')
@@ -352,11 +332,7 @@ function renderTable(element: HTMLElement, block: Block, reveal: Reveal, decorat
     })
     fragment.append(line)
   })
-  const tail = document.createElement('span')
-  tail.className = 'aa-syntax'
-  tail.dataset.hidden = ''
-  tail.textContent = block.source.slice(offset)
-  fragment.append(tail)
+  fragment.append(hiddenSyntax(document, block.source.slice(offset)))
   element.replaceChildren(fragment)
 }
 

@@ -88,16 +88,22 @@ const COLUMN_CLOSE = /^\s*<\/column>\s*$/
  * be indented by tabs, as Notion indents them; they are read without.
  */
 export function readColumns(source: string): string[] {
-  const columns: string[][] = []
+  const columns = readSections(source, [COLUMNS_OPEN, COLUMNS_CLOSE], COLUMN_OPEN, COLUMN_CLOSE).map(section => section.text)
+  return columns.length ? columns : ['', '']
+}
+
+/** The parts between a section's opening and closing lines, written inside tags that are not read, tab-indented or not. */
+function readSections(source: string, around: readonly RegExp[], open: RegExp, close: RegExp): { open: RegExpExecArray; text: string }[] {
+  const sections: { open: RegExpExecArray; lines: string[] }[] = []
   let current: string[] | null = null
   for (const line of source.replace(/\r\n?/g, '\n').split('\n')) {
-    if (COLUMNS_OPEN.test(line) || COLUMNS_CLOSE.test(line)) continue
-    if (COLUMN_OPEN.test(line)) { current = []; columns.push(current); continue }
-    if (COLUMN_CLOSE.test(line)) { current = null; continue }
+    if (around.some(each => each.test(line))) continue
+    const opened = open.exec(line)
+    if (opened) { current = []; sections.push({ open: opened, lines: current }); continue }
+    if (close.test(line)) { current = null; continue }
     if (current) current.push(line.replace(/^\t{1,2}/, ''))
   }
-  const trimmed = columns.map(lines => lines.join('\n').replace(/^\n+|\n+$/g, ''))
-  return trimmed.length ? trimmed : ['', '']
+  return sections.map(section => ({ open: section.open, text: section.lines.join('\n').replace(/^\n+|\n+$/g, '') }))
 }
 
 /** Columns written back as one block. */
@@ -124,23 +130,12 @@ const escapeAttribute = (value: string) => value.replace(/&/g, '&amp;').replace(
  * may be indented by tabs; they are read without.
  */
 export function readTabs(source: string): Tab[] {
-  const tabs: (Tab & { lines: string[] })[] = []
-  let current: (Tab & { lines: string[] }) | null = null
-  for (const line of source.replace(/\r\n?/g, '\n').split('\n')) {
-    if (TABS_OPEN.test(line) || TABS_CLOSE.test(line)) continue
-    const open = TAB_OPEN.exec(line)
-    if (open) {
-      const attributes: Record<string, string> = {}
-      for (const match of open[1].matchAll(/([a-z]+)="([^"]*)"/g)) attributes[match[1]] = unescapeAttribute(match[2])
-      current = { name: attributes.name ?? '', ...(attributes.icon ? { icon: attributes.icon } : {}), content: '', lines: [] }
-      tabs.push(current)
-      continue
-    }
-    if (TAB_CLOSE.test(line)) { current = null; continue }
-    if (current) current.lines.push(line.replace(/^\t{1,2}/, ''))
-  }
-  const read = tabs.map(({ lines, ...tab }) => ({ ...tab, content: lines.join('\n').replace(/^\n+|\n+$/g, '') }))
-  return read.length ? read : [{ name: '', content: '' }]
+  const tabs = readSections(source, [TABS_OPEN, TABS_CLOSE], TAB_OPEN, TAB_CLOSE).map(({ open, text }) => {
+    const attributes: Record<string, string> = {}
+    for (const match of open[1].matchAll(/([a-z]+)="([^"]*)"/g)) attributes[match[1]] = unescapeAttribute(match[2])
+    return { name: attributes.name ?? '', ...(attributes.icon ? { icon: attributes.icon } : {}), content: text }
+  })
+  return tabs.length ? tabs : [{ name: '', content: '' }]
 }
 
 /** Tabs written back as one block. */
@@ -189,15 +184,16 @@ export function parseBlocks(text: string): Placed[] {
     blocks.push({ kind, source: lines.slice(from, to + 1).join('\n'), prefix: 0, ...extra, start: starts[from] })
   }
   let i = 0
+  /** A block that runs from the line it opens on to the line that closes it, or to the end. */
+  const fenced = (kind: BlockKind, closes: (line: string) => boolean) => {
+    let j = i + 1
+    while (j < lines.length && !closes(lines[j])) j++
+    push(kind, i, Math.min(j, lines.length - 1), { prefix: lines[i].length })
+    i = j + 1
+  }
   while (i < lines.length) {
     const line = lines[i]
-    if (line.trim() === '$$') {
-      let j = i + 1
-      while (j < lines.length && lines[j].trim() !== '$$') j++
-      push('equation', i, Math.min(j, lines.length - 1), { prefix: line.length })
-      i = j + 1
-      continue
-    }
+    if (line.trim() === '$$') { fenced('equation', each => each.trim() === '$$'); continue }
     if (i + 1 < lines.length && line.includes('|') && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(lines[i + 1])) {
       let j = i + 1
       while (j + 1 < lines.length && lines[j + 1].trim() && lines[j + 1].includes('|')) j++
@@ -205,29 +201,11 @@ export function parseBlocks(text: string): Placed[] {
       i = j + 1
       continue
     }
-    if (COLUMNS_OPEN.test(line)) {
-      let j = i + 1
-      while (j < lines.length && !COLUMNS_CLOSE.test(lines[j])) j++
-      push('columns', i, Math.min(j, lines.length - 1), { prefix: line.length })
-      i = j + 1
-      continue
-    }
+    if (COLUMNS_OPEN.test(line)) { fenced('columns', each => COLUMNS_CLOSE.test(each)); continue }
     if (TOC.test(line)) { push('toc', i, i); i++; continue }
-    if (TABS_OPEN.test(line)) {
-      let j = i + 1
-      while (j < lines.length && !TABS_CLOSE.test(lines[j])) j++
-      push('tabs', i, Math.min(j, lines.length - 1), { prefix: line.length })
-      i = j + 1
-      continue
-    }
+    if (TABS_OPEN.test(line)) { fenced('tabs', each => TABS_CLOSE.test(each)); continue }
     const fence = FENCE.exec(line)
-    if (fence) {
-      let j = i + 1
-      while (j < lines.length && !closesFence(lines[j], fence[1])) j++
-      push('code', i, Math.min(j, lines.length - 1), { prefix: line.length })
-      i = j + 1
-      continue
-    }
+    if (fence) { fenced('code', each => closesFence(each, fence[1])); continue }
     if (!line.trim()) { i++; continue }
     if (DIVIDER.test(line)) { push('divider', i, i, { prefix: line.length }); i++; continue }
     const heading = HEADING.exec(line)

@@ -335,8 +335,8 @@ export function createControls(editor: Editor, options: EditorOptions): () => vo
     picker.style.top = `${at.bottom + gap + height <= view.top + view.height ? at.bottom + gap : Math.max(view.top, at.top - gap - height)}px`
     picker.querySelector<HTMLButtonElement>('button')?.focus()
   }
-  host.addEventListener('aa-callout-icon', event => { const detail = (event as CustomEvent<{ index: number; rect: DOMRect }>).detail; openIconPicker(detail.index, detail.rect) })
-  document.addEventListener('pointerdown', event => { if (iconPicker && !iconPicker.contains(event.target as Node)) hideIconPicker() }, true)
+  host.addEventListener('aa-callout-icon', event => { const detail = (event as CustomEvent<{ index: number; rect: DOMRect }>).detail; openIconPicker(detail.index, detail.rect) }, { signal })
+  document.addEventListener('pointerdown', event => { if (iconPicker && !iconPicker.contains(event.target as Node)) hideIconPicker() }, { capture: true, signal })
   let target = -1, active = 0, choices: readonly Command[] = [], slash: { from: number; to: number } | null = null
   let timer: ReturnType<typeof setTimeout> | undefined
   let disposed = false
