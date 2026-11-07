@@ -193,7 +193,6 @@ export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, deli
   const mark = markOf(delimiter, closing)
   if (!mark || comparePos(a, b) === 0) return wrapText(blocks, from, to, delimiter, closing)
   const ends = (index: number): [number, number] => [index === a.block ? Math.max(a.offset, blocks[index].prefix) : blocks[index].prefix, index === b.block ? b.offset : blocks[index].source.length]
-  const targets: number[] = []
   let words = false, all = true
   for (let index = a.block; index <= b.block; index++) {
     const block = blocks[index]
@@ -201,19 +200,11 @@ export function wrapSelection(blocks: readonly Block[], from: Pos, to: Pos, deli
     const [start, end] = ends(index)
     const wears = rangeWears(block, start, end, mark.key, atoms)
     if (!wears.words) continue
-    targets.push(index); words = true
+    words = true
     all &&= wears.all
   }
   if (!words) return { blocks: [...blocks], anchor: a, focus: b }
-  let next = [...blocks], anchor = a, focus = b
-  for (const index of targets.reverse()) {
-    const [start, end] = ends(index)
-    const marked = markRange(blocks[index], start, end, all ? { remove: mark.family } : { add: mark }, atoms)
-    next = setSource(next, index, marked.source).blocks
-    if (index === a.block) anchor = { block: index, offset: marked.from }
-    if (index === b.block) focus = { block: index, offset: marked.to }
-  }
-  return { blocks: next, anchor, focus }
+  return paintSelection(blocks, a, b, all ? { remove: mark.family } : { add: mark }, atoms) ?? { blocks: [...blocks], anchor: a, focus: b }
 }
 
 /** Delimiters written into the text as they are: an equation's, and any with nothing selected. */

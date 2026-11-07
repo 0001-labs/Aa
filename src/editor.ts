@@ -29,6 +29,7 @@ import { createCommentsView, type CommentsView } from './comments-view'
 import type { AnchoredThread, CommentStore } from './comments'
 import { word } from './words'
 import { imageAtom, squareIn, type Atom } from './atoms'
+import { caretAt } from './placement'
 import { createNesting } from './nesting'
 
 export type EditorOptions = {
@@ -969,11 +970,8 @@ function createCoreEditor(host: HTMLElement, options: EditorOptions = {}): Edito
     const element = elements()[index]
     const rect = element.getBoundingClientRect()
     const y = edge === 'top' ? rect.top + 2 : rect.bottom - 2
-    let node: Node | null = null, offset = 0
-    const caretPositionFromPoint = (document as Document & { caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null }).caretPositionFromPoint
-    if (caretPositionFromPoint) { const position = caretPositionFromPoint.call(document, x, y); if (position) { node = position.offsetNode; offset = position.offset } }
-    else if (document.caretRangeFromPoint) { const range = document.caretRangeFromPoint(x, y); if (range) { node = range.startContainer; offset = range.startOffset } }
-    const pos: Pos = node && element.contains(node) ? { block: index, offset: offsetIn(element, node, offset) } : { block: index, offset: edge === 'top' ? startOf(index) : blocks[index].source.length }
+    const point = caretAt(document, x, y)
+    const pos: Pos = point && element.contains(point.node) ? { block: index, offset: offsetIn(element, point.node, point.offset) } : { block: index, offset: edge === 'top' ? startOf(index) : blocks[index].source.length }
     setSelection(pos)
     applyReveal({ anchor: pos, focus: pos })
     keepCaretInView()
